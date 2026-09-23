@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.3
+name: Build and publish XiaoMeili v0.7.3.1.1
 
 on:
   push:
@@ -12,6 +12,7 @@ on:
       - "build/v071/**"
       - "build/v072/**"
       - "build/v073/**"
+      - "build/v0731/**"
 
 permissions:
   contents: write
@@ -46,17 +47,27 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.3
+      - name: Patch stable source to v0.7.3.1
         shell: pwsh
         run: |
-          python "build\v062\patch_v062.py" "$env:SOURCE_ROOT" "$PWD"
-          python "build\v0621\patch_v0621.py" "$env:SOURCE_ROOT"
-          python "build\v0622\patch_v0622.py" "$env:SOURCE_ROOT"
-          python "build\v070\patch_v070.py" "$env:SOURCE_ROOT" "$PWD"
-          python "build\v071\patch_v071.py" "$env:SOURCE_ROOT" "$PWD"
-          python "build\v072\patch_v072.py" "$env:SOURCE_ROOT" "$PWD"
-          python "build\v073\patch_v073.py" "$env:SOURCE_ROOT" "$PWD"
-          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          function Run-PythonChecked {
+            param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Args)
+            & python @Args
+            if ($LASTEXITCODE -ne 0) { throw "Python command failed: python $($Args -join ' ')" }
+          }
+          Run-PythonChecked "build\v062\patch_v062.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v0621\patch_v0621.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0622\patch_v0622.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v070\patch_v070.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v071\patch_v071.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v072\patch_v072.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v0731\patch_v0731.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.3\.1"') { throw "Source version verification failed: expected 0.7.3.1" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.3.1" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -100,7 +111,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.3_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.3.1_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -109,21 +120,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.3 release asset
+      - name: Publish v0.7.3.1 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.3" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.3.1" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.7.3" --repo "${{ github.repository }}" --yes --cleanup-tag
+            gh release delete "v0.7.3.1" --repo "${{ github.repository }}" --yes --cleanup-tag
           }
           $ghargs = @(
-            "release", "create", "v0.7.3", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.3.1", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.3",
-            "--notes", "V0.7.3 adds selectable Windows playback devices, dynamic version labels, and automatic cleanup of update caches and retired Kokoro components. Keeps Qwen3-TTS and Continuous Puppet V2."
+            "--title", "XiaoMeili V0.7.3.1",
+            "--notes", "V0.7.3.1 fixes a release-pipeline bug that mislabeled a V0.7.2 binary as V0.7.3. It also recalibrates the September 2026 VALORANT result screen, cleans chat/TTS metadata leakage, adds safe NDM leftover cleanup, and adds the optional Qwen3 VoiceDesign little-girl expansion."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -133,8 +144,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3/XiaoMeili_0.7.3_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.3_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.1/XiaoMeili_0.7.3.1_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.3.1_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -144,6 +155,8 @@ jobs:
           try {
             $exeEntry = $archive.Entries | Where-Object { $_.FullName -ieq "XiaoMeili.exe" } | Select-Object -First 1
             if (-not $exeEntry) { throw "Verified update ZIP does not contain XiaoMeili.exe at package root" }
+            $verEntry = $archive.Entries | Where-Object { $_.FullName -ieq "_internal/assets/VERSION.txt" -or $_.FullName -ieq "assets/VERSION.txt" } | Select-Object -First 1
+            if (-not $verEntry) { throw "Verified update ZIP does not contain VERSION.txt" }
           } finally {
             $archive.Dispose()
           }
@@ -155,10 +168,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3/XiaoMeili_0.7.3_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.1/XiaoMeili_0.7.3.1_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.3"
+            version = "0.7.3.1"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
@@ -188,5 +201,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.3 manifest"
+          git commit -m "Publish XiaoMeili v0.7.3.1 manifest"
           git push
