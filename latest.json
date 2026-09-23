@@ -1,23 +1,14 @@
 {
   "protocol": 1,
-  "version": "0.7.2",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.7.2/XiaoMeili_0.7.2_update.zip",
-  "sha256": "d0b8f4e3af4ff0a6c2d4a7e0aa7acfe4f72c3393b8a93058123f79c8a32f968a",
+  "version": "0.7.3",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.7.3/XiaoMeili_0.7.3_update.zip",
+  "sha256": "19942743cdfd356d146f001da62f0efeae7f58f281aec42e03033eab88701522",
   "notes": [
-    "语音引擎由 Kokoro 更换为阿里 Qwen3-TTS 1.7B CustomVoice",
-    "提供 Vivian / Serena 两个原生中文年轻女声及四种小美丽风格预设",
-    "首次启用 Qwen3-TTS 时由小美丽内部自动准备独立运行环境和约 4.5GB 模型",
-    "修复 V0.6.1.1 更新到 100% 后直接退出的问题",
-    "更新助手改为外置运行并增加启动存活检测，后续更新失败不会再先把小美丽关掉",
-    "修复 NDM 下载时进度长期停在 20% 的显示问题，现在会根据下载目录中的实际文件大小实时推进",
-    "增强 NDM 完成检测：兼容重复文件名、NDM 自己决定文件名、文件预分配及下载完成后文件仍被占用等情况",
-    "新增 NDM 加速下载模式：小美丽可直接把 llama.cpp、CUDA 与 Qwen3-8B 大模型下载任务发送给已运行的 Neat Download Manager",
-    "NDM 下载完成后小美丽会自动监控指定下载目录并把组件导入 XiaoMeiliData，不需要手动搬文件",
-    "保留内置下载器作为备用模式",
-    "新增本地 Qwen3-8B Q4_K_M 大脑，首次在小美丽内部下载约 5.03GB 模型和 llama.cpp CUDA 运行时",
-    "新增大脑 V0.7 文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
-    "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
-    "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
-    "保留播放设备选择、动态版本号、废弃组件清理、V2 鼠标互动、自更新与桌面错误日志机制"
+    "按用户 2026-09-23 新版无畏契约结算页重新校准五卡结算识别与底部再玩一局按钮区域",
+    "修复大模型偶尔把 spoken_text / board_text / emotion 字段名直接显示并朗读的问题，聊天框只显示自然回答",
+    "小美丽本地大脑就绪后会自动清理 NDM 下载目录中由小美丽产生的 CUDA、llama.cpp 与重复 Qwen GGUF 残留",
+    "人格卡改为纯性格设定，JSON 输出协议转为程序内部锁定；修改性格卡会立即影响下一次回答",
+    "声音页新增可选 Qwen3-TTS 1.7B VoiceDesign 小女孩声线扩展，提供 4 个不同的虚拟小女孩声线预设",
+    "保留 V0.7.2 的 NDM 加速、播放设备选择、动态版本号、V2 鼠标互动、自更新与桌面错误日志机制"
   ]
 }
