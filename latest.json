@@ -1,11 +1,12 @@
 {
   "protocol": 1,
-  "version": "0.6.1.1",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.6.1.1/XiaoMeili_0.6.1.1_update.zip",
-  "sha256": "",
+  "version": "0.6.2",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.6.2/XiaoMeili_0.6.2_update.zip",
+  "sha256": "6bb220ab55a0f498843f4bd16f055abb88ce8626d7fa8274b0b34fbf70c095ea",
   "notes": [
-    "建立小美丽永久更新通道",
-    "当前版本为 V0.6.1.1，暂无更高版本需要安装",
-    "后续版本将通过此清单推送"
+    "语音引擎由 Kokoro 更换为阿里 Qwen3-TTS 1.7B CustomVoice",
+    "提供 Vivian / Serena 两个原生中文年轻女声及四种小美丽风格预设",
+    "首次启用 Qwen3-TTS 时由小美丽内部自动准备独立运行环境和约 4.5GB 模型",
+    "保留 V2 鼠标互动、自动更新与桌面错误日志机制"
   ]
 }
