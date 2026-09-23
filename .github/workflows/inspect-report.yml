@@ -30,6 +30,10 @@ jobs:
           python "build\v0731\patch_v0731.py" "$src" "$PWD"
           python "build\v0732\patch_v0732.py" "$src"
           $main = Join-Path $src "app\src\main.py"
-          Write-Host "=== REPORT CODE 2890-3215 ==="
-          $all = Get-Content -LiteralPath $main
-          for ($i=2889; $i -lt [Math]::Min($all.Count,3215); $i++) { Write-Host ("{0}: {1}" -f ($i+1), $all[$i]) }
+          python "build\v0733\patch_v0733.py" "$src"
+          Write-Host "=== BRAIN UI/METHODS ==="
+          $main = Join-Path $src "app\src\main.py"
+          Select-String -Path $main -Pattern "brain_like_btn|brain_dislike_btn|def _brain_like|def _brain_dislike|brain_feedback_label|纠正小美丽|养成" -Context 8,18 | ForEach-Object { $_.ToString() }
+          Write-Host "=== BRAIN SERVICE FEEDBACK ==="
+          $brain = Join-Path $src "app\src\brain_qwen.py"
+          Select-String -Path $brain -Pattern "def _forced_correction|def _feedback_examples|def save_feedback|def ask|feedback.jsonl|_feedback_key" -Context 8,30 | ForEach-Object { $_.ToString() }
