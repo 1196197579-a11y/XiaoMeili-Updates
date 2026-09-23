@@ -13,7 +13,7 @@ def must_replace(text: str, old: str, new: str, label: str) -> str:
 def patch(source_root: Path, repo_root: Path):
     main_path = source_root / "app" / "src" / "main.py"
     req_path = source_root / "app" / "requirements.txt"
-    voice_src = repo_root / "build" / "v062" / "voice_qwen.py"
+    voice_src = repo_root / "build" / "v062" / "voice_qwen_min.py"
     voice_dst = source_root / "app" / "src" / "voice_qwen.py"
     if not main_path.exists():
         raise FileNotFoundError(main_path)
