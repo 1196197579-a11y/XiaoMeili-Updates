@@ -106,7 +106,7 @@ def patch(source_root: Path, repo_root: Path):
         bp = QWidget(); bv = QVBoxLayout(bp)
         bintro = QLabel(
             "V0.7 给小美丽装上“脑子”：文字输入 → 本地 Qwen3-8B → 小美丽人格 → 固定 Qwen3-TTS 声音。"
-            "\n这一版先把思考和人格调稳，麦克风、唤醒词和白板联动放到后续版本。"
+            "\\n这一版先把思考和人格调稳，麦克风、唤醒词和白板联动放到后续版本。"
         )
         bintro.setWordWrap(True); bv.addWidget(bintro)
 
@@ -284,7 +284,7 @@ def patch(source_root: Path, repo_root: Path):
         desired, ok = QInputDialog.getMultiLineText(
             self,
             "纠正小美丽",
-            "这句话你希望小美丽怎么回答？\n我会把它保存成养成样本，后面相似问题会优先模仿：",
+            "这句话你希望小美丽怎么回答？\\n我会把它保存成养成样本，后面相似问题会优先模仿：",
             str(ex.get("assistant_text") or ""),
         )
         if not ok:
