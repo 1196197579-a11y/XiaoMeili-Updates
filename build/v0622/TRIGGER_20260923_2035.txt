@@ -1,0 +1,1 @@
+Trigger verified Windows build for XiaoMeili v0.6.2.2.
