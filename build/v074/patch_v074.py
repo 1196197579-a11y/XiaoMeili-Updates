@@ -46,7 +46,7 @@ def patch(source_root: Path):
         )
 '''
     new_note = '''        bnote = QLabel(
-            "V0.7.4 纠正支持两种养成方式：\n"
+            "V0.7.4 纠正支持两种养成方式：\\n"
             "「学这个意思」会记住核心立场和语气，之后允许小美丽自己换句式表达；"
             "「固定这句话」才会在同样问题下逐字使用你指定的答案。"
             "👍 继续用于积累小美丽喜欢的整体说话风格。所有样本只保存在本机 XiaoMeiliData/brain。"
@@ -65,8 +65,8 @@ def patch(source_root: Path):
         desired, ok = QInputDialog.getMultiLineText(
             self,
             "纠正小美丽",
-            "写下你希望小美丽表达的答案 / 核心意思：\n"
-            "例如：保枪别说是我徒弟。\n\n"
+            "写下你希望小美丽表达的答案 / 核心意思：\\n"
+            "例如：保枪别说是我徒弟。\\n\\n"
             "下一步再选择是让她固定背这句话，还是只学这个意思。",
             str(ex.get("assistant_text") or ""),
         )
@@ -81,7 +81,7 @@ def patch(source_root: Path):
         mode_box.setIcon(QMessageBox.Icon.Question)
         mode_box.setText("你希望小美丽怎么记住这次纠正？")
         mode_box.setInformativeText(
-            "学这个意思（推荐）：保留核心含义、立场和语气，但允许她自然重组句子。\n"
+            "学这个意思（推荐）：保留核心含义、立场和语气，但允许她自然重组句子。\\n"
             "固定这句话：以后遇到同样的问题，直接逐字回答你写的这一句。"
         )
         semantic_btn = mode_box.addButton("🧠 学这个意思（推荐）", QMessageBox.ButtonRole.AcceptRole)
@@ -190,10 +190,10 @@ def patch(source_root: Path):
         for i, row in enumerate(rules, start=1):
             hit = "【当前问题直接命中】" if row.get("exact") else ""
             lines.append(
-                f"{i}. {hit}主人当时问：{row.get('user_text','')}\n"
+                f"{i}. {hit}主人当时问：{row.get('user_text','')}\\n"
                 f"   主人要求保留的核心意思：{row.get('meaning','')}"
             )
-        return "\n".join(lines)
+        return "\\n".join(lines)
 
     def _remove_history_for_question(self, user_text):
         key = self._feedback_key(user_text)
@@ -290,7 +290,7 @@ def patch(source_root: Path):
         }
         FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(FEEDBACK_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            f.write(json.dumps(row, ensure_ascii=False) + "\\n")
 
         if str(rating) == "down" and str(correction or "").strip():
             if mode == "fixed":
@@ -305,11 +305,11 @@ def patch(source_root: Path):
 
     # Add semantic lessons to the generation prompt. Fixed answers still bypass generation.
     system_anchor = '                system = str(persona or DEFAULT_PERSONA).strip() + "\\n\\n" + OUTPUT_CONTRACT.strip()\n'
-    system_new = '''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
+    system_new = '''                system = str(persona or DEFAULT_PERSONA).strip() + "\\n\\n" + OUTPUT_CONTRACT.strip()
                 semantic_rules = self._semantic_rules(user_text, 10)
                 semantic_prompt = self._semantic_rules_prompt(semantic_rules)
                 if semantic_prompt:
-                    system += "\n\n" + semantic_prompt
+                    system += "\\n\\n" + semantic_prompt
 '''
     b = replace_once(b, system_anchor, system_new, "semantic rules prompt")
 
@@ -330,7 +330,7 @@ def patch(source_root: Path):
                         retry_messages = list(messages)
                         retry_messages[-1] = {
                             "role": "user",
-                            "content": user_text + "\n/no_think\n"
+                            "content": user_text + "\\n/no_think\\n"
                                        "请根据主人教过的核心意思换一种自然说法回答，"
                                        "不要逐字复述参考句，但立场和含义必须保持一致。",
                         }
