@@ -1,0 +1,162 @@
+name: Build and publish XiaoMeili v0.6.2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "seed/XiaoMeili_V0_6_1_1_BootstrapFix_UpdateReady.zip"
+
+permissions:
+  contents: write
+
+jobs:
+  build-publish:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout update repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Expand one-time bootstrap seed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $seed = Join-Path $PWD "seed\XiaoMeili_V0_6_1_1_BootstrapFix_UpdateReady.zip"
+          if (-not (Test-Path $seed)) { throw "Bootstrap seed ZIP not found: $seed" }
+          $stage = Join-Path $PWD "staging"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Expand-Archive -LiteralPath $seed -DestinationPath $stage -Force
+          $source = Join-Path $stage "XiaoMeili_V0_6_1_1_Source"
+          if (-not (Test-Path (Join-Path $source "app\src\main.py"))) {
+            throw "Unexpected seed layout: $source"
+          }
+          "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Patch stable source to v0.6.2
+        shell: pwsh
+        run: |
+          python "build\v062\patch_v062.py" "$env:SOURCE_ROOT" "$PWD"
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py"
+
+      - name: Install desktop build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check -r "$env:SOURCE_ROOT\app\requirements.txt"
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.10,<7" "dxcam>=0.0.5"
+
+      - name: Build Windows EXE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dist = Join-Path $PWD "out"
+          $work = Join-Path $PWD "pyi-work"
+          $spec = Join-Path $PWD "pyi-spec"
+          $pyi = @(
+            "--noconfirm", "--clean", "--windowed",
+            "--name", "XiaoMeili",
+            "--icon", "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico",
+            "--distpath", "$dist",
+            "--workpath", "$work",
+            "--specpath", "$spec",
+            "--collect-all", "rapidocr",
+            "--collect-all", "onnxruntime",
+            "--collect-all", "soundfile",
+            "--collect-all", "dxcam",
+            "--add-data", "$env:SOURCE_ROOT\app\assets;assets",
+            "$env:SOURCE_ROOT\app\src\main.py"
+          )
+          python -m PyInstaller @pyi
+          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed: $LASTEXITCODE" }
+          $exe = Join-Path $dist "XiaoMeili\XiaoMeili.exe"
+          if (-not (Test-Path $exe)) { throw "PyInstaller did not produce XiaoMeili.exe" }
+          & $exe --runtime-self-test
+          if ($LASTEXITCODE -ne 0) { throw "Frozen runtime self-test failed: $LASTEXITCODE" }
+
+      - name: Create update package and SHA-256
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $releaseDir = Join-Path $PWD "release"
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+          $zip = Join-Path $releaseDir "XiaoMeili_0.6.2_update.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ([string]::IsNullOrWhiteSpace($hash)) { throw "SHA-256 calculation failed" }
+          "UPDATE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Built SHA256=$hash"
+
+      - name: Publish v0.6.2 release asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          gh release view "v0.6.2" --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release delete "v0.6.2" --repo "${{ github.repository }}" --yes --cleanup-tag
+          }
+          $ghargs = @(
+            "release", "create", "v0.6.2", "$env:UPDATE_ZIP",
+            "--repo", "${{ github.repository }}",
+            "--title", "XiaoMeili V0.6.2",
+            "--notes", "Replace Kokoro with Alibaba Qwen3-TTS 1.7B CustomVoice. Adds native-Chinese Vivian/Serena XiaoMeili voice presets. The heavy TTS model is downloaded once from inside XiaoMeili and is not bundled in the updater."
+          )
+          & gh @ghargs
+          if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
+
+      - name: Verify the public release download before manifest switch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2/XiaoMeili_0.6.2_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.6.2_verify.zip"
+          Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
+          $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($remoteHash -ne $env:UPDATE_SHA256) {
+            throw "Release verification failed. local=$env:UPDATE_SHA256 remote=$remoteHash"
+          }
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($verify)
+          try {
+            $exeEntry = $archive.Entries | Where-Object { $_.FullName -ieq "XiaoMeili.exe" } | Select-Object -First 1
+            if (-not $exeEntry) { throw "Verified update ZIP does not contain XiaoMeili.exe at package root" }
+          } finally {
+            $archive.Dispose()
+          }
+          Write-Host "Public release verified: $url"
+
+      - name: Switch latest.json only after release verification
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2/XiaoMeili_0.6.2_update.zip"
+          $manifest = [ordered]@{
+            protocol = 1
+            version = "0.6.2"
+            package_url = $url
+            sha256 = $env:UPDATE_SHA256
+            notes = @(
+              "语音引擎由 Kokoro 更换为阿里 Qwen3-TTS 1.7B CustomVoice",
+              "提供 Vivian / Serena 两个原生中文年轻女声及四种小美丽风格预设",
+              "首次启用 Qwen3-TTS 时由小美丽内部自动准备独立运行环境和约 4.5GB 模型",
+              "保留 V2 鼠标互动、自动更新与桌面错误日志机制"
+            )
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
+          git config user.name "XiaoMeili Update Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add latest.json
+          git commit -m "Publish XiaoMeili v0.6.2 manifest"
+          git push
