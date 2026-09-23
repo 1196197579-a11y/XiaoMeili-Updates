@@ -34,11 +34,6 @@ jobs:
           python "build\v0733\patch_v0733.py" "$src"
           python "build\v074\patch_v074.py" "$src"
           python "build\v075\patch_v075.py" "$src"
-          Write-Host "=== UPDATE 3950-4152 ==="
-          $main = Join-Path $src "app\src\main.py"
-          $ml = Get-Content -LiteralPath $main
-          for ($i=3949; $i -lt [Math]::Min($ml.Count,4152); $i++) { Write-Host ("U{0}: {1}" -f ($i+1), $ml[$i]) }
-          Write-Host "=== SETTINGS 4153-4245 ==="
-          for ($i=4152; $i -lt [Math]::Min($ml.Count,4245); $i++) { Write-Host ("S{0}: {1}" -f ($i+1), $ml[$i]) }
-          Write-Host "=== CONTROLLER 5462-5555 ==="
-          for ($i=5461; $i -lt [Math]::Min($ml.Count,5555); $i++) { Write-Host ("C{0}: {1}" -f ($i+1), $ml[$i]) }
+          Write-Host "=== UPDATE HELPER ==="
+          $helper = Join-Path $src "app\assets\update_helper.ps1"
+          Get-Content -LiteralPath $helper | ForEach-Object { Write-Host $_ }
