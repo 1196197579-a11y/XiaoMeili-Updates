@@ -31,11 +31,15 @@ jobs:
           python "build\v0732\patch_v0732.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           python "build\v0733\patch_v0733.py" "$src"
-          Write-Host "=== MAIN 4680-4765 ==="
+          python "build\v0733\patch_v0733.py" "$src"
+          python "build\v074\patch_v074.py" "$src"
+          python "build\v075\patch_v075.py" "$src"
+          Write-Host "=== STORAGE PATH MATCHES main.py ==="
           $main = Join-Path $src "app\src\main.py"
-          $ml = Get-Content -LiteralPath $main
-          for ($i=4679; $i -lt [Math]::Min($ml.Count,4765); $i++) { Write-Host ("M{0}: {1}" -f ($i+1), $ml[$i]) }
-          Write-Host "=== BRAIN 455-660 ==="
+          Select-String -Path $main -Pattern "XiaoMeiliData|PUBLIC|USER|UPDATE|updates|temp|cache|logs|assets|voice|brain" -Context 2,3 | ForEach-Object { $_.ToString() }
+          Write-Host "=== STORAGE PATH MATCHES voice_qwen.py ==="
+          $voice = Join-Path $src "app\src\voice_qwen.py"
+          Select-String -Path $voice -Pattern "XiaoMeiliData|PUBLIC|DATA_ROOT|RUNTIME_ROOT|MODEL_DIR|CACHE_DIR|logs" -Context 2,3 | ForEach-Object { $_.ToString() }
+          Write-Host "=== STORAGE PATH MATCHES brain_qwen.py ==="
           $brain = Join-Path $src "app\src\brain_qwen.py"
-          $bl = Get-Content -LiteralPath $brain
-          for ($i=454; $i -lt [Math]::Min($bl.Count,660); $i++) { Write-Host ("B{0}: {1}" -f ($i+1), $bl[$i]) }
+          Select-String -Path $brain -Pattern "XiaoMeiliData|PUBLIC|DATA_ROOT|BRAIN_ROOT|RUNTIME|MODEL|UPDATE|cache|logs" -Context 2,3 | ForEach-Object { $_.ToString() }
