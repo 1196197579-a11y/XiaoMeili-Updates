@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.6.2.2
+name: Build and publish XiaoMeili v0.7.0
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - "build/v062/**"
       - "build/v0621/**"
       - "build/v0622/**"
+      - "build/v070/**"
 
 permissions:
   contents: write
@@ -42,13 +43,14 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.6.2.2
+      - name: Patch stable source to v0.7.0
         shell: pwsh
         run: |
           python "build\v062\patch_v062.py" "$env:SOURCE_ROOT" "$PWD"
           python "build\v0621\patch_v0621.py" "$env:SOURCE_ROOT"
           python "build\v0622\patch_v0622.py" "$env:SOURCE_ROOT"
-          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py"
+          python "build\v070\patch_v070.py" "$env:SOURCE_ROOT" "$PWD"
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py"
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -92,7 +94,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.6.2.2_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.0_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -101,21 +103,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.6.2.2 release asset
+      - name: Publish v0.7.0 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.6.2.2" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.0" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.6.2.2" --repo "${{ github.repository }}" --yes --cleanup-tag
+            gh release delete "v0.7.0" --repo "${{ github.repository }}" --yes --cleanup-tag
           }
           $ghargs = @(
-            "release", "create", "v0.6.2.2", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.0", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.6.2.2",
-            "--notes", "V0.6.2.2 adds selectable Windows playback devices, dynamic version labels, and automatic cleanup of update caches and retired Kokoro components. Keeps Qwen3-TTS and Continuous Puppet V2."
+            "--title", "XiaoMeili V0.7.0",
+            "--notes", "V0.7.0 adds selectable Windows playback devices, dynamic version labels, and automatic cleanup of update caches and retired Kokoro components. Keeps Qwen3-TTS and Continuous Puppet V2."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -125,8 +127,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2.2/XiaoMeili_0.6.2.2_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.6.2.2_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.0/XiaoMeili_0.7.0_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.0_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -147,10 +149,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2.2/XiaoMeili_0.6.2.2_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.0/XiaoMeili_0.7.0_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.6.2.2"
+            version = "0.7.0"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
@@ -159,15 +161,16 @@ jobs:
               "首次启用 Qwen3-TTS 时由小美丽内部自动准备独立运行环境和约 4.5GB 模型",
               "修复 V0.6.1.1 更新到 100% 后直接退出的问题",
               "更新助手改为外置运行并增加启动存活检测，后续更新失败不会再先把小美丽关掉",
-              "声音页新增 Windows 播放设备选择，可把小美丽语音送到指定扬声器、耳机或虚拟音频设备",
-              "设置窗口标题和声音页版本号改为读取 APP_VERSION，后续升级自动同步",
-              "启动后自动清理旧更新包、临时更新文件和已淘汰 Kokoro 模型",
-              "保留 V2 鼠标互动、Qwen3-TTS、自更新与桌面错误日志机制"
+              "新增本地 Qwen3-8B Q4_K_M 大脑，首次在小美丽内部下载约 5.03GB 模型和 llama.cpp CUDA 运行时",
+              "新增“大脑 V0.7”文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
+              "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
+              "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
+              "保留播放设备选择、动态版本号、废弃组件清理、V2 鼠标互动、自更新与桌面错误日志机制"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.6.2.2 manifest"
+          git commit -m "Publish XiaoMeili v0.7.0 manifest"
           git push
