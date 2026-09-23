@@ -31,9 +31,11 @@ jobs:
           python "build\v0732\patch_v0732.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           python "build\v0733\patch_v0733.py" "$src"
-          Write-Host "=== BRAIN UI/METHODS ==="
+          Write-Host "=== MAIN 4680-4765 ==="
           $main = Join-Path $src "app\src\main.py"
-          Select-String -Path $main -Pattern "brain_like_btn|brain_dislike_btn|def _brain_like|def _brain_dislike|brain_feedback_label|纠正小美丽|养成" -Context 8,18 | ForEach-Object { $_.ToString() }
-          Write-Host "=== BRAIN SERVICE FEEDBACK ==="
+          $ml = Get-Content -LiteralPath $main
+          for ($i=4679; $i -lt [Math]::Min($ml.Count,4765); $i++) { Write-Host ("M{0}: {1}" -f ($i+1), $ml[$i]) }
+          Write-Host "=== BRAIN 455-660 ==="
           $brain = Join-Path $src "app\src\brain_qwen.py"
-          Select-String -Path $brain -Pattern "def _forced_correction|def _feedback_examples|def save_feedback|def ask|feedback.jsonl|_feedback_key" -Context 8,30 | ForEach-Object { $_.ToString() }
+          $bl = Get-Content -LiteralPath $brain
+          for ($i=454; $i -lt [Math]::Min($bl.Count,660); $i++) { Write-Host ("B{0}: {1}" -f ($i+1), $bl[$i]) }
