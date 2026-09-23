@@ -1,0 +1,34 @@
+name: Inspect XiaoMeili report crop
+on:
+  push:
+    paths:
+      - "build/inspect/**"
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Expand seed and inspect report crop code
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $seed = Join-Path $PWD "seed\XiaoMeili_V0_6_1_1_BootstrapFix_UpdateReady.zip"
+          $stage = Join-Path $PWD "staging_inspect"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Expand-Archive -LiteralPath $seed -DestinationPath $stage -Force
+          $src = Join-Path $stage "XiaoMeili_V0_6_1_1_Source"
+          python "build\v062\patch_v062.py" "$src" "$PWD"
+          python "build\v0621\patch_v0621.py" "$src"
+          python "build\v0622\patch_v0622.py" "$src"
+          python "build\v070\patch_v070.py" "$src" "$PWD"
+          python "build\v071\patch_v071.py" "$src" "$PWD"
+          python "build\v072\patch_v072.py" "$src" "$PWD"
+          python "build\v0731\patch_v0731.py" "$src" "$PWD"
+          python "build\v0732\patch_v0732.py" "$src"
+          $main = Join-Path $src "app\src\main.py"
+          Write-Host "=== MATCHES ==="
+          Select-String -Path $main -Pattern "report_locked_parse_fail|ROI_REPORT|report_crop|locked_parse|五卡|战报|KDA" -Context 6,10 | ForEach-Object { $_.ToString() }
