@@ -34,9 +34,6 @@ jobs:
           python "build\v0733\patch_v0733.py" "$src"
           python "build\v074\patch_v074.py" "$src"
           python "build\v075\patch_v075.py" "$src"
-          Write-Host "=== MAIN TOP 1-115 ==="
+          Write-Host "=== SETTINGS TABS ==="
           $main = Join-Path $src "app\src\main.py"
-          $ml = Get-Content -LiteralPath $main
-          for ($i=0; $i -lt [Math]::Min($ml.Count,115); $i++) { Write-Host ("M{0}: {1}" -f ($i+1), $ml[$i]) }
-          Write-Host "=== UPDATE CODE MATCHES ==="
-          Select-String -Path $main -Pattern "update_helper|updater|UPDATE_DIR|apply_update|立即更新|update.zip|updates" -Context 5,16 | ForEach-Object { $_.ToString() }
+          Select-String -Path $main -Pattern "addTab|常规|class Settings|class AppController|def __init__\(self, cfg" -Context 6,12 | ForEach-Object { $_.ToString() }
