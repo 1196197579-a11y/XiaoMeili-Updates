@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.3.1
+name: Build and publish XiaoMeili v0.7.3.2
 
 on:
   push:
@@ -13,6 +13,7 @@ on:
       - "build/v072/**"
       - "build/v073/**"
       - "build/v0731/**"
+      - "build/v0732/**"
 
 permissions:
   contents: write
@@ -47,7 +48,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.3.1
+      - name: Patch stable source to v0.7.3.2
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -64,9 +65,10 @@ jobs:
           Run-PythonChecked "build\v071\patch_v071.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "build\v072\patch_v072.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "build\v0731\patch_v0731.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v0732\patch_v0732.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.3\.1"') { throw "Source version verification failed: expected 0.7.3.1" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.3\.2"') { throw "Source version verification failed: expected 0.7.3.1" }
           Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.3.1" -Encoding ascii
 
       - name: Install desktop build dependencies
@@ -111,7 +113,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.3.1_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.3.2_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -120,21 +122,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.3.1 release asset
+      - name: Publish v0.7.3.2 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.3.1" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.3.2" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.7.3.1" --repo "${{ github.repository }}" --yes --cleanup-tag
+            gh release delete "v0.7.3.2" --repo "${{ github.repository }}" --yes --cleanup-tag
           }
           $ghargs = @(
-            "release", "create", "v0.7.3.1", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.3.2", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.3.1",
-            "--notes", "V0.7.3.1 fixes a release-pipeline bug that mislabeled a V0.7.2 binary as V0.7.3. It also recalibrates the September 2026 VALORANT result screen, cleans chat/TTS metadata leakage, adds safe NDM leftover cleanup, and adds the optional Qwen3 VoiceDesign little-girl expansion."
+            "--title", "XiaoMeili V0.7.3.2",
+            "--notes", "V0.7.3.2 makes user corrections deterministic: the same corrected question now bypasses model randomness and directly uses the latest user-provided answer. It also rewrites conflicting recent chat memory and keeps corrected examples as strong guidance for similar questions."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -144,8 +146,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.1/XiaoMeili_0.7.3.1_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.3.1_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.2/XiaoMeili_0.7.3.2_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.3.2_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -168,10 +170,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.1/XiaoMeili_0.7.3.1_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.2/XiaoMeili_0.7.3.2_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.3.1"
+            version = "0.7.3.2"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
@@ -194,6 +196,8 @@ jobs:
               "新增大脑 V0.7 文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
               "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
               "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
+              "修复纠正答案只作为弱示例、会被历史对话和随机生成覆盖的问题：同样问题现在直接使用主人最后一次纠正答案",
+              "纠正时同步改写冲突的近期聊天记忆；相似问题继续把纠正样本作为高优先级参考",
               "保留播放设备选择、动态版本号、废弃组件清理、V2 鼠标互动、自更新与桌面错误日志机制"
             )
           }
@@ -201,5 +205,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.3.1 manifest"
+          git commit -m "Publish XiaoMeili v0.7.3.2 manifest"
           git push
