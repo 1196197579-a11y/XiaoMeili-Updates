@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.6.2
+name: Build and publish XiaoMeili v0.6.2.1
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - "seed/XiaoMeili_V0_6_1_1_BootstrapFix_UpdateReady.zip"
       - "build/v062/**"
+      - "build/v0621/**"
 
 permissions:
   contents: write
@@ -40,10 +41,11 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.6.2
+      - name: Patch stable source to v0.6.2.1
         shell: pwsh
         run: |
           python "build\v062\patch_v062.py" "$env:SOURCE_ROOT" "$PWD"
+          python "build\v0621\patch_v0621.py" "$env:SOURCE_ROOT"
           python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py"
 
       - name: Install desktop build dependencies
@@ -87,7 +89,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.6.2_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.6.2.1_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -96,20 +98,20 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.6.2 release asset
+      - name: Publish v0.6.2.1 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.6.2" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.6.2.1" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.6.2" --repo "${{ github.repository }}" --yes --cleanup-tag
+            gh release delete "v0.6.2.1" --repo "${{ github.repository }}" --yes --cleanup-tag
           }
           $ghargs = @(
-            "release", "create", "v0.6.2", "$env:UPDATE_ZIP",
+            "release", "create", "v0.6.2.1", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.6.2",
+            "--title", "XiaoMeili V0.6.2.1",
             "--notes", "Replace Kokoro with Alibaba Qwen3-TTS 1.7B CustomVoice. Adds native-Chinese Vivian/Serena XiaoMeili voice presets. The heavy TTS model is downloaded once from inside XiaoMeili and is not bundled in the updater."
           )
           & gh @ghargs
@@ -120,7 +122,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2/XiaoMeili_0.6.2_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2.1/XiaoMeili_0.6.2.1_update.zip"
           $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.6.2_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -142,22 +144,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2/XiaoMeili_0.6.2_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.6.2.1/XiaoMeili_0.6.2.1_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.6.2"
+            version = "0.6.2.1"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
               "语音引擎由 Kokoro 更换为阿里 Qwen3-TTS 1.7B CustomVoice",
               "提供 Vivian / Serena 两个原生中文年轻女声及四种小美丽风格预设",
               "首次启用 Qwen3-TTS 时由小美丽内部自动准备独立运行环境和约 4.5GB 模型",
-              "保留 V2 鼠标互动、自动更新与桌面错误日志机制"
+              "修复 V0.6.1.1 更新到 100% 后直接退出的问题",
+              "更新助手改为外置运行并增加启动存活检测，后续更新失败不会再先把小美丽关掉",
+              "保留 V2 鼠标互动、Qwen3-TTS 与桌面错误日志机制"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.6.2 manifest"
+          git commit -m "Publish XiaoMeili v0.6.2.1 manifest"
           git push
