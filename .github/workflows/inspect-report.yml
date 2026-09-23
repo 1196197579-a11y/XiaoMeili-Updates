@@ -34,12 +34,9 @@ jobs:
           python "build\v0733\patch_v0733.py" "$src"
           python "build\v074\patch_v074.py" "$src"
           python "build\v075\patch_v075.py" "$src"
-          Write-Host "=== STORAGE PATH MATCHES main.py ==="
+          Write-Host "=== MAIN TOP 1-115 ==="
           $main = Join-Path $src "app\src\main.py"
-          Select-String -Path $main -Pattern "XiaoMeiliData|PUBLIC|USER|UPDATE|updates|temp|cache|logs|assets|voice|brain" -Context 2,3 | ForEach-Object { $_.ToString() }
-          Write-Host "=== STORAGE PATH MATCHES voice_qwen.py ==="
-          $voice = Join-Path $src "app\src\voice_qwen.py"
-          Select-String -Path $voice -Pattern "XiaoMeiliData|PUBLIC|DATA_ROOT|RUNTIME_ROOT|MODEL_DIR|CACHE_DIR|logs" -Context 2,3 | ForEach-Object { $_.ToString() }
-          Write-Host "=== STORAGE PATH MATCHES brain_qwen.py ==="
-          $brain = Join-Path $src "app\src\brain_qwen.py"
-          Select-String -Path $brain -Pattern "XiaoMeiliData|PUBLIC|DATA_ROOT|BRAIN_ROOT|RUNTIME|MODEL|UPDATE|cache|logs" -Context 2,3 | ForEach-Object { $_.ToString() }
+          $ml = Get-Content -LiteralPath $main
+          for ($i=0; $i -lt [Math]::Min($ml.Count,115); $i++) { Write-Host ("M{0}: {1}" -f ($i+1), $ml[$i]) }
+          Write-Host "=== UPDATE CODE MATCHES ==="
+          Select-String -Path $main -Pattern "update_helper|updater|UPDATE_DIR|apply_update|立即更新|update.zip|updates" -Context 5,16 | ForEach-Object { $_.ToString() }
