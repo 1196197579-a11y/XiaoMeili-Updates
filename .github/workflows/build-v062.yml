@@ -68,8 +68,8 @@ jobs:
           Run-PythonChecked "build\v0732\patch_v0732.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.3\.2"') { throw "Source version verification failed: expected 0.7.3.1" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.3.1" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.3\.2"') { throw "Source version verification failed: expected 0.7.3.2" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.3.2" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
