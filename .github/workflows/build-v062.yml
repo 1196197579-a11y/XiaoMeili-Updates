@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.5
+name: Build and publish XiaoMeili v0.7.6
 
 on:
   push:
@@ -17,6 +17,7 @@ on:
       - "build/v0733/**"
       - "build/v074/**"
       - "build/v075/**"
+      - "build/v076/**"
 
 permissions:
   contents: write
@@ -51,7 +52,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.5
+      - name: Patch stable source to v0.7.6
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -72,10 +73,19 @@ jobs:
           Run-PythonChecked "build\v0733\patch_v0733.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v074\patch_v074.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v075\patch_v075.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v076\patch_v076.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$env:SOURCE_ROOT\app\assets\storage_migrate.ps1", [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) { throw "PowerShell helper parse failed: $($parseErrors | Out-String)" }
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$env:SOURCE_ROOT\app\assets\update_helper.ps1", [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) { throw "Update helper parse failed: $($parseErrors | Out-String)" }
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.5"') { throw "Source version verification failed: expected 0.7.5" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.5" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.6"') { throw "Source version verification failed: expected 0.7.6" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.6" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -119,7 +129,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.5_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.6_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -128,21 +138,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.5 release asset
+      - name: Publish v0.7.6 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.5" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.6" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.7.5" --repo "${{ github.repository }}" --yes --cleanup-tag
+            gh release delete "v0.7.6" --repo "${{ github.repository }}" --yes --cleanup-tag
           }
           $ghargs = @(
-            "release", "create", "v0.7.5", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.6", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.5",
-            "--notes", "V0.7.5 upgrades semantic learning into a closed loop: confirmed structured rules, semantic rule matching, post-generation semantic guard, automatic rewrites when a candidate violates the taught intent, safe fallback to the user reference answer, and an editable learning-rule library."
+            "--title", "XiaoMeili V0.7.6",
+            "--notes", "V0.7.6 adds a safe one-click C-to-D storage migration. XiaoMeiliData is copied and verified before C data is removed, then the old C path becomes a Windows junction to D so all existing absolute paths and effects remain valid. Future updater extraction and rollback backups are also staged in the D-backed updates folder."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -152,8 +162,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.5/XiaoMeili_0.7.5_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.5_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.6/XiaoMeili_0.7.6_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.6_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -176,10 +186,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.5/XiaoMeili_0.7.5_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.6/XiaoMeili_0.7.6_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.5"
+            version = "0.7.6"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
@@ -202,11 +212,17 @@ jobs:
               "新增大脑 V0.7 文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
               "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
               "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
-              "新增 V0.7.5 语义守门：学这个意思会先提炼成场景、核心意思、必须体现、禁止偏离和语气，并让主人确认后才保存",
+              "新增存储页：可一键把整个 XiaoMeiliData 安全迁移到 D 盘，默认 D:\\XiaoMeiliData",
+              "迁移覆盖 Qwen3-8B、llama.cpp、Qwen3-TTS、语音运行环境、动作素材、养成库、日志、调试文件与更新缓存",
+              "采用先复制、逐文件校验、再切换的策略；失败自动回滚，校验成功后才删除 C 盘旧副本",
+              "C:\\Users\\Public\\XiaoMeiliData 会保留为几乎不占空间的 Junction 兼容入口，因此旧配置和绝对素材路径无需修改",
+              "新版更新助手把更新解压目录和程序回滚备份放在 XiaoMeiliData/updates，迁移后实际位于 D 盘，避免后续更新继续大量挤占 C 盘",
+              "启动时自动清理旧更新器遗留在 C 盘的 XiaoMeiliUpdate 临时目录和程序 .backup 目录",
+              "新增 V0.7.6 语义守门：学这个意思会先提炼成场景、核心意思、必须体现、禁止偏离和语气，并让主人确认后才保存",
               "回答命中语义规则后不会直接放行，而是先经过第二次语义检查；不合格自动重写，连续失败回退主人参考答案",
               "新增养成库，可查看规则编号、模式、启用状态和命中次数，并可编辑、暂停或删除规则",
               "相似问题由本地 Qwen 做规则匹配，只有高置信度命中才套用规则，避免无关问题被错误牵连",
-              "新增 V0.7.5 语义养成：纠正答案时可选择学这个意思或固定这句话两种模式",
+              "新增 V0.7.6 语义养成：纠正答案时可选择学这个意思或固定这句话两种模式",
               "学这个意思会保留核心立场、肯定或否定方向、人物关系与语气，同时允许 Qwen 自然重组句子，不再机械背台词",
               "同一问题的新语义规则会覆盖旧固定规则；纠正时会移除冲突的旧聊天记忆，避免被历史答案拉回去",
               "若语义模式生成结果只是逐字复述参考句，小美丽会自动再尝试一次自然改写",
@@ -221,5 +237,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.5 manifest"
+          git commit -m "Publish XiaoMeili v0.7.6 manifest"
           git push
