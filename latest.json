@@ -1,8 +1,8 @@
 {
   "protocol": 1,
-  "version": "0.7.3.2",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.7.3.2/XiaoMeili_0.7.3.2_update.zip",
-  "sha256": "b4c73aafbe32c3aa778c9cf09f3fa4af73f841c0f7337bcd1181ce5ae0e5ccc5",
+  "version": "0.7.3.3",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.7.3.3/XiaoMeili_0.7.3.3_update.zip",
+  "sha256": "54511c6a14c5153f4eead5aee828648dedd6a1d09ed0183a56468e128149251a",
   "notes": [
     "语音引擎由 Kokoro 更换为阿里 Qwen3-TTS 1.7B CustomVoice",
     "提供 Vivian / Serena 两个原生中文年轻女声及四种小美丽风格预设",
@@ -23,6 +23,8 @@
     "新增大脑 V0.7 文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
     "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
     "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
+    "按 2026-09-24 用户实测结算页重新校准高清战报快照：纵向由 42%-74% 下移到 50%-82%，完整保留昵称、表现评分与 KDA",
+    "同步重算昵称 OCR 与 KDA OCR 子区域，避免快照底部截断导致击杀数 K 解析失败",
     "修复纠正答案只作为弱示例、会被历史对话和随机生成覆盖的问题：同样问题现在直接使用主人最后一次纠正答案",
     "纠正时同步改写冲突的近期聊天记忆；相似问题继续把纠正样本作为高优先级参考",
     "保留播放设备选择、动态版本号、废弃组件清理、V2 鼠标互动、自更新与桌面错误日志机制"
