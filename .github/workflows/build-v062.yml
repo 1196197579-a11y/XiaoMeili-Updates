@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.3.3
+name: Build and publish XiaoMeili v0.7.4
 
 on:
   push:
@@ -15,6 +15,7 @@ on:
       - "build/v0731/**"
       - "build/v0732/**"
       - "build/v0733/**"
+      - "build/v074/**"
 
 permissions:
   contents: write
@@ -49,7 +50,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.3.3
+      - name: Patch stable source to v0.7.4
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -68,10 +69,11 @@ jobs:
           Run-PythonChecked "build\v0731\patch_v0731.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "build\v0732\patch_v0732.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0733\patch_v0733.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v074\patch_v074.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.3\.3"') { throw "Source version verification failed: expected 0.7.3.3" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.3.3" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.4"') { throw "Source version verification failed: expected 0.7.4" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.4" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -115,7 +117,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.3.3_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.4_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -124,21 +126,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.3.3 release asset
+      - name: Publish v0.7.4 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.3.3" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.4" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.7.3.3" --repo "${{ github.repository }}" --yes --cleanup-tag
+            gh release delete "v0.7.4" --repo "${{ github.repository }}" --yes --cleanup-tag
           }
           $ghargs = @(
-            "release", "create", "v0.7.3.3", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.4", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.3.3",
-            "--notes", "V0.7.3.3 recalibrates the September 24 VALORANT result snapshot: the high-resolution player-card crop moves from y=42%-74% to y=50%-82%, and nickname/KDA OCR bands are retargeted so full K/D/A values are no longer clipped."
+            "--title", "XiaoMeili V0.7.4",
+            "--notes", "V0.7.4 adds semantic learning. User corrections now offer two modes: Learn the meaning lets Qwen preserve the user-defined intent/stance while naturally paraphrasing, while Fixed sentence keeps deterministic exact replies. Semantic lessons suppress stale fixed answers and conflicting recent chat history."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -148,8 +150,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.3/XiaoMeili_0.7.3.3_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.3.3_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.4/XiaoMeili_0.7.4_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.4_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -172,10 +174,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.3.3/XiaoMeili_0.7.3.3_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.4/XiaoMeili_0.7.4_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.3.3"
+            version = "0.7.4"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
@@ -198,6 +200,10 @@ jobs:
               "新增大脑 V0.7 文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
               "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
               "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
+              "新增 V0.7.4 语义养成：纠正答案时可选择“学这个意思”或“固定这句话”两种模式",
+              "学这个意思会保留核心立场、肯定/否定方向、人物关系与语气，同时允许 Qwen 自然重组句子，不再机械背台词",
+              "同一问题的新语义规则会覆盖旧固定规则；纠正时会移除冲突的旧聊天记忆，避免被历史答案拉回去",
+              "若语义模式生成结果只是逐字复述参考句，小美丽会自动再尝试一次自然改写",
               "按 2026-09-24 用户实测结算页重新校准高清战报快照：纵向由 42%-74% 下移到 50%-82%，完整保留昵称、表现评分与 KDA",
               "同步重算昵称 OCR 与 KDA OCR 子区域，避免快照底部截断导致击杀数 K 解析失败",
               "修复纠正答案只作为弱示例、会被历史对话和随机生成覆盖的问题：同样问题现在直接使用主人最后一次纠正答案",
@@ -209,5 +215,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.3.3 manifest"
+          git commit -m "Publish XiaoMeili v0.7.4 manifest"
           git push
