@@ -131,7 +131,7 @@ def patch(source_root: Path):
 
     # Replace save_feedback as a whole. This is more robust than matching escaped newline literals.
     sf_start = b.index('    def save_feedback(')
-    sf_end = b.index('\\n    def feedback_count', sf_start)
+    sf_end = b.index('    def feedback_count', sf_start)
     save_method = '''    def save_feedback(self, rating: str, user_text: str, assistant_text: str, correction: str = ""):
         row = {
             "time": datetime.now().isoformat(timespec="seconds"),
