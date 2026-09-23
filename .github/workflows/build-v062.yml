@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "seed/XiaoMeili_V0_6_1_1_BootstrapFix_UpdateReady.zip"
+      - "build/v062/**"
 
 permissions:
   contents: write
