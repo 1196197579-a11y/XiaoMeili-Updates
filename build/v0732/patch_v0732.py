@@ -130,15 +130,13 @@ def patch(source_root: Path):
     b = replace_once(b, old_rows, new_rows, "feedback rows refactor")
 
     # When the user explicitly corrects an answer, also rewrite the recent chat memory.
-    old_save = '''        with open(FEEDBACK_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-'''
-    new_save = '''        with open(FEEDBACK_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        if str(rating) == "down" and str(correction or "").strip():
-            self._rewrite_history_with_correction(user_text, str(correction).strip())
-'''
-    b = replace_once(b, old_save, new_save, "history rewrite on correction")
+    save_line = '            f.write(json.dumps(row, ensure_ascii=False) + "\\n")\\n'
+    save_replacement = (
+        '            f.write(json.dumps(row, ensure_ascii=False) + "\\n")\\n'
+        '        if str(rating) == "down" and str(correction or "").strip():\\n'
+        '            self._rewrite_history_with_correction(user_text, str(correction).strip())\\n'
+    )
+    b = replace_once(b, save_line, save_replacement, "history rewrite on correction")
 
     # Exact corrected questions must bypass model randomness entirely.
     ask_anchor = '''        self._generate_busy = True
