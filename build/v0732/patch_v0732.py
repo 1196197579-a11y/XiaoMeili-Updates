@@ -129,14 +129,24 @@ def patch(source_root: Path):
 '''
     b = replace_once(b, old_rows, new_rows, "feedback rows refactor")
 
-    # When the user explicitly corrects an answer, also rewrite the recent chat memory.
-    save_line = '            f.write(json.dumps(row, ensure_ascii=False) + "\\n")\\n'
-    save_replacement = (
-        '            f.write(json.dumps(row, ensure_ascii=False) + "\\n")\\n'
-        '        if str(rating) == "down" and str(correction or "").strip():\\n'
-        '            self._rewrite_history_with_correction(user_text, str(correction).strip())\\n'
-    )
-    b = replace_once(b, save_line, save_replacement, "history rewrite on correction")
+    # Replace save_feedback as a whole. This is more robust than matching escaped newline literals.
+    sf_start = b.index('    def save_feedback(')
+    sf_end = b.index('\\n    def feedback_count', sf_start)
+    save_method = '''    def save_feedback(self, rating: str, user_text: str, assistant_text: str, correction: str = ""):
+        row = {
+            "time": datetime.now().isoformat(timespec="seconds"),
+            "rating": str(rating),
+            "user_text": str(user_text or "").strip(),
+            "assistant_text": str(assistant_text or "").strip(),
+            "correction": str(correction or "").strip(),
+        }
+        FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(FEEDBACK_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\\n")
+        if str(rating) == "down" and str(correction or "").strip():
+            self._rewrite_history_with_correction(user_text, str(correction).strip())
+'''
+    b = b[:sf_start] + save_method + b[sf_end:]
 
     # Exact corrected questions must bypass model randomness entirely.
     ask_anchor = '''        self._generate_busy = True
