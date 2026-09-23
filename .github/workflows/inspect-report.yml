@@ -30,5 +30,6 @@ jobs:
           python "build\v0731\patch_v0731.py" "$src" "$PWD"
           python "build\v0732\patch_v0732.py" "$src"
           $main = Join-Path $src "app\src\main.py"
-          Write-Host "=== MATCHES ==="
-          Select-String -Path $main -Pattern "report_locked_parse_fail|ROI_REPORT|report_crop|locked_parse|五卡|战报|KDA" -Context 6,10 | ForEach-Object { $_.ToString() }
+          Write-Host "=== REPORT CODE 2890-3215 ==="
+          $all = Get-Content -LiteralPath $main
+          for ($i=2889; $i -lt [Math]::Min($all.Count,3215); $i++) { Write-Host ("{0}: {1}" -f ($i+1), $all[$i]) }
