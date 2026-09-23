@@ -1,0 +1,11 @@
+{
+  "protocol": 1,
+  "version": "0.6.1.1",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.6.1.1/XiaoMeili_0.6.1.1_update.zip",
+  "sha256": "",
+  "notes": [
+    "建立小美丽永久更新通道",
+    "当前版本为 V0.6.1.1，暂无更高版本需要安装",
+    "后续版本将通过此清单推送"
+  ]
+}
