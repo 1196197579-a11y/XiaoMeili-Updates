@@ -123,7 +123,7 @@ def patch(source_root: Path, repo_root: Path):
         ok, msg = self.brain_service.test_ndm()
         self.brain_status.setText(msg)
         if not ok:
-            QMessageBox.warning(self, "NDM 未连接", "没有连接到 Neat Download Manager。\n\n请先打开 NDM，再点击“测试 NDM”。")
+            QMessageBox.warning(self, "NDM 未连接", "没有连接到 Neat Download Manager。\\n\\n请先打开 NDM，再点击“测试 NDM”。")
 
     def _prepare_brain(self):
         self._brain_save_settings()
@@ -138,7 +138,7 @@ def patch(source_root: Path, repo_root: Path):
                 return
             ok, msg = self.brain_service.test_ndm()
             if not ok:
-                QMessageBox.warning(self, "NDM 未连接", "请先打开 Neat Download Manager。\n\n小美丽会直接连接 NDM 本机接收服务，不需要浏览器扩展。")
+                QMessageBox.warning(self, "NDM 未连接", "请先打开 Neat Download Manager。\\n\\n小美丽会直接连接 NDM 本机接收服务，不需要浏览器扩展。")
                 return
         self.brain_prepare_btn.setEnabled(False)
         self.brain_status.setText("正在准备本地大脑…")
