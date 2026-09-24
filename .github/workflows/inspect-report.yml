@@ -36,10 +36,15 @@ jobs:
           python "build\v0761\patch_v0761.py" "$src" "$PWD"
           python "build\v0762\patch_v0762.py" "$src"
           $main = Join-Path $src "app\src\main.py"
-          $ml = Get-Content -LiteralPath $main
-          $hit = Select-String -Path $main -Pattern "^class PetWindow" | Select-Object -First 1
-          if (-not $hit) { throw "PetWindow not found" }
-          $start = [Math]::Max(0, $hit.LineNumber - 40)
-          $end = [Math]::Min($ml.Count, $hit.LineNumber + 520)
-          Write-Host ("=== PETWINDOW " + $hit.LineNumber + " ===")
-          for ($i=$start; $i -lt $end; $i++) { Write-Host ("P{0}: {1}" -f ($i+1), $ml[$i]) }
+          New-Item -ItemType Directory -Force -Path (Join-Path $PWD "generated") | Out-Null
+          Copy-Item -LiteralPath $main -Destination (Join-Path $PWD "generated\current_main_v0762.py") -Force
+          Copy-Item -LiteralPath (Join-Path $src "app\src\brain_qwen.py") -Destination (Join-Path $PWD "generated\current_brain_v0762.py") -Force
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated/current_main_v0762.py generated/current_brain_v0762.py
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Snapshot reconstructed V0.7.6.2 source for V0.7.7 development"
+            git push
+          }
+          Write-Host "snapshot committed"
