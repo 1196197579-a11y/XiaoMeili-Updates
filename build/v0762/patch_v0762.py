@@ -29,9 +29,12 @@ def patch(source_root: Path):
     if n != 1:
         raise RuntimeError("version replacement failed")
 
-    # Add zipfile for package integrity validation.
+    # Add zipfile for package integrity validation without depending on a specific import ordering.
     if "import zipfile\n" not in s:
-        s = replace_once(s, "import urllib.request\n", "import urllib.request\nimport zipfile\n", "zipfile import")
+        m = re.search(r"^import [^\\n]+\\n", s, flags=re.MULTILINE)
+        if not m:
+            raise RuntimeError("could not find an import anchor for zipfile")
+        s = s[:m.end()] + "import zipfile\\n" + s[m.end():]
 
     start = s.index("    def install_latest_async(self):\n", s.index("class UpdateService(QObject):"))
     end = s.index("\n\ndef _path_size_bytes", start)
