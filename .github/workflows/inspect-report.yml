@@ -37,5 +37,5 @@ jobs:
           python "build\v0762\patch_v0762.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $ml = Get-Content -LiteralPath $main
-          Write-Host "=== MOUSE LAYER 720-1050 ==="
-          for ($i=719; $i -lt [Math]::Min($ml.Count,1050); $i++) { Write-Host ("L{0}: {1}" -f ($i+1), $ml[$i]) }
+          Write-Host "=== PET 1050-1550 ==="
+          for ($i=1049; $i -lt [Math]::Min($ml.Count,1550); $i++) { Write-Host ("P{0}: {1}" -f ($i+1), $ml[$i]) }
