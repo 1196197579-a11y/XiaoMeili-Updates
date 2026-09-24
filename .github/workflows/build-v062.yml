@@ -1,24 +1,10 @@
-name: Build and publish XiaoMeili v0.7.6.1.1
+name: Build and publish XiaoMeili v0.7.6.2
 
 on:
   push:
     branches: [main]
     paths:
-      - "seed/XiaoMeili_V0_6_1_1_BootstrapFix_UpdateReady.zip"
-      - "build/v062/**"
-      - "build/v0621/**"
-      - "build/v0622/**"
-      - "build/v070/**"
-      - "build/v071/**"
-      - "build/v072/**"
-      - "build/v073/**"
-      - "build/v0731/**"
-      - "build/v0732/**"
-      - "build/v0733/**"
-      - "build/v074/**"
-      - "build/v075/**"
-      - "build/v076/**"
-      - "build/v0761/**"
+      - "build/release-trigger/**"
 
 permissions:
   contents: write
@@ -53,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.6.1.1
+      - name: Patch stable source to v0.7.6.2
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -76,6 +62,7 @@ jobs:
           Run-PythonChecked "build\v075\patch_v075.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v076\patch_v076.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "build\v0761\patch_v0761.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v0762\patch_v0762.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -112,8 +99,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.6\.1"') { throw "Source version verification failed: expected 0.7.6.1" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.6.1" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.6\.2"') { throw "Source version verification failed: expected 0.7.6.2" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.6.2" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -157,7 +144,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.6.1_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.6.2_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -166,21 +153,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.6.1 release asset
+      - name: Publish v0.7.6.2 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.6.1" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.6.2" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release delete "v0.7.6.1" --repo "${{ github.repository }}" --yes --cleanup-tag
+            throw "Release v0.7.6.2 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.6.1", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.6.2", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.6.1",
-            "--notes", "V0.7.6.1 adds a safe one-click C-to-D storage migration. XiaoMeiliData is copied and verified before C data is removed, then the old C path becomes a Windows junction to D so all existing absolute paths and effects remain valid. Future updater extraction and rollback backups are also staged in the D-backed updates folder."
+            "--title", "XiaoMeili V0.7.6.2",
+            "--notes", "V0.7.6.2 keeps the V0.7.6.1 D-drive migration hotfix and hardens self-update downloads with three retries, cache-busting retries, Content-Length validation, SHA-256 validation before rename, and ZIP integrity checks. Release assets are now immutable per version."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -190,7 +177,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.6.1/XiaoMeili_0.7.6.1_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.6.2/XiaoMeili_0.7.6.2_update.zip"
           $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.6.1_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -214,10 +201,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.6.1/XiaoMeili_0.7.6.1_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.6.2/XiaoMeili_0.7.6.2_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.6.1"
+            version = "0.7.6.2"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
@@ -240,6 +227,10 @@ jobs:
               "新增大脑 V0.7 文字聊天页，可直接和小美丽对话并使用已固定的 Qwen3-TTS 声音自动朗读",
               "新增可编辑人格卡，以及 spoken_text / board_text / emotion 三段式结构化回答",
               "新增👍/👎养成样本：喜欢的回答和手动纠正会本地保存并作为后续回答示例，不需要现在训练模型",
+              "修复 V0.7.6.1 更新包在部分网络/CDN链路下下载后 SHA-256 不一致的问题：下载器现在最多自动重试 3 次",
+              "更新下载增加 Content-Length 完整性检查、SHA-256 预校验和 ZIP 内部完整性检查，失败的候选包不会进入安装阶段",
+              "重试时自动加入 no-cache 与缓存穿透参数，避免继续命中异常缓存对象",
+              "发布流水线改为每个版本资产不可覆盖，并只在显式 release-trigger 时构建，避免同一版本重复发布造成 CDN 缓存混淆",
               "修复 V0.7.6 点击 D 盘迁移后小美丽直接关闭的问题：根因是 Windows PowerShell 5.1 对无 BOM UTF-8 中文脚本的编码解析失败",
               "迁移助手改为纯 ASCII 脚本，兼容 Windows PowerShell 5.1",
               "新增启动握手机制：迁移助手必须先写入 READY 标记，小美丽才允许退出；脚本解析失败时小美丽保持运行且不会碰数据",
@@ -249,11 +240,11 @@ jobs:
               "C:\\Users\\Public\\XiaoMeiliData 会保留为几乎不占空间的 Junction 兼容入口，因此旧配置和绝对素材路径无需修改",
               "新版更新助手把更新解压目录和程序回滚备份放在 XiaoMeiliData/updates，迁移后实际位于 D 盘，避免后续更新继续大量挤占 C 盘",
               "启动时自动清理旧更新器遗留在 C 盘的 XiaoMeiliUpdate 临时目录和程序 .backup 目录",
-              "新增 V0.7.6.1 语义守门：学这个意思会先提炼成场景、核心意思、必须体现、禁止偏离和语气，并让主人确认后才保存",
+              "新增 V0.7.6.2 语义守门：学这个意思会先提炼成场景、核心意思、必须体现、禁止偏离和语气，并让主人确认后才保存",
               "回答命中语义规则后不会直接放行，而是先经过第二次语义检查；不合格自动重写，连续失败回退主人参考答案",
               "新增养成库，可查看规则编号、模式、启用状态和命中次数，并可编辑、暂停或删除规则",
               "相似问题由本地 Qwen 做规则匹配，只有高置信度命中才套用规则，避免无关问题被错误牵连",
-              "新增 V0.7.6.1 语义养成：纠正答案时可选择学这个意思或固定这句话两种模式",
+              "新增 V0.7.6.2 语义养成：纠正答案时可选择学这个意思或固定这句话两种模式",
               "学这个意思会保留核心立场、肯定或否定方向、人物关系与语气，同时允许 Qwen 自然重组句子，不再机械背台词",
               "同一问题的新语义规则会覆盖旧固定规则；纠正时会移除冲突的旧聊天记忆，避免被历史答案拉回去",
               "若语义模式生成结果只是逐字复述参考句，小美丽会自动再尝试一次自然改写",
@@ -268,5 +259,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.6.1 manifest"
+          git commit -m "Publish XiaoMeili v0.7.6.2 manifest"
           git push
