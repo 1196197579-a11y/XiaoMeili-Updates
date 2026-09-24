@@ -1,4 +1,4 @@
-name: Inspect XiaoMeili report crop
+name: Inspect XiaoMeili source
 on:
   push:
     paths:
@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Expand seed and inspect report crop code
+      - name: Expand seed and inspect drag interaction
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -29,16 +29,13 @@ jobs:
           python "build\v072\patch_v072.py" "$src" "$PWD"
           python "build\v0731\patch_v0731.py" "$src" "$PWD"
           python "build\v0732\patch_v0732.py" "$src"
-          $main = Join-Path $src "app\src\main.py"
-          python "build\v0733\patch_v0733.py" "$src"
-          python "build\v0733\patch_v0733.py" "$src"
-          python "build\v074\patch_v074.py" "$src"
-          python "build\v075\patch_v075.py" "$src"
           python "build\v0733\patch_v0733.py" "$src"
           python "build\v074\patch_v074.py" "$src"
           python "build\v075\patch_v075.py" "$src"
           python "build\v076\patch_v076.py" "$src" "$PWD"
-          Write-Host "=== UPDATE SERVICE 3850-4155 ==="
+          python "build\v0761\patch_v0761.py" "$src" "$PWD"
+          python "build\v0762\patch_v0762.py" "$src"
           $main = Join-Path $src "app\src\main.py"
-          $ml = Get-Content -LiteralPath $main
-          for ($i=3849; $i -lt [Math]::Min($ml.Count,4155); $i++) { Write-Host ("U{0}: {1}" -f ($i+1), $ml[$i]) }
+          Write-Host "=== DRAG / PUPPET MATCHES ==="
+          Select-String -Path $main -Pattern "class PetWindow|mousePressEvent|mouseMoveEvent|mouseReleaseEvent|drag|mouse_interaction|puppet|Mouse|QPixmap|QGraphicsOpacityEffect" -Context 8,20 | ForEach-Object { $_.ToString() }
+
