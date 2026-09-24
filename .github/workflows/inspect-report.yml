@@ -36,6 +36,10 @@ jobs:
           python "build\v0761\patch_v0761.py" "$src" "$PWD"
           python "build\v0762\patch_v0762.py" "$src"
           $main = Join-Path $src "app\src\main.py"
-          Write-Host "=== DRAG / PUPPET MATCHES ==="
-          Select-String -Path $main -Pattern "class PetWindow|mousePressEvent|mouseMoveEvent|mouseReleaseEvent|drag|mouse_interaction|puppet|Mouse|QPixmap|QGraphicsOpacityEffect" -Context 8,20 | ForEach-Object { $_.ToString() }
-
+          $ml = Get-Content -LiteralPath $main
+          $hit = Select-String -Path $main -Pattern "^class PetWindow" | Select-Object -First 1
+          if (-not $hit) { throw "PetWindow not found" }
+          $start = [Math]::Max(0, $hit.LineNumber - 40)
+          $end = [Math]::Min($ml.Count, $hit.LineNumber + 520)
+          Write-Host ("=== PETWINDOW " + $hit.LineNumber + " ===")
+          for ($i=$start; $i -lt $end; $i++) { Write-Host ("P{0}: {1}" -f ($i+1), $ml[$i]) }
