@@ -34,6 +34,30 @@ jobs:
           python "build\v0733\patch_v0733.py" "$src"
           python "build\v074\patch_v074.py" "$src"
           python "build\v075\patch_v075.py" "$src"
-          Write-Host "=== UPDATE HELPER ==="
-          $helper = Join-Path $src "app\assets\update_helper.ps1"
-          Get-Content -LiteralPath $helper | ForEach-Object { Write-Host $_ }
+          Write-Host "=== V076 MIGRATION HELPER SMOKE TEST ==="
+          $testSrc = "C:\Users\Public\XiaoMeiliData_Test076"
+          $testDst = "D:\XiaoMeiliData_Test076"
+          $testLog = "D:\xiaomeili_migration_test.log"
+          Remove-Item -LiteralPath $testSrc -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath ($testSrc + ".__C_BACKUP__") -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $testDst -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $testLog -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path (Join-Path $testSrc "brain\models") | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $testSrc "voice\runtime") | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $testSrc "assets") | Out-Null
+          '{"ok":true}' | Set-Content -LiteralPath (Join-Path $testSrc "config.json") -Encoding UTF8
+          'modeldata' | Set-Content -LiteralPath (Join-Path $testSrc "brain\models\test.gguf") -Encoding UTF8
+          'voicedata' | Set-Content -LiteralPath (Join-Path $testSrc "voice\runtime\test.bin") -Encoding UTF8
+          'assetdata' | Set-Content -LiteralPath (Join-Path $testSrc "assets\idle.txt") -Encoding UTF8
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "build\v076\storage_migrate.ps1" -Source $testSrc -Target $testDst -ParentPid 999999 -ExePath "C:\Windows\System32\whoami.exe" -DesktopLog $testLog
+          $rc = $LASTEXITCODE
+          Write-Host "helper_exit=$rc"
+          if (Test-Path -LiteralPath $testLog) { Get-Content -LiteralPath $testLog | ForEach-Object { Write-Host $_ } }
+          if ($rc -ne 0) { throw "migration helper smoke test failed exit=$rc" }
+          $item = Get-Item -LiteralPath $testSrc -Force
+          Write-Host ("src_attrs=" + $item.Attributes)
+          Write-Host ("src_target=" + ($item.Target -join ","))
+          if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0) { throw "source is not a junction after migration" }
+          if (-not (Test-Path -LiteralPath (Join-Path $testSrc "brain\models\test.gguf"))) { throw "old path cannot read migrated file" }
+          if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "target missing migrated file" }
+          Write-Host "V076 migration helper smoke test PASS"
