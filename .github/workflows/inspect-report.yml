@@ -37,5 +37,12 @@ jobs:
           python "build\v0762\patch_v0762.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $ml = Get-Content -LiteralPath $main
-          Write-Host "=== PET 1050-1550 ==="
-          for ($i=1049; $i -lt [Math]::Min($ml.Count,1550); $i++) { Write-Host ("P{0}: {1}" -f ($i+1), $ml[$i]) }
+          python "build\v0733\patch_v0733.py" "$src"
+          python "build\v074\patch_v074.py" "$src"
+          python "build\v075\patch_v075.py" "$src"
+          python "build\v076\patch_v076.py" "$src" "$PWD"
+          python "build\v0761\patch_v0761.py" "$src" "$PWD"
+          python "build\v0762\patch_v0762.py" "$src"
+          Write-Host "=== DRAG/MOUSE MATCHES ==="
+          $main = Join-Path $src "app\src\main.py"
+          Select-String -Path $main -Pattern "mousePressEvent|mouseMoveEvent|mouseReleaseEvent|mouse_interaction|Continuous|puppet|drag|mouse_pos|paintEvent|class Pet" -Context 10,22 | ForEach-Object { $_.ToString() }
