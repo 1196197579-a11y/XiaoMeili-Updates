@@ -37,16 +37,14 @@ def patch(source_root: Path):
     )
 
     # Drag interaction becomes a real user-facing toggle.
-    s, drag_n = re.subn(
-        r'if self\.drag_press_global is not None and not self\.drag_visual_active:\n(\s+)threshold = max\(2, min\(6, int\(self\.cfg\.get\("drag_interaction", \{\}\)\.get\("threshold_px", 4\)\)\)\)',
-        'if (self.drag_press_global is not None and not self.drag_visual_active\\n'
-        '                    and bool(self.cfg.get("drag_interaction", {}).get("enabled", True))):\\n'
-        r'\1threshold = max(2, min(6, int(self.cfg.get("drag_interaction", {}).get("threshold_px", 4))))',
-        s,
-        count=1,
-    )
-    if drag_n != 1:
-        raise RuntimeError("drag enabled guard replacement failed")
+    drag_old = '''            if not self.drag_visual_active and self.drag_press_global is not None:
+                threshold = max(2, min(6, int(self.cfg.get("drag_interaction", {}).get("threshold_px", 4))))
+'''
+    drag_new = '''            if (not self.drag_visual_active and self.drag_press_global is not None
+                    and bool(self.cfg.get("drag_interaction", {}).get("enabled", True))):
+                threshold = max(2, min(6, int(self.cfg.get("drag_interaction", {}).get("threshold_px", 4))))
+'''
+    s = must(s, drag_old, drag_new, "drag enabled guard")
 
     # V2 mouse-follow strength: preserve the validated motion model and only
     # multiply its visible displacement/rotation amplitude.
