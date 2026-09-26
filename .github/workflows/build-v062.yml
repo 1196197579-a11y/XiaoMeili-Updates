@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.7.8
+name: Build and publish XiaoMeili v0.7.7.9
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.7.8
+      - name: Patch stable source to v0.7.7.9
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -72,6 +72,7 @@ jobs:
           Run-PythonChecked "build\v0776\patch_v0776.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0777\patch_v0777.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0778\patch_v0778.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0779\patch_v0779.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -108,8 +109,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.8"') { throw "Source version verification failed: expected 0.7.7.8" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.8" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.9"') { throw "Source version verification failed: expected 0.7.7.9" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.9" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -155,7 +156,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.8_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.9_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -164,21 +165,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.7.8 release asset
+      - name: Publish v0.7.7.9 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.7.8" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.7.9" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.7.7.8 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.7.7.9 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.7.8", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.7.9", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.7.8",
-            "--notes", "V0.7.7.8 repairs the current VALORANT five-card result-screen geometry by widening the horizontal OCR crop and deriving it from the same frozen full frame, fixes the white Qt scroll-host leak in dark mode while keeping the deep-teal background, and fixes locked right-click state timing so unlocking happens on release without reopening an incorrect Lock menu."
+            "--title", "XiaoMeili V0.7.7.9",
+            "--notes", "V0.7.7.9 fixes learning-library deletion at its persistence root by tombstoning deleted lessons so feedback history cannot recreate them, removes deleted fixed lessons from style examples, and adds persistent custom groups with create, rename, delete, move, ungrouped/all views and search. Groups organize the library only and never change matching behavior."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -188,8 +189,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.8/XiaoMeili_0.7.7.8_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.8_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.9/XiaoMeili_0.7.7.9_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.9_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -212,28 +213,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.8/XiaoMeili_0.7.7.8_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.9/XiaoMeili_0.7.7.9_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.7.8"
+            version = "0.7.7.9"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "修复当前无畏契约五人结算页横向截取范围过窄的问题：识别区域由左右各裁 9% 调整为约 2%–96%，完整保留第一张和第五张玩家卡片",
-              "结算页五张玩家卡片仍保持已验证的纵向范围 50%–82%，昵称、表现评分和 K/D/A 行不会因为本次横向修正而上下漂移",
-              "结算候选快照改为只抓取一次完整游戏画面，再从同一帧裁出 OCR 卡片区域，避免结算动画期间连续两次截图造成画面时序错位",
-              "解析失败时 report_locked_parse_fail 图片现在优先保存完整游戏快照，同时额外保存 report_locked_cards_parse_fail 作为实际 OCR 卡片裁剪，方便以后准确判断是截图还是解析问题",
-              "深色模式保留原有深青色主背景，卡片与控件调整为稍亮的青绿色层级，增强模块和背景之间的区分",
-              "修复深色模式卡片背后出现大块白底：为设置滚动区域的 host 与 viewport 明确应用深青色背景，不再继承 Qt 默认白色调色板",
-              "修复锁定状态右键后仍显示「锁定小美丽」的问题：锁定期间保持完整点击穿透，右键按下只记录解锁意图，直到右键释放后才解除锁定",
-              "右键菜单文本改为状态感知：已锁定时显示「解锁小美丽（游戏防误触）」，未锁定时显示「锁定小美丽（游戏防误触）」",
-              "保留 V0.7.7.7 的长期记忆、单窗口养成规则编辑、原生游戏防误触穿透和全部既有功能",
-              "发布自检新增五卡横向中心对齐、深色滚动背景和新版锁定状态逻辑检查，防止后续版本再次回退"
+              "修复养成库点击「删除」并确认后规则又重新出现的问题：根因是 learning_rules.json 删除后，旧 feedback.jsonl 养成记录会在刷新时再次迁移成规则",
+              "删除机制改为持久删除标记（tombstone）：已删除规则不会再被旧养成历史自动重建，也不会参与固定台词命中或语义匹配",
+              "进一步修复隐藏影响：删除固定规则后，对应旧纠正样本也不会继续作为回答风格示例影响小美丽",
+              "养成库新增自定义分组，可创建、重命名和删除分组；删除分组只删除文件夹结构，组内规则自动回到「未分组」，不会丢失",
+              "支持把任意语义规则或固定台词移动到指定分组，也可以随时移回「未分组」",
+              "新增「全部规则」和「未分组」视图；已有旧规则无需迁移操作，会自动归入「未分组」",
+              "新增养成库搜索，可按规则编号、触发问题、场景、核心意思、必须体现、禁止偏离、语气和参考回答快速查找",
+              "分组仅用于整理和查找，不参与语义匹配、不改变规则优先级，也不会影响小美丽实际回答逻辑",
+              "若删除一条规则后重新教同一个问题，会创建一条新的规则，而不是偷偷复活旧的已删除规则",
+              "发布自检新增完整回归链路：旧反馈生成规则 → 创建分组 → 移动 → 重命名 → 删除分组回到未分组 → 删除规则 → 再次同步旧反馈，确认规则不会复活"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.7.8 manifest"
+          git commit -m "Publish XiaoMeili v0.7.7.9 manifest"
           git push
