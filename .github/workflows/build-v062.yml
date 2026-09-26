@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.7.3
+name: Build and publish XiaoMeili v0.7.7.4
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.7.3
+      - name: Patch stable source to v0.7.7.4
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -67,6 +67,7 @@ jobs:
           Run-PythonChecked "build\v0771\patch_v0771.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "build\v0772\patch_v0772.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0773\patch_v0773.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0774\patch_v0774.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -103,8 +104,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.3"') { throw "Source version verification failed: expected 0.7.7.3" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.3" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.4"') { throw "Source version verification failed: expected 0.7.7.4" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.4" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -141,6 +142,8 @@ jobs:
           if (-not (Test-Path $exe)) { throw "PyInstaller did not produce XiaoMeili.exe" }
           & $exe --runtime-self-test
           if ($LASTEXITCODE -ne 0) { throw "Frozen runtime self-test failed: $LASTEXITCODE" }
+          & $exe --settings-ui-self-test
+          if ($LASTEXITCODE -ne 0) { throw "Frozen settings UI self-test failed: $LASTEXITCODE" }
 
       - name: Create update package and SHA-256
         shell: pwsh
@@ -148,7 +151,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.3_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.4_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -157,21 +160,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.7.3 release asset
+      - name: Publish v0.7.7.4 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.7.3" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.7.4" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.7.7.3 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.7.7.4 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.7.3", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.7.4", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.7.3",
-            "--notes", "V0.7.7.3 refreshes the settings UI: Brain model/download controls are collapsible, persona and learning rules move to second-level editors, Voice/Brain tabs keep stable names, and long update notes scroll inside a fixed panel so update controls never leave the screen. Existing brain, voice, training, drag, game recognition, storage migration and updater behavior is preserved."
+            "--title", "XiaoMeili V0.7.7.4",
+            "--notes", "V0.7.7.4 rebuilds the settings center around six user-facing sections: General, Brain, Voice, Interaction, Actions, and System. Technical model/download/update/storage/vision/log controls are consolidated under System; everyday settings use card-based navigation and immediate save; unfinished wake-word/ASR/long-term-memory features are explicitly shown as unavailable instead of fake-enabled. Existing stable runtime behavior is preserved."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -181,8 +184,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.3/XiaoMeili_0.7.7.3_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.3_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.4/XiaoMeili_0.7.7.4_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.4_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -205,24 +208,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.3/XiaoMeili_0.7.7.3_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.4/XiaoMeili_0.7.7.4_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.7.3"
+            version = "0.7.7.4"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "重构大脑设置页：组件状态、首次准备、下载方式、NDM 下载目录及说明统一收进可展开/收回的「模型与下载配置」",
-              "小美丽性格卡从主页面移入独立二级编辑窗口，主页面只保留「小美丽性格」入口，减少长期占用空间",
-              "养成库与语义规则从主页面移入独立二级编辑窗口，可继续刷新、编辑、启用/暂停和删除规则",
-              "声音与大脑标签永久去掉版本号，后续更新只显示「声音」和「大脑」",
-              "更新页版本说明改为固定高度滚动区域；无论更新内容多长，都不会把「立即更新」按钮挤出屏幕",
-              "统一设置窗口间距、圆角、边框和选中态，保持轻量 Windows 风格，并保留 V0.7.7.2 的全部核心功能"
+              "设置中心重构为六个一级入口：常规、大脑、声音、互动、动作、系统；不再使用九个顶部标签堆叠功能",
+              "采用浅灰绿背景、白色圆角卡片、青绿色强调色和左侧导航，整体视觉对齐新的白色治愈系设计方向",
+              "所有技术项统一迁入「系统 → 组件与下载 / 更新 / 存储 / 游戏识别 / 日志」，大脑和声音页面不再直接暴露模型路径、NDM 等工程信息",
+              "常规页新增昵称与 Windows 开机启动，并把置顶、点击穿透、锁定位置、透明度、桌宠大小和快捷键重新整理",
+              "大脑页重组为 AI、性格、记忆、学习与养成、表达自由度、对话测试；长期记忆未实现时明确显示「尚未启用」",
+              "声音页重组为唤醒词、语音识别、小美丽声音、自动朗读、输出设备、输入设备；未正式接入的唤醒词和 ASR 不再伪装成可用功能",
+              "互动页新增可调鼠标跟随强度和拖拽互动总开关，继续保留 V2 连续跟随与 V0.7.7.2 拖拽物理逻辑",
+              "动作页作为动作库/状态动作/事件触发/视频素材入口，继续复用原有批量导入、随机素材池、战报模板和测试能力",
+              "普通开关、滑杆和下拉项改为即时保存；复杂编辑器继续保留明确的保存动作，取消全局「保存并应用」依赖",
+              "系统日志新增「导出给 ChatGPT」诊断包，可一键打包最近日志与配置用于排错",
+              "托盘「检查更新」会自动切换到「系统 → 更新」；更新说明继续固定在滚动区域，不会撑出屏幕",
+              "发布流水线新增冻结版设置中心 UI 自检，打包前实际构造新版设置窗口并验证六大入口与系统二级页"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.7.3 manifest"
+          git commit -m "Publish XiaoMeili v0.7.7.4 manifest"
           git push
