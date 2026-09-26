@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.10: cool voice, voice selector fix, human pause, right-click unlock menu.
