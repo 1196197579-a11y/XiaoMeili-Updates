@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.6: lean General, right-click lock, rule mode editing, custom avatar.
