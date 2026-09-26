@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.3 compact settings UI refresh.
