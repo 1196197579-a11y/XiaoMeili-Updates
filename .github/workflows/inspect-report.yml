@@ -35,14 +35,10 @@ jobs:
           python "build\v076\patch_v076.py" "$src" "$PWD"
           python "build\v0761\patch_v0761.py" "$src" "$PWD"
           python "build\v0762\patch_v0762.py" "$src"
+          python "build\v077\patch_v077.py" "$src" "$PWD"
           $main = Join-Path $src "app\src\main.py"
+          Write-Host "=== PETWINDOW DRAG REGION ==="
           $ml = Get-Content -LiteralPath $main
-          python "build\v0733\patch_v0733.py" "$src"
-          python "build\v074\patch_v074.py" "$src"
-          python "build\v075\patch_v075.py" "$src"
-          python "build\v076\patch_v076.py" "$src" "$PWD"
-          python "build\v0761\patch_v0761.py" "$src" "$PWD"
-          python "build\v0762\patch_v0762.py" "$src"
-          Write-Host "=== DRAG/MOUSE MATCHES ==="
-          $main = Join-Path $src "app\src\main.py"
-          Select-String -Path $main -Pattern "mousePressEvent|mouseMoveEvent|mouseReleaseEvent|mouse_interaction|Continuous|puppet|drag|mouse_pos|paintEvent|class Pet" -Context 10,22 | ForEach-Object { $_.ToString() }
+          $start = ($ml | Select-String -Pattern "^class PetWindow\(QWidget\):").LineNumber
+          $end = ($ml | Select-String -Pattern "^class AppController\(QObject\):").LineNumber
+          for ($i=$start-1; $i -lt [Math]::Min($end-1,$start+1350); $i++) { Write-Host ("P{0}: {1}" -f ($i+1), $ml[$i]) }
