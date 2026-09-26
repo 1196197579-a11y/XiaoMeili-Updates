@@ -26,6 +26,8 @@ def install_eye_assets(source_root: Path):
     out = source_root / "app" / "assets" / "drag_interaction"
     out.mkdir(parents=True, exist_ok=True)
     for name, encoded in EYE_ASSETS_B64.items():
+        encoded = "".join(str(encoded).split())
+        encoded += "=" * ((4 - len(encoded) % 4) % 4)
         data = base64.b64decode(encoded)
         if len(data) < 500 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
             raise RuntimeError(f"invalid embedded eye asset: {name}")
