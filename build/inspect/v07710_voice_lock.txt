@@ -1,0 +1,1 @@
+Inspect V0.7.7.10 voice selector, VoiceDesign presets, natural pause path, and lock menu state.
