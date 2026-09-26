@@ -1,0 +1,1 @@
+Retry verified Windows release for XiaoMeili v0.7.7.1 after embedded eye-asset padding fix.
