@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.7.5
+name: Build and publish XiaoMeili v0.7.7.6
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.7.5
+      - name: Patch stable source to v0.7.7.6
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -69,6 +69,7 @@ jobs:
           Run-PythonChecked "build\v0773\patch_v0773.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0774\patch_v0774.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0775\patch_v0775.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0776\patch_v0776.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -105,8 +106,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.5"') { throw "Source version verification failed: expected 0.7.7.5" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.5" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.6"') { throw "Source version verification failed: expected 0.7.7.6" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.6" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -152,7 +153,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.5_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.6_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -161,21 +162,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.7.5 release asset
+      - name: Publish v0.7.7.6 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.7.5" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.7.6" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.7.7.5 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.7.7.6 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.7.5", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.7.6", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.7.5",
-            "--notes", "V0.7.7.5 fixes blank second-level dialogs by explicitly remounting hidden backend pages, replaces legacy combo/spin arrows and question marks with modern UI controls, and adds a persistent light/dark mode toggle in the upper-right corner. The release self-test now mounts Shortcut, Brain Chat, and Action pages and verifies both themes before publication."
+            "--title", "XiaoMeili V0.7.7.6",
+            "--notes", "V0.7.7.6 removes unused General controls, retires click-through in favor of right-click position locking, restores rule-mode selection after editing and adds double-click editing, and adds a persistent custom sidebar avatar stored inside XiaoMeiliData. It also migrates old click-through/opacity state to a safe interactive default."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -185,8 +186,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.5/XiaoMeili_0.7.7.5_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.5_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.6/XiaoMeili_0.7.7.6_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.6_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -209,27 +210,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.5/XiaoMeili_0.7.7.5_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.6/XiaoMeili_0.7.7.6_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.7.5"
+            version = "0.7.7.6"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "修复快捷键、对话测试、状态动作、视频素材等二级窗口只剩「关闭」按钮、内容空白的问题；根因是旧页面从隐藏 Tab 迁移后仍保持隐藏状态",
-              "二级窗口改为显式激活、重新挂载并 show，再在关闭后恢复回隐藏后台页；发布前会真实挂载快捷键、大脑对话和动作页做可见性自检",
-              "重新设计 QComboBox 下拉箭头与 QSpinBox / QDoubleSpinBox 上下调节按钮，使用细线青绿 Chevron 图标，去掉旧式 Windows 三角按钮",
-              "旧版问号帮助控件统一改成小型圆角「i」信息按钮，并与白色治愈系卡片风统一",
-              "右上角新增 34px 日夜切换按钮：白天显示月亮、夜间显示太阳，点击即时切换且记忆上次主题",
-              "夜间模式覆盖设置主界面、系统页与二级编辑窗口，并尝试同步 Windows 原生标题栏深色状态",
-              "夜间模式采用深绿黑背景、深色卡片和薄荷青绿色强调色，不改变现有功能布局与数据",
-              "滚动条、复选框、输入框、按钮、Tab、卡片 Hover 等控件同步统一视觉，避免新旧控件混搭",
-              "发布流水线扩展设置中心自检：验证快捷键 / 大脑 / 动作二级页真实可见，并验证白天与夜间主题都能正常应用"
+              "常规页彻底移除「桌宠位置」「透明度」「点击穿透」三个低频入口，只保留更常用的桌宠设置",
+              "点击穿透功能退出用户设置并自动迁移为关闭；透明度自动恢复 100%，避免移除入口后留下无法调整的隐藏状态",
+              "移除桌宠右上角悬浮锁定按钮；右键点击小美丽新增「锁定位置 / 解除锁定」选项",
+              "锁定逻辑改为只锁定位置，不再开启点击穿透，因此锁定后仍能右键小美丽并随时解除",
+              "养成库支持双击任意固定台词或语义规则直接进入编辑，不再必须先选中再点「编辑」",
+              "修复编辑固定台词后不再出现养成方式选择的问题；点击确定后重新提供「学这个意思」与「固定这句话」",
+              "已有规则可以在固定台词与语义规则之间切换模式，并保留原规则编号、启用状态与命中数据",
+              "左侧小美丽头像改为可编辑头像：鼠标悬停显示「更换」，点击选择本地 PNG/JPG/JPEG/WebP/BMP 图片",
+              "自定义头像会自动居中裁切为圆形并复制到 XiaoMeiliData/profile/avatar.png，删除原图不会影响头像，D盘迁移和后续更新也会保留",
+              "发布自检新增常规页退休控件检查和可编辑头像检查，避免旧入口在后续版本里意外重新出现"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.7.5 manifest"
+          git commit -m "Publish XiaoMeili v0.7.7.6 manifest"
           git push
