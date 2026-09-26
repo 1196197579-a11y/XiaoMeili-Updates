@@ -435,7 +435,11 @@ def patch(source_root: Path):
         # General page no longer exposes the retired controls.
         general = dialog.v774_stack.widget(0)
         texts = []
-        for w in general.findChildren((QLabel, QCheckBox, QPushButton)):
+        widgets = []
+        widgets.extend(general.findChildren(QLabel))
+        widgets.extend(general.findChildren(QCheckBox))
+        widgets.extend(general.findChildren(QPushButton))
+        for w in widgets:
             try:
                 texts.append(str(w.text() or ""))
             except Exception:
