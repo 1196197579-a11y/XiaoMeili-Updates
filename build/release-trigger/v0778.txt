@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.8: result geometry, dark UI, lock-state fixes.
