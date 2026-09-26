@@ -36,9 +36,22 @@ jobs:
           python "build\v0761\patch_v0761.py" "$src" "$PWD"
           python "build\v0762\patch_v0762.py" "$src"
           python "build\v077\patch_v077.py" "$src" "$PWD"
+          python "build\v0771\patch_v0771.py" "$src" "$PWD"
+          python "build\v0772\patch_v0772.py" "$src"
+          python "build\v0773\patch_v0773.py" "$src"
+          python "build\v0774\patch_v0774.py" "$src"
+          python "build\v0775\patch_v0775.py" "$src"
           $main = Join-Path $src "app\src\main.py"
-          Write-Host "=== PETWINDOW DRAG REGION ==="
           $ml = Get-Content -LiteralPath $main
-          $start = ($ml | Select-String -Pattern "^class PetWindow\(QWidget\):").LineNumber
-          $end = ($ml | Select-String -Pattern "^class AppController\(QObject\):").LineNumber
-          for ($i=$start-1; $i -lt [Math]::Min($end-1,$start+1350); $i++) { Write-Host ("P{0}: {1}" -f ($i+1), $ml[$i]) }
+          Write-Host "=== V0776 TARGET LINES ==="
+          $patterns = @("lock_bubble","contextMenuEvent","_brain_edit_rule","brain_rules_list","avatar =","v774_profile_name","QFileDialog","lock_position","锁定")
+          foreach ($pattern in $patterns) {
+            Write-Host ("--- PATTERN: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-18)
+              $b = [Math]::Min($ml.Count, $n+40)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("L{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
