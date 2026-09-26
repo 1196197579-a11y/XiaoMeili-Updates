@@ -140,7 +140,8 @@ def patch_main(main_path: Path):
         retired_title = "设置中心" + "焕新完成"
         if retired_title in source_text:
             raise RuntimeError("retired settings-center startup popup text returned")
-        if "QTimer.singleShot(350, self._v774_first_run_notice)" in source_text:
+        retired_timer = "QTimer.singleShot(350, " + "self._v774_first_run_notice)"
+        if retired_timer in source_text:
             raise RuntimeError("retired settings-center startup popup timer returned")
 
         return True
