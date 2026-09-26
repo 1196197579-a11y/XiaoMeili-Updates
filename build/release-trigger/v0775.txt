@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.5: second-level dialog fix, modern controls, persistent night mode.
