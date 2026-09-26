@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.7.9
+name: Build and publish XiaoMeili v0.7.7.10
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.7.9
+      - name: Patch stable source to v0.7.7.10
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -73,6 +73,7 @@ jobs:
           Run-PythonChecked "build\v0777\patch_v0777.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0778\patch_v0778.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0779\patch_v0779.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v07710\patch_v07710.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -109,8 +110,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.9"') { throw "Source version verification failed: expected 0.7.7.9" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.9" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.10"') { throw "Source version verification failed: expected 0.7.7.10" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.10" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -156,7 +157,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.9_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.10_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -165,21 +166,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.7.9 release asset
+      - name: Publish v0.7.7.10 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.7.9" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.7.10" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.7.7.9 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.7.7.10 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.7.9", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.7.10", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.7.9",
-            "--notes", "V0.7.7.9 fixes learning-library deletion at its persistence root by tombstoning deleted lessons so feedback history cannot recreate them, removes deleted fixed lessons from style examples, and adds persistent custom groups with create, rename, delete, move, ungrouped/all views and search. Groups organize the library only and never change matching behavior."
+            "--title", "XiaoMeili V0.7.7.10",
+            "--notes", "V0.7.7.10 adds a new XiaoMeili VoiceDesign preset tuned for a cool, aloof, slightly cocky young-girl delivery with subtle human-like clause pauses, fixes the voice selector event that was discarded while Settings was hidden, improves installed voice-pack status text, and changes locked right-click behavior to show an explicit Unlock menu instead of auto-unlocking and then reopening the Lock menu."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -189,8 +190,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.9/XiaoMeili_0.7.7.9_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.9_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.10/XiaoMeili_0.7.7.10_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.10_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -213,28 +214,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.9/XiaoMeili_0.7.7.9_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.10/XiaoMeili_0.7.7.10_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.7.9"
+            version = "0.7.7.10"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "修复养成库点击「删除」并确认后规则又重新出现的问题：根因是 learning_rules.json 删除后，旧 feedback.jsonl 养成记录会在刷新时再次迁移成规则",
-              "删除机制改为持久删除标记（tombstone）：已删除规则不会再被旧养成历史自动重建，也不会参与固定台词命中或语义匹配",
-              "进一步修复隐藏影响：删除固定规则后，对应旧纠正样本也不会继续作为回答风格示例影响小美丽",
-              "养成库新增自定义分组，可创建、重命名和删除分组；删除分组只删除文件夹结构，组内规则自动回到「未分组」，不会丢失",
-              "支持把任意语义规则或固定台词移动到指定分组，也可以随时移回「未分组」",
-              "新增「全部规则」和「未分组」视图；已有旧规则无需迁移操作，会自动归入「未分组」",
-              "新增养成库搜索，可按规则编号、触发问题、场景、核心意思、必须体现、禁止偏离、语气和参考回答快速查找",
-              "分组仅用于整理和查找，不参与语义匹配、不改变规则优先级，也不会影响小美丽实际回答逻辑",
-              "若删除一条规则后重新教同一个问题，会创建一条新的规则，而不是偷偷复活旧的已删除规则",
-              "发布自检新增完整回归链路：旧反馈生成规则 → 创建分组 → 移动 → 重命名 → 删除分组回到未分组 → 删除规则 → 再次同步旧反馈，确认规则不会复活"
+              "新增「小美丽｜高冷酷拽（推荐）」VoiceDesign 声线：年轻女孩感、清澈偏冷、高冷酷拽、略带漫不经心和轻微嫌弃，明确禁止甜、奶、撒娇、夹子音和成熟御姐感",
+              "新声线加入轻量真人停顿：不会乱加「嗯啊那个」等口头禅，只在中文转折和短语边界补充轻微节奏停顿，自动朗读和试听都会生效",
+              "推荐语速设定为约 0.95×；实际仍保留原语速控件，可按听感继续微调",
+              "修复中文女声下拉框长期灰色、无法重新选声线的问题：旧代码在设置窗口尚未显示时收到声线列表事件会直接丢弃，导致列表永远不填充",
+              "声线列表现在无论设置窗口是否可见都会同步；已有固定声音不会阻止你重新海选或更换其他女声",
+              "小女孩 VoiceDesign 扩展已安装时，按钮会明确显示「✓ 小女孩声线扩展已安装」，不再用灰色的「安装」按钮造成误解",
+              "当前固定声音改为显示友好名称，不再直接暴露 design_bean 等内部 ID",
+              "修复右键锁定/解锁逻辑：锁定状态不再在右键释放时自动解锁，而是弹出独立的「解锁小美丽（游戏防误触）」菜单，选择后才解除锁定",
+              "未锁定状态右键仍显示「锁定小美丽（游戏防误触）」；锁定状态和未锁定状态的菜单文字与行为现在严格对应",
+              "发布自检新增隐藏设置窗口下的声线列表填充测试、高冷推荐声线存在测试、自然停顿文本测试和锁定菜单静态检查"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.7.9 manifest"
+          git commit -m "Publish XiaoMeili v0.7.7.10 manifest"
           git push
