@@ -163,6 +163,68 @@ def patch(source_root: Path):
 '''
     s = s[:tray_start] + tray_method + s[tray_end:]
 
+    # Add a frozen/offscreen UI smoke test so the release pipeline validates
+    # actual SettingsDialog construction, not only Python syntax.
+    bottom_anchor = '\n\nif __name__=="__main__":\n'
+    if bottom_anchor not in s:
+        raise RuntimeError("main entry anchor missing")
+    smoke_func = r'''
+
+def settings_ui_self_test():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    app = QApplication.instance() or QApplication([])
+    cfg = load_config()
+    pet = PetWindow(cfg)
+    vision = VisionWorker(cfg)
+    voice = VoiceService()
+    brain = BrainService()
+    updater = UpdateService(cfg)
+    dialog = SettingsDialog(cfg, pet, vision, voice, brain, updater)
+    try:
+        expected = ["常规", "大脑", "声音", "互动", "动作", "系统"]
+        if list(getattr(dialog, "v774_nav_names", [])) != expected:
+            raise RuntimeError(f"V0.7.7.4 nav mismatch: {getattr(dialog, 'v774_nav_names', None)}")
+        system_titles = [
+            dialog.v774_system_tabs.tabText(i)
+            for i in range(dialog.v774_system_tabs.count())
+        ]
+        for title in ("更新", "存储", "组件与下载", "游戏识别", "日志"):
+            if title not in system_titles:
+                raise RuntimeError(f"V0.7.7.4 system tab missing: {title}")
+        if dialog.windowTitle() != "小美丽 设置":
+            raise RuntimeError(f"unexpected settings title: {dialog.windowTitle()}")
+        return True
+    finally:
+        try:
+            dialog.close()
+        except Exception:
+            pass
+        try:
+            brain.shutdown()
+        except Exception:
+            pass
+        try:
+            voice.shutdown()
+        except Exception:
+            pass
+'''
+    s = s.replace(bottom_anchor, smoke_func + bottom_anchor, 1)
+
+    entry_anchor = 'if __name__=="__main__":\n    if "--runtime-self-test" in sys.argv:\n'
+    if entry_anchor not in s:
+        raise RuntimeError("runtime self-test entry anchor missing")
+    entry_new = '''if __name__=="__main__":
+    if "--settings-ui-self-test" in sys.argv:
+        try:
+            settings_ui_self_test()
+            raise SystemExit(0)
+        except Exception:
+            LOGGER.exception("V0.7.7.4 设置中心自检失败")
+            raise SystemExit(8)
+    if "--runtime-self-test" in sys.argv:
+'''
+    s = s.replace(entry_anchor, entry_new, 1)
+
     # ------------------------------------------------------------------
     # V0.7.7.4 six-section settings center.
     # ------------------------------------------------------------------
@@ -1151,6 +1213,8 @@ def patch(source_root: Path):
         'micfg.get("strength", 1.0)',
         'self.v774_system_tabs.addTab(components, "组件与下载")',
         'self.setWindowTitle("小美丽 设置")',
+        'def settings_ui_self_test():',
+        '"--settings-ui-self-test" in sys.argv',
     ]
     for token in checks:
         if token not in final:
