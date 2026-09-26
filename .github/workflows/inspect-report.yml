@@ -41,11 +41,12 @@ jobs:
           python "build\v0773\patch_v0773.py" "$src"
           python "build\v0774\patch_v0774.py" "$src"
           python "build\v0775\patch_v0775.py" "$src"
+          python "build\v0776\patch_v0776.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
-          $patterns = @("lock_bubble","contextMenuEvent","_brain_edit_rule","brain_rules_list","avatar =","v774_profile_name","QFileDialog","lock_position","锁定")
+          $patterns = @("lock_bubble","contextMenuEvent","_brain_edit_rule","brain_rules_list","avatar =","v774_profile_name","QFileDialog","lock_position","锁定","apply_clickthrough_native","apply_window_flags","mousePressEvent","mouseDoubleClickEvent","mouseMoveEvent","mouseReleaseEvent")
           foreach ($pattern in $patterns) {
             Write-Host ("--- PATTERN: " + $pattern + " ---")
             $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
