@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.9: durable learning-rule deletion and custom groups.
