@@ -326,10 +326,10 @@ def patch_brain(brain_path: Path):
         "auto remember before rules",
     )
 
-    old_system = '''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
+    old_system = r'''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
                 if matched_rule:
 '''
-    new_system = '''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
+    new_system = r'''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
                 if bool(long_term_memory):
                     recalled = self.recall_memories(user_text, 8)
                     if recalled:
