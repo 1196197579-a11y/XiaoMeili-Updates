@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.7.10
+name: Build and publish XiaoMeili v0.7.7.11
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.7.10
+      - name: Patch stable source to v0.7.7.11
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -74,6 +74,7 @@ jobs:
           Run-PythonChecked "build\v0778\patch_v0778.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0779\patch_v0779.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v07710\patch_v07710.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v07711\patch_v07711.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -110,8 +111,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.10"') { throw "Source version verification failed: expected 0.7.7.10" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.10" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.11"') { throw "Source version verification failed: expected 0.7.7.11" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.11" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -157,7 +158,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.10_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.11_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -166,21 +167,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.7.10 release asset
+      - name: Publish v0.7.7.11 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.7.10" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.7.11" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.7.7.10 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.7.7.11 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.7.10", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.7.11", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.7.10",
-            "--notes", "V0.7.7.10 adds a new XiaoMeili VoiceDesign preset tuned for a cool, aloof, slightly cocky young-girl delivery with subtle human-like clause pauses, fixes the voice selector event that was discarded while Settings was hidden, improves installed voice-pack status text, and changes locked right-click behavior to show an explicit Unlock menu instead of auto-unlocking and then reopening the Lock menu."
+            "--title", "XiaoMeili V0.7.7.11",
+            "--notes", "V0.7.7.11 retunes the recommended XiaoMeili VoiceDesign line toward a slightly boyish but still female battle-sage timbre: lower and less sharp, less sweet, cooler and more combat-ready while preserving subtle human-like pauses. It also permanently removes the obsolete Settings Center onboarding popup that could reappear at startup."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -190,8 +191,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.10/XiaoMeili_0.7.7.10_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.10_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.11/XiaoMeili_0.7.7.11_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.11_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -214,28 +215,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.10/XiaoMeili_0.7.7.10_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.11/XiaoMeili_0.7.7.11_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.7.10"
+            version = "0.7.7.11"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "新增「小美丽｜高冷酷拽（推荐）」VoiceDesign 声线：年轻女孩感、清澈偏冷、高冷酷拽、略带漫不经心和轻微嫌弃，明确禁止甜、奶、撒娇、夹子音和成熟御姐感",
-              "新声线加入轻量真人停顿：不会乱加「嗯啊那个」等口头禅，只在中文转折和短语边界补充轻微节奏停顿，自动朗读和试听都会生效",
-              "推荐语速设定为约 0.95×；实际仍保留原语速控件，可按听感继续微调",
-              "修复中文女声下拉框长期灰色、无法重新选声线的问题：旧代码在设置窗口尚未显示时收到声线列表事件会直接丢弃，导致列表永远不填充",
-              "声线列表现在无论设置窗口是否可见都会同步；已有固定声音不会阻止你重新海选或更换其他女声",
-              "小女孩 VoiceDesign 扩展已安装时，按钮会明确显示「✓ 小女孩声线扩展已安装」，不再用灰色的「安装」按钮造成误解",
-              "当前固定声音改为显示友好名称，不再直接暴露 design_bean 等内部 ID",
-              "修复右键锁定/解锁逻辑：锁定状态不再在右键释放时自动解锁，而是弹出独立的「解锁小美丽（游戏防误触）」菜单，选择后才解除锁定",
-              "未锁定状态右键仍显示「锁定小美丽（游戏防误触）」；锁定状态和未锁定状态的菜单文字与行为现在严格对应",
-              "发布自检新增隐藏设置窗口下的声线列表填充测试、高冷推荐声线存在测试、自然停顿文本测试和锁定菜单静态检查"
+              "将「小美丽｜高冷酷拽」重新调成「小美丽｜战斗贤者（推荐）」：仍然是女声基底，但略带一点小男孩式的干净少年感，不会变成真正男声",
+              "降低普通小女孩声线的尖、甜和头腔感，声音重心稍微下压，清澈偏冷、薄而有韧性，更接近年轻战斗贤者而不是软萌小女孩",
+              "明确抑制甜、奶、撒娇、娃娃音、夹子音和尖细刺耳，同时避免成熟御姐、低沉成年男声和粗糙沙哑",
+              "保留高冷、酷、拽、自信、略带漫不经心和轻微嫌弃的说话性格，咬字更短促、利落、有战斗感",
+              "继续保留 V0.7.7.10 的轻量真人停顿逻辑和约 0.95× 推荐语速；不会乱塞口头禅，也不会把对白变成戏剧朗诵",
+              "沿用原 design_xiaomeili_cool 声线 ID，因此如果你已经把上一版推荐声线设为固定声音，升级后会直接使用重新调过的「战斗贤者」版本，无需重新绑定",
+              "彻底移除启动设置界面时的「设置中心焕新完成」提示框；设置中心本身保留不变，只是不再弹这个说明窗口",
+              "同时移除旧提示框的延时启动定时器和旧提示文案，避免配置迁移或状态异常时再次复活",
+              "发布自检新增：最终 EXE 源码不得包含「设置中心焕新完成」文本，也不得重新注册该启动弹窗定时器",
+              "其他 V0.7.7.10 功能保持不变：声线海选、固定声音、自然停顿、右键锁定/解锁、长期记忆、养成库分组和游戏防误触逻辑均保留"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.7.10 manifest"
+          git commit -m "Publish XiaoMeili v0.7.7.11 manifest"
           git push
