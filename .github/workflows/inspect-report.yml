@@ -42,8 +42,12 @@ jobs:
           python "build\v0774\patch_v0774.py" "$src"
           python "build\v0775\patch_v0775.py" "$src"
           python "build\v0776\patch_v0776.py" "$src"
+          python "build\v0777\patch_v0777.py" "$src"
+          python "build\v0778\patch_v0778.py" "$src"
+          python "build\v0779\patch_v0779.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $brain = Join-Path $src "app\src\brain_qwen.py"
+          $voice = Join-Path $src "app\src\voice_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
           $patterns = @("voice_combo","voice_prev","voice_next","voice_fix_btn","_voice_voices_ready","_voice_preview","_voice_fix","固定声音","女孩声线")
@@ -55,6 +59,33 @@ jobs:
               $a = [Math]::Max(1, $n-18)
               $b = [Math]::Min($ml.Count, $n+40)
               for ($i=$a; $i -le $b; $i++) { Write-Host ("L{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
+          Write-Host "=== CURRENT MAIN VOICE/LOCK TARGETS ==="
+          $patterns = @("voice_combo","voice_prev","voice_next","voice_fix_btn","_voice_voices_ready","_voice_preview","_voice_fix","_open_voice_picker","load_voices_async","set_interaction_lock","contextMenuEvent","poll_hover_lock_button","_v0778_unlock_pending")
+          foreach ($pattern in $patterns) {
+            Write-Host ("--- MAIN PATTERN: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-35)
+              $b = [Math]::Min($ml.Count, $n+100)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("M{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
+          Write-Host "=== CURRENT VOICE_QWEN TARGETS ==="
+          $vl = Get-Content -LiteralPath $voice
+          $vpatterns = @("PRESETS","design_bean","design_ice","load_voices_async","def preview","def synthesize","def _synthesize","voice_id","speed","instruct","generate_voice_design")
+          foreach ($pattern in $vpatterns) {
+            Write-Host ("--- VOICE PATTERN: " + $pattern + " ---")
+            $matches = $vl | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-35)
+              $b = [Math]::Min($vl.Count, $n+110)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("V{0}: {1}" -f $i, $vl[$i-1]) }
             }
           }
 
