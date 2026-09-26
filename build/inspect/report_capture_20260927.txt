@@ -1,0 +1,1 @@
+Inspect result-page capture geometry and parse-fail snapshot.
