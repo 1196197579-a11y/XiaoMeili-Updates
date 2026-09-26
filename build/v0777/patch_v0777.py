@@ -326,23 +326,22 @@ def patch_brain(brain_path: Path):
         "auto remember before rules",
     )
 
-    b = must(
-        b,
-        '                system = str(persona or DEFAULT_PERSONA).strip() + "\\n\\n" + OUTPUT_CONTRACT.strip()\n'
-        '                if matched_rule:\n',
-        '                system = str(persona or DEFAULT_PERSONA).strip() + "\\n\\n" + OUTPUT_CONTRACT.strip()\n'
-        '                if bool(long_term_memory):\n'
-        '                    recalled = self.recall_memories(user_text, 8)\n'
-        '                    if recalled:\n'
-        '                        system += (\\n'
-        '                            "\\n\\n【小美丽的长期记忆｜仅在相关时自然使用】\\n"\\n'
-        '                            "这些是主人过去明确表达过、并保存在本机的长期信息。只在与当前话题有关时使用，"\\n'
-        '                            "不要每次主动复述，也不要根据它们编造新的事实。\\n"\\n'
-        '                            + "\\n".join(f"• {item}" for item in recalled)\\n'
-        '                        )\n'
-        '                if matched_rule:\n',
-        "inject recalled memories",
-    )
+    old_system = '''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
+                if matched_rule:
+'''
+    new_system = '''                system = str(persona or DEFAULT_PERSONA).strip() + "\n\n" + OUTPUT_CONTRACT.strip()
+                if bool(long_term_memory):
+                    recalled = self.recall_memories(user_text, 8)
+                    if recalled:
+                        system += (
+                            "\n\n【小美丽的长期记忆｜仅在相关时自然使用】\n"
+                            "这些是主人过去明确表达过、并保存在本机的长期信息。只在与当前话题有关时使用，"
+                            "不要每次主动复述，也不要根据它们编造新的事实。\n"
+                            + "\n".join(f"• {item}" for item in recalled)
+                        )
+                if matched_rule:
+'''
+    b = must(b, old_system, new_system, "inject recalled memories")
 
     brain_path.write_text(b, encoding="utf-8")
     py_compile.compile(str(brain_path), doraise=True)
