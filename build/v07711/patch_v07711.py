@@ -137,7 +137,8 @@ def patch_main(main_path: Path):
 
         # V0.7.7.11 startup notice must be fully retired.
         source_text = Path(__file__).read_text(encoding="utf-8")
-        if "设置中心焕新完成" in source_text:
+        retired_title = "设置中心" + "焕新完成"
+        if retired_title in source_text:
             raise RuntimeError("retired settings-center startup popup text returned")
         if "QTimer.singleShot(350, self._v774_first_run_notice)" in source_text:
             raise RuntimeError("retired settings-center startup popup timer returned")
