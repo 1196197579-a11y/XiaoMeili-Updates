@@ -64,7 +64,7 @@ jobs:
           Run-PythonChecked "build\v0761\patch_v0761.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "build\v0762\patch_v0762.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v077\patch_v077.py" "$env:SOURCE_ROOT" "$PWD"
-          Run-PythonChecked "build\v0771\patch_v0771.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0771\patch_v0771.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
