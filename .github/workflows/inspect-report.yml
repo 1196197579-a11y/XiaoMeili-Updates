@@ -46,7 +46,7 @@ jobs:
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
-          $patterns = @("_open_brain_rules_editor","brain_rules_dialog","brain_rules_list","rules_dv","_refresh_brain_rules","_selected_brain_rule_id","_brain_delete_rule","_brain_toggle_rule")
+          $patterns = @("voice_combo","voice_prev","voice_next","voice_fix_btn","_voice_voices_ready","_voice_preview","_voice_fix","固定声音","女孩声线")
           foreach ($pattern in $patterns) {
             Write-Host ("--- PATTERN: " + $pattern + " ---")
             $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
@@ -60,7 +60,7 @@ jobs:
 
           Write-Host "=== BRAIN_QWEN V0777 TARGETS ==="
           $bl = Get-Content -LiteralPath $brain
-          $bpatterns = @("def _sync_rules_from_feedback","def list_rules","def get_rule","def update_rule","def delete_rule","def _upsert_rule","def _exact_rule","def _active_semantic_rules","def save_feedback")
+          $bpatterns = @("PRESETS","design_bean","display_name","load_voices_async","def preview","voices_ready")
           foreach ($pattern in $bpatterns) {
             Write-Host ("--- BRAIN PATTERN: " + $pattern + " ---")
             $matches = $bl | Select-String -SimpleMatch -Pattern $pattern
