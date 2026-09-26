@@ -108,7 +108,7 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.7"') { throw "Source version verification failed: expected 0.7.7.8" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.8"') { throw "Source version verification failed: expected 0.7.7.8" }
           Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.8" -Encoding ascii
 
       - name: Install desktop build dependencies
