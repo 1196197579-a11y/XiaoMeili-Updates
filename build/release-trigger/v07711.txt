@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.11: battle-sage voice retune and remove settings startup notice.
