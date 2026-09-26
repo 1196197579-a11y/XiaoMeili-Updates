@@ -46,7 +46,7 @@ jobs:
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
-          $patterns = @("lock_bubble","contextMenuEvent","_brain_edit_rule","brain_rules_list","avatar =","v774_profile_name","QFileDialog","lock_position","锁定","apply_clickthrough_native","apply_window_flags","mousePressEvent","mouseDoubleClickEvent","mouseMoveEvent","mouseReleaseEvent")
+          $patterns = @("lock_bubble","contextMenuEvent","_brain_edit_rule","brain_rules_list","avatar =","v774_profile_name","QFileDialog","lock_position","锁定","apply_clickthrough_native","apply_window_flags","mousePressEvent","mouseDoubleClickEvent","mouseMoveEvent","mouseReleaseEvent","brain_service.ask","generation_finished.connect","brain_context","def _brain_send","def _brain_ask","def _send_brain")
           foreach ($pattern in $patterns) {
             Write-Host ("--- PATTERN: " + $pattern + " ---")
             $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
