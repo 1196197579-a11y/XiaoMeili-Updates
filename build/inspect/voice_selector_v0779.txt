@@ -1,0 +1,1 @@
+Inspect current voice selector and design_bean behavior.
