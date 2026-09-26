@@ -42,6 +42,7 @@ jobs:
           python "build\v0774\patch_v0774.py" "$src"
           python "build\v0775\patch_v0775.py" "$src"
           $main = Join-Path $src "app\src\main.py"
+          $brain = Join-Path $src "app\src\brain_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
           $patterns = @("lock_bubble","contextMenuEvent","_brain_edit_rule","brain_rules_list","avatar =","v774_profile_name","QFileDialog","lock_position","锁定")
@@ -53,5 +54,19 @@ jobs:
               $a = [Math]::Max(1, $n-18)
               $b = [Math]::Min($ml.Count, $n+40)
               for ($i=$a; $i -le $b; $i++) { Write-Host ("L{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
+          Write-Host "=== BRAIN_QWEN V0777 TARGETS ==="
+          $bl = Get-Content -LiteralPath $brain
+          $bpatterns = @("class BrainService","def ask","def generate","history","context_turns","persona","rules","prompt","messages","generation_finished","worker")
+          foreach ($pattern in $bpatterns) {
+            Write-Host ("--- BRAIN PATTERN: " + $pattern + " ---")
+            $matches = $bl | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-30)
+              $b = [Math]::Min($bl.Count, $n+90)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("B{0}: {1}" -f $i, $bl[$i-1]) }
             }
           }
