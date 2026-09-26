@@ -1114,7 +1114,7 @@ def patch_main(main_path: Path):
         'APP_VERSION = "0.7.7.7"',
         'theme_btn.clicked.connect(self._v0775_toggle_theme)',
         'def _v0777_memory_category_label',
-        '长期记忆{"已开启" if memory_on else "已关闭"}',
+        'memory_count = int(self.brain_service.memory_count())',
         'self.cfg["brain"].get("long_term_memory", True)',
         'WS_EX_NOACTIVATE = 0x08000000',
         'GetAsyncKeyState(VK_RBUTTON)',
