@@ -4400,7 +4400,7 @@ def patch(source_root: Path):
         'def _begin_speech_session(self, inline_question=""):',
         'def _split_wake_phrase(text):',
         'Fun-ASR-Nano-2512',
-        '回答结束后停留',
+        'class DialogueBoardOverlay(QWidget):',  # whiteboard overlay verified above
     ]
     for token in checks:
         if token not in m:
