@@ -1,0 +1,1 @@
+Inspect current service ownership and main lifecycle for V0.8.0.
