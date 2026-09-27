@@ -118,3 +118,13 @@ jobs:
               for ($i=$a; $i -le $b; $i++) { Write-Host ("B{0}: {1}" -f $i, $bl[$i-1]) }
             }
           }
+
+      - name: Upload expanded source
+        uses: actions/upload-artifact@v4
+        with:
+          name: expanded-source-v080
+          path: |
+            _tmp_v0503_seed/app/src/main.py
+            _tmp_v0503_seed/app/src/brain_qwen.py
+            _tmp_v0503_seed/app/src/voice_qwen.py
+          if-no-files-found: error
