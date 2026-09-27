@@ -48,6 +48,11 @@ jobs:
           python "build\v07710\patch_v07710.py" "$src"
           python "build\v07711\patch_v07711.py" "$src"
           python "build\v07712\patch_v07712.py" "$src"
+          python "build\v080\patch_v080.py" "$src"
+          python "build\v082\patch_v082.py" "$src"
+          python "build\v083\patch_v083.py" "$src"
+          python "build\v084\patch_v084.py" "$src"
+          python "build\v085\patch_v085.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $voice = Join-Path $src "app\src\voice_qwen.py"
@@ -88,6 +93,19 @@ jobs:
               $a = [Math]::Max(1, $n-35)
               $b = [Math]::Min($ml.Count, $n+100)
               for ($i=$a; $i -le $b; $i++) { Write-Host ("M{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
+          Write-Host "=== V085 SPEECH SESSION / WHITEBOARD TARGETS ==="
+          $patterns = @("_begin_speech_session","_end_speech_session","_speech_session","_speech_session_timer","_handle_speech","_on_speech","_split_wake_phrase","DialogueBoardOverlay","whiteboard","playback_started","playback_finished","hold_ms","freeze","pause","conversation","green","status_light","wake")
+          foreach ($pattern in $patterns) {
+            Write-Host ("--- V085 TARGET: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-55)
+              $b = [Math]::Min($ml.Count, $n+160)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("S{0}: {1}" -f $i, $ml[$i-1]) }
             }
           }
 
