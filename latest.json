@@ -1,13 +1,13 @@
 {
   "protocol": 1,
-  "version": "0.8.3",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.3/XiaoMeili_0.8.3_update.zip",
-  "sha256": "069fe8d1c66cf840edeca51c3516e604106f8753aba3588622fca8c688299796",
+  "version": "0.8.4",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.4/XiaoMeili_0.8.4_update.zip",
+  "sha256": "475acf5180825d55d536b02d97ff9494897f3ea2fb5ce05e7cb2d92fe97acbff",
   "notes": [
-    "V0.8.3 修复「听到你说话了」后一直不进入识别的问题：FSMN-VAD 检测到语音开始后，如果迟迟不返回结束事件，会由自适应静音检测自动收句并进入 Fun-ASR 识别",
-    "静音兜底只在 FSMN-VAD 已确认开始说话之后工作，并根据当前麦克风噪声底、说话峰值动态计算阈值，避免单纯固定音量阈值造成误触发",
-    "新增桌面自动故障日志：VAD 异常、ASR 异常、ASR 空结果、FSMN-VAD 缺少结束事件、语音 worker 致命错误时，会在桌面生成「小美丽语音故障日志_时间_故障代码.txt」",
-    "桌面故障日志会自动附带当前故障说明、原始 speech_worker.log 路径以及最后 180 行运行日志，便于后续直接上传定位根因",
-    "继续保留 V0.8.2 的 FunASR 1.4.16 固定版本、中文 Nano 参数、唤醒词空格/标点兼容和详细 VAD/ASR 诊断日志"
+    "V0.8.4 修复已由桌面故障日志确认的 Fun-ASR-Nano 输入崩溃：之前把 NumPy 音频数组直接传入 Nano，最终触发 TypeError: 'NoneType' object is not iterable",
+    "现在会先把麦克风的 16 kHz 单声道 float32 波形转换为 torch.Tensor，再交给 Fun-ASR-Nano-2512；这与 Nano 当前 ChatML 音频输入实现一致",
+    "新增 ASR_INPUT 诊断记录，包含输入类型、shape、dtype、采样率、振幅和 RMS，后续可继续精确定位音频进入 ASR 前是否正常",
+    "继续保留 V0.8.3 的 FSMN-VAD 自适应静音收句兜底与桌面自动故障日志，不再回退语音端点修复",
+    "若仍发生 ASR 异常，桌面日志会使用 V0.8.4 新故障代码，便于与上一版 NumPy 输入错误区分"
   ]
 }
