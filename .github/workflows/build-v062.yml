@@ -236,7 +236,6 @@ jobs:
               "声音页新增语音对话、唤醒回应和输入输出入口；互动页新增对话状态灯；动作页新增白板播报；系统组件页新增语音输入组件，技术设置继续集中在系统栏",
               "系统资源占用页同步显示小美丽当前语音阶段，便于后续继续增加游戏画面识别、主动动画和事件吐槽时观察实际性能成本"
             )
-            )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
