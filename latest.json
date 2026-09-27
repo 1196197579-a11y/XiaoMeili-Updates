@@ -1,13 +1,13 @@
 {
   "protocol": 1,
-  "version": "0.8.2",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.2/XiaoMeili_0.8.2_update.zip",
-  "sha256": "6d38f07ceff1b2cfd680e5cdc8a3630df19e252d60c553b0d707d333ca9b47e7",
+  "version": "0.8.3",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.3/XiaoMeili_0.8.3_update.zip",
+  "sha256": "069fe8d1c66cf840edeca51c3516e604106f8753aba3588622fca8c688299796",
   "notes": [
-    "V0.8.2 修复语音唤醒链路：保留 V0.8.1 的 worker 输出隔离与错误回传，避免 FunASR 进度信息污染小美丽事件流",
-    "Fun-ASR-Nano-2512 改为明确中文识别，并使用 cache={} 与 itn=True；语音运行环境固定 FunASR 1.4.16，避免后续版本漂移",
-    "修复「美丽 美丽」「美丽，美丽」「美丽。美丽」等空格和标点形式无法稳定命中唤醒词的问题，并统一清理识别文本中的空白与标点",
-    "新增 VAD_START、VAD_END、ASR_RAW、ASR_NORMALIZED、ASR_EMPTY 等诊断日志，后续语音问题可直接定位到具体环节",
-    "Fun-ASR-Nano 优先使用当前内置注册方式加载，失败时自动回退 remote_code 兼容方式"
+    "V0.8.3 修复「听到你说话了」后一直不进入识别的问题：FSMN-VAD 检测到语音开始后，如果迟迟不返回结束事件，会由自适应静音检测自动收句并进入 Fun-ASR 识别",
+    "静音兜底只在 FSMN-VAD 已确认开始说话之后工作，并根据当前麦克风噪声底、说话峰值动态计算阈值，避免单纯固定音量阈值造成误触发",
+    "新增桌面自动故障日志：VAD 异常、ASR 异常、ASR 空结果、FSMN-VAD 缺少结束事件、语音 worker 致命错误时，会在桌面生成「小美丽语音故障日志_时间_故障代码.txt」",
+    "桌面故障日志会自动附带当前故障说明、原始 speech_worker.log 路径以及最后 180 行运行日志，便于后续直接上传定位根因",
+    "继续保留 V0.8.2 的 FunASR 1.4.16 固定版本、中文 Nano 参数、唤醒词空格/标点兼容和详细 VAD/ASR 诊断日志"
   ]
 }
