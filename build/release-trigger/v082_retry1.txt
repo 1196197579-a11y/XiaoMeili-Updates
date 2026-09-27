@@ -1,0 +1,1 @@
+Retry XiaoMeili V0.8.2 after fixing the embedded speech worker stdout redirect typo.
