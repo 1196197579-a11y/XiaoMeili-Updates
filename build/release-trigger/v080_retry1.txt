@@ -1,0 +1,1 @@
+Retry XiaoMeili V0.8.0 after source verification and manifest syntax fixes.
