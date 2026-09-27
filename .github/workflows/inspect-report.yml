@@ -53,7 +53,7 @@ jobs:
           $voice = Join-Path $src "app\src\voice_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
-          $patterns = @("voice_combo","voice_prev","voice_next","voice_fix_btn","_voice_voices_ready","_voice_preview","_voice_fix","固定声音","女孩声线")
+          $patterns = @("战报白板模板","report_template","QMediaPlayer","QVideoWidget","mpv","video","play_action","action_library","动作库","导入视频","素材","report_font","QPainter","paintEvent","QMovie","cv2.VideoCapture","voice_service.preview","brain_service.ask","send_brain","brain_finished","answer_after","board_text","spoken_text")
           foreach ($pattern in $patterns) {
             Write-Host ("--- PATTERN: " + $pattern + " ---")
             $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
