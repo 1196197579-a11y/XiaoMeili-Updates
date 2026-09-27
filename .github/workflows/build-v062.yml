@@ -121,7 +121,7 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.7"') { throw "Source version verification failed: expected 0.8.8" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.8\.1"') { throw "Source version verification failed: expected 0.8.8.1" }
           if ($main -notmatch 'def _v088_selected_exchange\(self\):') { throw "V0.8.8 feature verification failed: direct correction helper missing" }
           if ($main -notmatch 'warm_up_async') { throw "V0.8.8 feature verification failed: warmup missing" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
