@@ -1,0 +1,1 @@
+Inspect current action/video/report template and brain/voice hooks for V0.8.0.
