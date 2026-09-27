@@ -53,7 +53,7 @@ jobs:
           $voice = Join-Path $src "app\src\voice_qwen.py"
           $ml = Get-Content -LiteralPath $main
           Write-Host "=== V0776 TARGET LINES ==="
-          $patterns = @("VoiceService(","BrainService(","class App","class Tray","class Main","SettingsDialog(","def main","settings =","self.voice_service","self.brain_service","generation_finished.connect","synthesis_finished.connect","request_settings.connect","QSystemTrayIcon")
+          $patterns = @("def _brain_send","generate_async(","generation_finished","class BrainService","def generate","def ask","def cancel_generation","def preview")
           foreach ($pattern in $patterns) {
             Write-Host ("--- PATTERN: " + $pattern + " ---")
             $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
