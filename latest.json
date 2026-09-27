@@ -1,16 +1,9 @@
 {
   "protocol": 1,
-  "version": "0.8.8",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.8/XiaoMeili_0.8.8_update.zip",
-  "sha256": "d57ddb5dadc04251bbe14dfcef43a4d1dfcd36a1b4fdbe994d5d3bf174279b81",
+  "version": "0.8.7",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.7/XiaoMeili_0.8.7_update.zip",
+  "sha256": "e40150094929d52c10175cb6bff1c405e1de163f71d639904519483d9b46e440",
   "notes": [
-    "V0.8.8 点击「纠正 / 养成」后直接进入完整规则编辑器，不再经过 OK → 选择养成方式 → 再确认的多层弹窗",
-    "聊天记录支持选中后纠正：优先修改当前选中的小美丽回复；未选中时才回退到最后一次回复",
-    "同一触发问题已有养成规则时直接覆盖原规则，不重复创建新的 R 编号规则",
-    "普通聊天取消「规则匹配一次 + 正式回答一次 + 守门检查 + 最多多次重写」的多推理链，改为轻量本地候选检索 + 单次 Qwen3-8B 主推理",
-    "固定台词精确命中时 0 次模型推理直接返回；语义规则候选最多 6 条，在同一次回答推理里自行判断是否相关",
-    "小美丽启动后后台预热本地 Qwen3-8B（仅在模型已安装时执行，不触发下载），降低第一句冷启动延迟",
-    "回答状态新增规则检索、模型生成和总耗时；brain_server / 主日志增加 BRAIN_LATENCY，后续慢响应可以直接定位是哪一环",
-    "继续保留 V0.8.7 的连续语音会话、动态白板、Fun-ASR-Nano / FSMN-VAD 修复和单句声音微调"
+    "临时回退更新源：V0.8.8 发布包版本标识错误，已停止分发；V0.8.8.1 正在重新构建验证。"
   ]
 }
