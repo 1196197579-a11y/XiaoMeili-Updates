@@ -1,0 +1,1 @@
+Trigger XiaoMeili V0.8.2 auto-update build after speech wake-chain repair patch and workflow update.
