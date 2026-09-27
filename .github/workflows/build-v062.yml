@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.8.4
+name: Build and publish XiaoMeili v0.8.5
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.8.4
+      - name: Patch stable source to v0.8.5
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -80,6 +80,7 @@ jobs:
           Run-PythonChecked "build\v082\patch_v082.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v083\patch_v083.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v084\patch_v084.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v085\patch_v085.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
@@ -116,8 +117,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.4"') { throw "Source version verification failed: expected 0.8.4" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.4" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.5"') { throw "Source version verification failed: expected 0.8.5" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.5" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -163,7 +164,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.8.4_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.8.5_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -172,21 +173,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.8.4 release asset
+      - name: Publish v0.8.5 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.8.4" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.8.5" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.8.4 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.8.5 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.8.4", "$env:UPDATE_ZIP",
+            "release", "create", "v0.8.5", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.8.4",
-            "--notes", "V0.8.4 fixes the confirmed Fun-ASR-Nano crash from V0.8.3 by converting the captured mono float32 NumPy waveform to torch.Tensor before AutoModel.generate. This matches Nano's ChatML input path, which accepts str paths or torch.Tensor audio. It keeps the adaptive VAD end fallback and desktop diagnostics, and adds ASR_INPUT logging."
+            "--title", "XiaoMeili V0.8.5",
+            "--notes", "V0.8.5 fixes the confirmed FunASR 1.4.16 duplicate-fs crash by removing fs from the Nano generate call. It uses torch.Tensor as the primary transport and automatically retries through a temporary 16 kHz PCM16 WAV file if the tensor path fails. Existing adaptive VAD endpoint fallback and desktop diagnostics are retained."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -196,8 +197,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.4/XiaoMeili_0.8.4_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.4_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.5/XiaoMeili_0.8.5_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.5_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -220,23 +221,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.4/XiaoMeili_0.8.4_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.5/XiaoMeili_0.8.5_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.8.4"
+            version = "0.8.5"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "V0.8.4 修复已由桌面故障日志确认的 Fun-ASR-Nano 输入崩溃：之前把 NumPy 音频数组直接传入 Nano，最终触发 TypeError: 'NoneType' object is not iterable",
-              "现在会先把麦克风的 16 kHz 单声道 float32 波形转换为 torch.Tensor，再交给 Fun-ASR-Nano-2512；这与 Nano 当前 ChatML 音频输入实现一致",
-              "新增 ASR_INPUT 诊断记录，包含输入类型、shape、dtype、采样率、振幅和 RMS，后续可继续精确定位音频进入 ASR 前是否正常",
-              "继续保留 V0.8.3 的 FSMN-VAD 自适应静音收句兜底与桌面自动故障日志，不再回退语音端点修复",
-              "若仍发生 ASR 异常，桌面日志会使用 V0.8.4 新故障代码，便于与上一版 NumPy 输入错误区分"
+              "V0.8.5 修复 V0.8.4 日志确认的 FunASR 1.4.16 重复 fs 参数崩溃：不再向 Fun-ASR-Nano 的 generate() 额外传入 fs=16000",
+              "语音识别优先继续使用 torch.Tensor 输入；若 Tensor 路径仍因 FunASR 版本兼容问题失败，会自动把同一段录音临时写成 16 kHz 单声道 PCM16 WAV，再用文件路径重试一次",
+              "新增 ASR_TRANSPORT 与 ASR_TRANSPORT_FALLBACK 日志，可以清楚看到实际走的是 Tensor 主路径还是 WAV 兼容路径",
+              "成功识别会记录 ASR_SUCCESS；若两种输入方式都失败，桌面自动生成 V0.8.5 专属故障日志，并同时附上两条路径的完整 traceback",
+              "继续保留 V0.8.3 起的 FSMN-VAD 自适应静音收句兜底和桌面自动故障日志"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.8.4 manifest"
+          git commit -m "Publish XiaoMeili v0.8.5 manifest"
           git push
