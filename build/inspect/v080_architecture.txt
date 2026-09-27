@@ -1,0 +1,1 @@
+Inspect current V0.8.0 speech/whiteboard integration points.
