@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.7.7.11
+name: Build and publish XiaoMeili v0.7.7.12
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.7.7.11
+      - name: Patch stable source to v0.7.7.12
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -75,6 +75,7 @@ jobs:
           Run-PythonChecked "build\v0779\patch_v0779.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v07710\patch_v07710.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v07711\patch_v07711.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v07712\patch_v07712.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
           $tokens = $null
           $parseErrors = $null
@@ -111,15 +112,15 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.11"') { throw "Source version verification failed: expected 0.7.7.11" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.11" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.7\.7\.12"') { throw "Source version verification failed: expected 0.7.7.12" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.7.7.12" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install --disable-pip-version-check -r "$env:SOURCE_ROOT\app\requirements.txt"
-          python -m pip install --disable-pip-version-check "pyinstaller>=6.10,<7" "dxcam>=0.0.5"
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.10,<7" "dxcam>=0.0.5" "psutil>=6.0,<8"
 
       - name: Build Windows EXE
         shell: pwsh
@@ -158,7 +159,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.11_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.7.7.12_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -167,21 +168,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.7.7.11 release asset
+      - name: Publish v0.7.7.12 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.7.7.11" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.7.7.12" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.7.7.11 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.7.7.12 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.7.7.11", "$env:UPDATE_ZIP",
+            "release", "create", "v0.7.7.12", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.7.7.11",
-            "--notes", "V0.7.7.11 retunes the recommended XiaoMeili VoiceDesign line toward a slightly boyish but still female battle-sage timbre: lower and less sharp, less sweet, cooler and more combat-ready while preserving subtle human-like pauses. It also permanently removes the obsolete Settings Center onboarding popup that could reappear at startup."
+            "--title", "XiaoMeili V0.7.7.12",
+            "--notes", "V0.7.7.12 changes semantic learning from reference-answer-driven to meaning-driven generation: the owner correction is hidden after distillation, the semantic guard checks stance rather than wording, and failed guards regenerate from abstract intent instead of copying the original correction. It also adds a compact System resource monitor for CPU, memory, GPU and VRAM to help evaluate future game-vision features."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -191,8 +192,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.11/XiaoMeili_0.7.7.11_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.11_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.12/XiaoMeili_0.7.7.12_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.7.7.12_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -215,28 +216,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.11/XiaoMeili_0.7.7.11_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.7.7.12/XiaoMeili_0.7.7.12_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.7.7.11"
+            version = "0.7.7.12"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "将「小美丽｜高冷酷拽」重新调成「小美丽｜战斗贤者（推荐）」：仍然是女声基底，但略带一点小男孩式的干净少年感，不会变成真正男声",
-              "降低普通小女孩声线的尖、甜和头腔感，声音重心稍微下压，清澈偏冷、薄而有韧性，更接近年轻战斗贤者而不是软萌小女孩",
-              "明确抑制甜、奶、撒娇、娃娃音、夹子音和尖细刺耳，同时避免成熟御姐、低沉成年男声和粗糙沙哑",
-              "保留高冷、酷、拽、自信、略带漫不经心和轻微嫌弃的说话性格，咬字更短促、利落、有战斗感",
-              "继续保留 V0.7.7.10 的轻量真人停顿逻辑和约 0.95× 推荐语速；不会乱塞口头禅，也不会把对白变成戏剧朗诵",
-              "沿用原 design_xiaomeili_cool 声线 ID，因此如果你已经把上一版推荐声线设为固定声音，升级后会直接使用重新调过的「战斗贤者」版本，无需重新绑定",
-              "彻底移除启动设置界面时的「设置中心焕新完成」提示框；设置中心本身保留不变，只是不再弹这个说明窗口",
-              "同时移除旧提示框的延时启动定时器和旧提示文案，避免配置迁移或状态异常时再次复活",
-              "发布自检新增：最终 EXE 源码不得包含「设置中心焕新完成」文本，也不得重新注册该启动弹窗定时器",
-              "其他 V0.7.7.10 功能保持不变：声线海选、固定声音、自然停顿、右键锁定/解锁、长期记忆、养成库分组和游戏防误触逻辑均保留"
+              "重做「学这个意思」语义养成：主人输入的纠正句只用于第一次提炼规则，正式回答阶段不再把原始参考答案交给 Qwen",
+              "语义规则现在只向模型暴露场景、核心立场、必须体现的抽象语义、禁止偏离和语气；固定台词模式保持原样",
+              "加强语义提炼器：明确要求把具体句子抽象成观点/态度/行为策略，例如「没见过你这么丑的」会提炼成「认为主人不好看，并以毒舌方式表达」",
+              "语义守门员改为只检查意思和立场是否一致，不再要求措辞接近主人原句，允许明显不同的自然表达",
+              "移除语义规则连续失败后回退主人参考答案的旧机制；现在会基于抽象语义再次生成一条全新表达，避免学意思退化成背台词",
+              "同一语义规则连续命中时，提示模型尽量更换自然说法，减少每次回答都一模一样",
+              "系统栏新增「资源占用」页，简洁显示 CPU、内存、GPU、显存四项指标，并给出当前资源压力等级",
+              "CPU 和内存同时显示整机占用与小美丽主进程+子进程的估算占用，便于观察 Qwen、TTS、OCR 等组件成本",
+              "GPU 与显存通过 NVIDIA nvidia-smi 每 2 秒读取整机数据；由于 Windows WDDM 限制，不把整机显存误标成小美丽独占",
+              "资源页设计用于后续增加游戏画面识别、事件动画等功能时做开启前后对比，帮助控制小美丽长期资源占用"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.7.7.11 manifest"
+          git commit -m "Publish XiaoMeili v0.7.7.12 manifest"
           git push
