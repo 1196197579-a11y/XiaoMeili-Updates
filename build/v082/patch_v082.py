@@ -53,6 +53,8 @@ def patch(source_root: Path):
         print(f"V0.8.2 patched {label}: {count} occurrence(s)")
 
     worker = base64.b64decode(WORKER_B64).decode("utf-8")
+    # Repair the one-character typo in the embedded worker payload before installation.
+    worker = worker.replace("contextib.redirect_stdout", "contextlib.redirect_stdout")
     compile(worker, "speech_worker.py", "exec")
     speech_text = _replace_worker_literal(speech_text, worker)
 
