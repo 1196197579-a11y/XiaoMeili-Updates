@@ -1,0 +1,1 @@
+Trigger XiaoMeili V0.8.3 adaptive VAD endpoint and desktop diagnostic release build.
