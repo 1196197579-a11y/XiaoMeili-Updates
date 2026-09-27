@@ -1,0 +1,1 @@
+Release XiaoMeili V0.7.7.12: semantic learning and resource monitor.
