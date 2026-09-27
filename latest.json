@@ -1,13 +1,13 @@
 {
   "protocol": 1,
-  "version": "0.8.5",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.5/XiaoMeili_0.8.5_update.zip",
-  "sha256": "7f5a1eceb032863c5abb3ef01120b8bfae117b50b51ef8bd1a64a0a1b97c42fa",
+  "version": "0.8.6",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.6/XiaoMeili_0.8.6_update.zip",
+  "sha256": "50a3f7a8e7f38cfa99e49274848025c473d13ba46e4008a3996b8e9e4cb66cc8",
   "notes": [
-    "V0.8.5 修复 V0.8.4 日志确认的 FunASR 1.4.16 重复 fs 参数崩溃：不再向 Fun-ASR-Nano 的 generate() 额外传入 fs=16000",
-    "语音识别优先继续使用 torch.Tensor 输入；若 Tensor 路径仍因 FunASR 版本兼容问题失败，会自动把同一段录音临时写成 16 kHz 单声道 PCM16 WAV，再用文件路径重试一次",
-    "新增 ASR_TRANSPORT 与 ASR_TRANSPORT_FALLBACK 日志，可以清楚看到实际走的是 Tensor 主路径还是 WAV 兼容路径",
-    "成功识别会记录 ASR_SUCCESS；若两种输入方式都失败，桌面自动生成 V0.8.5 专属故障日志，并同时附上两条路径的完整 traceback",
-    "继续保留 V0.8.3 起的 FSMN-VAD 自适应静音收句兜底和桌面自动故障日志"
+    "V0.8.6 将语音会话改成真正的连续多轮对话：唤醒一次后，每次小美丽回答完都会立即恢复监听，只有在最后一次回答结束后持续静默超过设定时间才退出语音状态",
+    "修复白板动画说完后冻结：实时播报期间始终保持动态；15 秒素材不足时继续循环；TTS 结束后约 0.12 秒收起，不再定格 3 秒",
+    "对白白板现在以实际 TTS 音频时长为准，而不是简单按字数估算，因此嘴型动画显示时长与真实播报更稳定",
+    "新增可扩展的单句语气微调机制 phrase_voice_overrides，并已为“干嘛”加入小女孩年龄感修正；语音缓存键也包含微调指令，避免旧缓存继续播放成年感版本",
+    "继续保留 V0.8.5 的 Fun-ASR-Nano 双输入兼容、FSMN-VAD 静音收句兜底以及桌面自动故障日志"
   ]
 }
