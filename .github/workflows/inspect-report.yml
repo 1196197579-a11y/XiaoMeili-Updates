@@ -124,7 +124,7 @@ jobs:
         with:
           name: expanded-source-v080
           path: |
-            _tmp_v0503_seed/app/src/main.py
-            _tmp_v0503_seed/app/src/brain_qwen.py
-            _tmp_v0503_seed/app/src/voice_qwen.py
+            staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/main.py
+            staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/brain_qwen.py
+            staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/voice_qwen.py
           if-no-files-found: error
