@@ -195,7 +195,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.2/XiaoMeili_0.8.2_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.0_verify.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.2_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -236,5 +236,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.8.0 manifest"
+          git commit -m "Publish XiaoMeili v0.8.2 manifest"
           git push
