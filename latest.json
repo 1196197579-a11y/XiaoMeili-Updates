@@ -1,13 +1,13 @@
 {
   "protocol": 1,
-  "version": "0.8.4",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.4/XiaoMeili_0.8.4_update.zip",
-  "sha256": "475acf5180825d55d536b02d97ff9494897f3ea2fb5ce05e7cb2d92fe97acbff",
+  "version": "0.8.5",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.5/XiaoMeili_0.8.5_update.zip",
+  "sha256": "7f5a1eceb032863c5abb3ef01120b8bfae117b50b51ef8bd1a64a0a1b97c42fa",
   "notes": [
-    "V0.8.4 修复已由桌面故障日志确认的 Fun-ASR-Nano 输入崩溃：之前把 NumPy 音频数组直接传入 Nano，最终触发 TypeError: 'NoneType' object is not iterable",
-    "现在会先把麦克风的 16 kHz 单声道 float32 波形转换为 torch.Tensor，再交给 Fun-ASR-Nano-2512；这与 Nano 当前 ChatML 音频输入实现一致",
-    "新增 ASR_INPUT 诊断记录，包含输入类型、shape、dtype、采样率、振幅和 RMS，后续可继续精确定位音频进入 ASR 前是否正常",
-    "继续保留 V0.8.3 的 FSMN-VAD 自适应静音收句兜底与桌面自动故障日志，不再回退语音端点修复",
-    "若仍发生 ASR 异常，桌面日志会使用 V0.8.4 新故障代码，便于与上一版 NumPy 输入错误区分"
+    "V0.8.5 修复 V0.8.4 日志确认的 FunASR 1.4.16 重复 fs 参数崩溃：不再向 Fun-ASR-Nano 的 generate() 额外传入 fs=16000",
+    "语音识别优先继续使用 torch.Tensor 输入；若 Tensor 路径仍因 FunASR 版本兼容问题失败，会自动把同一段录音临时写成 16 kHz 单声道 PCM16 WAV，再用文件路径重试一次",
+    "新增 ASR_TRANSPORT 与 ASR_TRANSPORT_FALLBACK 日志，可以清楚看到实际走的是 Tensor 主路径还是 WAV 兼容路径",
+    "成功识别会记录 ASR_SUCCESS；若两种输入方式都失败，桌面自动生成 V0.8.5 专属故障日志，并同时附上两条路径的完整 traceback",
+    "继续保留 V0.8.3 起的 FSMN-VAD 自适应静音收句兜底和桌面自动故障日志"
   ]
 }
