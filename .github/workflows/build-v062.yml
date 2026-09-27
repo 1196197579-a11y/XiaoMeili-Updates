@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.8.7
+name: Build and publish XiaoMeili v0.8.8
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.8.7
+      - name: Patch stable source to v0.8.8
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -119,8 +119,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.7"') { throw "Source version verification failed: expected 0.8.7" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.7" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.7"') { throw "Source version verification failed: expected 0.8.8" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.8" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -166,7 +166,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.8.7_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.8.8_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -175,21 +175,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.8.7 release asset
+      - name: Publish v0.8.8 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.8.7" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.8.8" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.8.7 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.8.8 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.8.7", "$env:UPDATE_ZIP",
+            "release", "create", "v0.8.8", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.8.7",
-            "--notes", "V0.8.7 completes the multi-turn voice flow: one wake keeps the conversation active until the configured inactivity timeout. The talking whiteboard stays animated throughout speech and the configured audience hold instead of freezing. A new per-phrase voice editor lets exact lines receive extra TTS style guidance, with a default child-voice correction for the short wake phrase 干嘛. It also fixes the V0.8.6 extra-instruction closure bug."
+            "--title", "XiaoMeili V0.8.8",
+            "--notes", "V0.8.8 makes correction one-step and cuts the normal brain path to one Qwen generation. Selected assistant replies can be corrected directly; existing exact rules are updated instead of duplicated. Semantic rules use fast local candidate retrieval, fixed replies use zero model calls, the local brain prewarms in the background, and per-turn latency is logged."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -199,8 +199,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.7/XiaoMeili_0.8.7_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.7_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.8/XiaoMeili_0.8.8_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.8_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -223,23 +223,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.7/XiaoMeili_0.8.7_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.8/XiaoMeili_0.8.8_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.8.7"
+            version = "0.8.8"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "V0.8.7 将语音会话改成连续多轮：唤醒一次后，每次小美丽回答完都会自动恢复监听；只有连续静默超过设置时间才退出语音状态，右上角绿灯在整段会话期间保持",
-              "白板动画不再冻结：从小美丽开始说话到说完后的观众停留阶段都持续动态播放；15 秒素材不足时自动循环；停留时间继续使用白板设置中的数值，默认 3 秒",
-              "白板显示时长以实际 TTS 音频时长为准，而不是简单按字数估算，因此不同语速、停顿和标点下都更准确",
-              "声音页新增单句语气微调，可给指定完整台词追加专属声音要求并直接试听；默认已为干嘛加入小女孩年龄感修正，且语音缓存会区分不同微调规则",
-              "修复上一版单句声音微调内部闭包变量问题；继续保留 V0.8.5 的 Fun-ASR-Nano 双输入兼容、FSMN-VAD 静音收句兜底和桌面自动故障日志"
+              "V0.8.8 点击「纠正 / 养成」后直接进入完整规则编辑器，不再经过 OK → 选择养成方式 → 再确认的多层弹窗",
+              "聊天记录支持选中后纠正：优先修改当前选中的小美丽回复；未选中时才回退到最后一次回复",
+              "同一触发问题已有养成规则时直接覆盖原规则，不重复创建新的 R 编号规则",
+              "普通聊天取消「规则匹配一次 + 正式回答一次 + 守门检查 + 最多多次重写」的多推理链，改为轻量本地候选检索 + 单次 Qwen3-8B 主推理",
+              "固定台词精确命中时 0 次模型推理直接返回；语义规则候选最多 6 条，在同一次回答推理里自行判断是否相关",
+              "小美丽启动后后台预热本地 Qwen3-8B（仅在模型已安装时执行，不触发下载），降低第一句冷启动延迟",
+              "回答状态新增规则检索、模型生成和总耗时；brain_server / 主日志增加 BRAIN_LATENCY，后续慢响应可以直接定位是哪一环",
+              "继续保留 V0.8.7 的连续语音会话、动态白板、Fun-ASR-Nano / FSMN-VAD 修复和单句声音微调"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.8.7 manifest"
+          git commit -m "Publish XiaoMeili v0.8.8 manifest"
           git push
