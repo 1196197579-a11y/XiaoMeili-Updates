@@ -216,7 +216,9 @@ def patch(source_root: Path):
 '''
     new='''            "instruct": str(preset.get("instruct") or "") + self._speed_instruction(speed) + (" " + str(extra_instruct).strip() if str(extra_instruct or "").strip() else ""),
 '''
-    v=once(v,old,new,"synthesize instruction append")
+    if old not in v:
+        raise RuntimeError("V0.8.6 synthesize instruction token missing")
+    v=v.replace(old,new,1)
 
     v=once(v,
            '''    def warm_phrase_cache(self, phrases, voice_id, speed=1.0):
