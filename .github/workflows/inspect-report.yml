@@ -45,6 +45,9 @@ jobs:
           python "build\v0777\patch_v0777.py" "$src"
           python "build\v0778\patch_v0778.py" "$src"
           python "build\v0779\patch_v0779.py" "$src"
+          python "build\v07710\patch_v07710.py" "$src"
+          python "build\v07711\patch_v07711.py" "$src"
+          python "build\v07712\patch_v07712.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $voice = Join-Path $src "app\src\voice_qwen.py"
@@ -59,6 +62,19 @@ jobs:
               $a = [Math]::Max(1, $n-18)
               $b = [Math]::Min($ml.Count, $n+40)
               for ($i=$a; $i -le $b; $i++) { Write-Host ("L{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
+          Write-Host "=== V080 MAIN ARCHITECTURE TARGETS ==="
+          $v80patterns = @("class PetWindow","class SettingsDialog","def _open_voice","voice_dialog","video","QMediaPlayer","QVideoWidget","QMovie","opencv","cv2.VideoCapture","action","animation","state_action","play_video","brain_service.generation_finished","voice_service.preview_finished","voice_service","QAudio","sounddevice","pyaudio","microphone","whiteboard","report_template","战报模板")
+          foreach ($pattern in $v80patterns) {
+            Write-Host ("--- V080 MAIN PATTERN: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-45)
+              $b = [Math]::Min($ml.Count, $n+130)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("A{0}: {1}" -f $i, $ml[$i-1]) }
             }
           }
 
