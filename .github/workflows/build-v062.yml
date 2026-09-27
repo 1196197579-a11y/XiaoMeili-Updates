@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.8.0
+name: Build and publish XiaoMeili v0.8.2
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.8.0
+      - name: Patch stable source to v0.8.2
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -77,6 +77,7 @@ jobs:
           Run-PythonChecked "build\v07711\patch_v07711.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v07712\patch_v07712.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v080\patch_v080.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v082\patch_v082.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
@@ -113,8 +114,8 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.0"') { throw "Source version verification failed: expected 0.8.0" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.0" -Encoding ascii
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.2"') { throw "Source version verification failed: expected 0.8.2" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.2" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -160,7 +161,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.8.0_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.8.2_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -169,21 +170,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.8.0 release asset
+      - name: Publish v0.8.2 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.8.0" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.8.2" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.8.0 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.8.2 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.8.0", "$env:UPDATE_ZIP",
+            "release", "create", "v0.8.2", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.8.0",
-            "--notes", "V0.8.0 adds the first complete voice-interaction loop: wake with 美丽美丽, random non-repeating wake acknowledgements, microphone listening and FunASR recognition with FSMN-VAD, direct handoff to the existing XiaoMeili brain, Qwen3-TTS speech, a unified talking whiteboard with typewriter-synced text plus a 3-second audience hold, and a non-clickable green conversation status light. It also adds voice/whiteboard settings and keeps technical downloads under System."
+            "--title", "XiaoMeili V0.8.2",
+            "--notes", "V0.8.2 repairs the local voice wake chain: it preserves the V0.8.1 stdout/event-stream isolation, pins FunASR 1.4.16, uses explicit Chinese Nano inference parameters, fixes wake matching across spaces and punctuation, prefers the built-in Nano loader with remote-code fallback, and adds VAD/ASR diagnostic logging."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -193,7 +194,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.0/XiaoMeili_0.8.0_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.2/XiaoMeili_0.8.2_update.zip"
           $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.0_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -217,24 +218,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.0/XiaoMeili_0.8.0_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.2/XiaoMeili_0.8.2_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.8.0"
+            version = "0.8.2"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "进入 V0.8.0 语音交互阶段：固定唤醒词为「美丽美丽」，支持先唤醒再提问，也支持「美丽美丽，我该不该买大狙？」一句话完成",
-              "唤醒成功后从「干嘛？」「咋滴了？」「有事你就说！」三句中随机回应，并禁止连续重复；固定回应会使用当前小美丽固定声线缓存播放",
-              "新增本地语音输入链路：FunASR + FSMN-VAD，默认优先使用 CPU 运行，避免持续占用 RTX 游戏显卡；首次使用需在「系统 → 组件与下载」准备语音识别组件",
-              "语音识别支持麦克风选择，并加入「美丽美丽、小美丽、贤者、VALORANT、KDA、保枪、大狙」等热词；小美丽自己播报时自动暂停监听，避免把自己的声音再次识别进去",
-              "语音问题直接进入现有小美丽大脑，继续使用性格卡、养成库、长期记忆和 V0.7.7.12 的语义立场驱动规则；语音回答会自动控制为适合口播和白板阅读的简洁中文",
-              "新增统一对白白板：唤醒回应与所有语音回答共用同一支聊天气泡白板视频，模板视频原音轨不会参与播放，实际声音始终来自当前固定 Qwen3-TTS 声线",
-              "白板文字会根据实际语音时长采用标点加权的打字机方式逐步出现；TTS 说完后全文继续保留约 3 秒，再自动隐藏，方便直播观众即使没听清也能读完",
-              "新增「小美丽｜对白白板模板」编辑器：可拖动/缩放文字限制框，调整区域、字号、停留时间，提供 5/10/20/30/50 字预览、一键铺满对白区、恢复默认、视频更换和动画预览",
-              "桌宠右上角新增淡绿色呼吸状态灯：从唤醒成功一直显示到回答白板的 3 秒停留结束；状态灯不是按钮、没有鼠标命中区域，不影响游戏防误触和锁定穿透",
-              "声音页新增语音对话、唤醒回应和输入输出入口；互动页新增对话状态灯；动作页新增白板播报；系统组件页新增语音输入组件，技术设置继续集中在系统栏",
-              "系统资源占用页同步显示小美丽当前语音阶段，便于后续继续增加游戏画面识别、主动动画和事件吐槽时观察实际性能成本"
+              "V0.8.2 修复语音唤醒链路：保留 V0.8.1 的 worker 输出隔离与错误回传，避免 FunASR 进度信息污染小美丽事件流",
+              "Fun-ASR-Nano-2512 改为明确中文识别，并使用 cache={} 与 itn=True；语音运行环境固定 FunASR 1.4.16，避免后续版本漂移",
+              "修复「美丽 美丽」「美丽，美丽」「美丽。美丽」等空格和标点形式无法稳定命中唤醒词的问题，并统一清理识别文本中的空白与标点",
+              "新增 VAD_START、VAD_END、ASR_RAW、ASR_NORMALIZED、ASR_EMPTY 等诊断日志，后续语音问题可直接定位到具体环节",
+              "Fun-ASR-Nano 优先使用当前内置注册方式加载，失败时自动回退 remote_code 兼容方式"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
