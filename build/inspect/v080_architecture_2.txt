@@ -1,0 +1,1 @@
+Inspect current source architecture for XiaoMeili V0.8.0 voice interaction, whiteboard playback, green status light, and settings UI.
