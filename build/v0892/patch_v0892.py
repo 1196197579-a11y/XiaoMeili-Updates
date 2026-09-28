@@ -42,7 +42,7 @@ def patch_main(path: Path):
         raise RuntimeError("V0.8.9.2 expected APP_VERSION 0.8.9.1 base")
     s = s.replace('APP_VERSION = "0.8.9.1"', 'APP_VERSION = "0.8.9.2"', 1)
     s = s.replace("V0.8.9.1｜", "V0.8.9.2｜", 1)
-
+    # Favorites added a seventh navigation section; keep the frozen UI self-test in sync.\n    s = s.replace('raise RuntimeError(f"expected 6 in-layout theme buttons, got {len(theme_buttons)}")', 'raise RuntimeError(f"expected 7 in-layout theme buttons, got {len(theme_buttons)}")', 1)\n
     import_anchor = "from speech_input import SpeechInputService\n"
     if import_anchor not in s:
         raise RuntimeError("V0.8.9.2 speech import anchor missing")
