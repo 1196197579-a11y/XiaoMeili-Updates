@@ -435,11 +435,11 @@ def patch_main(path: Path):
         raise RuntimeError("V0.8.8.2 card return anchor missing")
     card_method = card_method.replace(
         old_return,
-        "        try:\\n"
-        "            self._v0882_register_card(card, title, description, button_slot)\\n"
-        "        except Exception:\\n"
-        "            LOGGER.warning(\\\"注册常用卡片失败: %s\\\", title, exc_info=True)\\n"
-        "        return card, val\\n",
+        "        try:\n"
+        "            self._v0882_register_card(card, title, description, button_slot)\n"
+        "        except Exception:\n"
+        "            LOGGER.warning(\"注册常用卡片失败: %s\", title, exc_info=True)\n"
+        "        return card, val\n",
         1,
     )
     s = s[:card_method_start] + card_method + s[card_method_end:]
@@ -450,8 +450,8 @@ def patch_main(path: Path):
         raise RuntimeError("V0.8.8.2 shell anchor missing")
     s = s.replace(
         shell_anchor,
-        "        self.v0882_feature_catalog = {}\\n"
-        "        self.v0882_favorite_buttons = {}\\n"
+        "        self.v0882_feature_catalog = {}\n"
+        "        self.v0882_favorite_buttons = {}\n"
         + shell_anchor,
         1,
     )
@@ -533,8 +533,8 @@ def patch_main(path: Path):
     # Its summary label no longer exists after removing the Video Materials card.
     s = s.replace(
         '        self.v774_video_value.setText(f"当前共 {total} 个动作素材")\n',
-        '        if hasattr(self, "v774_video_value"):\\n'
-        '            self.v774_video_value.setText(f"当前共 {total} 个动作素材")\\n',
+        '        if hasattr(self, "v774_video_value"):\n'
+        '            self.v774_video_value.setText(f"当前共 {total} 个动作素材")\n',
         1,
     )
 
@@ -557,7 +557,7 @@ def patch_main(path: Path):
         raise RuntimeError("V0.8.8.2 summary refresh anchor missing")
     s = s.replace(
         refresh_anchor,
-        refresh_anchor + "        self._v0882_refresh_favorites()\\n        self._v0882_refresh_favorite_buttons()\\n",
+        refresh_anchor + "        self._v0882_refresh_favorites()\n        self._v0882_refresh_favorite_buttons()\n",
         1,
     )
 
