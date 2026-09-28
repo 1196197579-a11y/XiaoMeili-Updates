@@ -48,17 +48,25 @@ def patch_speech(path: Path):
 
     # Empty ASR is usually a harmless VAD/noise false-start. Keep it in the
     # internal speech log, but do not litter the desktop with a "fault" file.
-    worker, n = re.subn(
-        r'''(?ms)([ \t]*)desktop_diagnostic\(\s*
-[ \t]*["']ASR_EMPTY["']\s*,\s*
-[ \t]*f["']ASR 未返回文字；reason=\{reason\} seconds=\{seconds:\.3f\}["']\s*,\s*
-[ \t]*args\.log\s*,?\s*
-\)\s*''',
-        '',
-        worker,
-        count=1,
-    )
-    if n != 1:
+    removed_empty_diag = False
+    search_from = 0
+    while True:
+        hit = worker.find('"ASR_EMPTY"', search_from)
+        if hit < 0:
+            break
+        call = worker.rfind("desktop_diagnostic(", max(0, hit - 500), hit)
+        if call < 0:
+            search_from = hit + 1
+            continue
+        line_start = worker.rfind("\n", 0, call) + 1
+        close = worker.find(")\n", hit)
+        if close < 0 or close - call > 800:
+            search_from = hit + 1
+            continue
+        worker = worker[:line_start] + worker[close + 2:]
+        removed_empty_diag = True
+        break
+    if not removed_empty_diag:
         raise RuntimeError("V0.8.8.2 could not suppress ASR_EMPTY desktop diagnostic")
 
     # Keep desktop diagnostics for real exceptions, and make their header match
