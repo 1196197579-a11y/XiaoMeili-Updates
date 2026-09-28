@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.8.8.2
+name: Build and publish XiaoMeili v0.8.8.3
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.8.8.2
+      - name: Patch stable source to v0.8.8.3
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -86,6 +86,7 @@ jobs:
           Run-PythonChecked "build\v088\patch_v088.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0881\patch_v0881.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0882\patch_v0882.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0883\patch_v0883.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
@@ -122,21 +123,27 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.8\.2"') { throw "Source version verification failed: expected 0.8.8.2" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.8\.2"') { throw "Source version verification failed: expected 0.8.8.3" }
           if ($main -notmatch 'def _v088_selected_exchange\(self\):') { throw "V0.8.8 feature verification failed: direct correction helper missing" }
           if ($main -notmatch 'warm_up_async') { throw "V0.8.8 feature verification failed: warmup missing" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
           if ($brain -notmatch 'def _fast_rule_candidates\(self, user_text, limit=6\):') { throw "V0.8.8 feature verification failed: fast rule retrieval missing" }
           if ($brain -notmatch '\[BRAIN_LATENCY\]') { throw "V0.8.8 feature verification failed: latency diagnostics missing" }
-          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.8.8.2 favorites navigation missing" }
-          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.8.8.2 favorites manager missing" }
-          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.8.2 duplicate 状态动作 action entrance remains" }
-          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.8.2 duplicate 视频素材 action entrance remains" }
+          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.8.8.3 favorites navigation missing" }
+          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.8.8.3 favorites manager missing" }
+          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.8.3 duplicate 状态动作 action entrance remains" }
+          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.8.3 duplicate 视频素材 action entrance remains" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
-          if ($brain -notmatch '这是一条语义/立场规则，不是台词模板') { throw "V0.8.8.2 semantic anti-repeat prompt missing" }
+          if ($brain -notmatch '这是一条语义/立场规则，不是台词模板') { throw "V0.8.8.3 semantic anti-repeat prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
-          if ($speech -notmatch '小美丽 V0\.8\.8\.2 语音诊断日志') { throw "V0.8.8.2 speech diagnostic label missing" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.8.2" -Encoding ascii
+          if ($speech -notmatch '小美丽 V0\.8\.8\.2 语音诊断日志') { throw "V0.8.8.3 speech diagnostic label missing" }
+          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.8.8.3 vector favorite star class missing" }
+          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.8.8.3 voice dialogue favorite mapping missing" }
+          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.8.8.3 wake reply favorite mapping missing" }
+          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.8.8.3 phrase style favorite mapping missing" }
+          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.8.8.3 unified rule editor missing" }
+          if ($brain -notmatch 'feedback_aliases') { throw "V0.8.8.3 rule trigger alias protection missing" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.8.3" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -182,7 +189,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.8.8.2_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.8.8.3_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -191,21 +198,21 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.8.8.2 release asset
+      - name: Publish v0.8.8.3 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.8.8.2" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.8.8.3" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.8.8.2 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.8.8.3 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.8.8.2", "$env:UPDATE_ZIP",
+            "release", "create", "v0.8.8.3", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.8.8.2",
-            "--notes", "V0.8.8.2 adds a customizable Favorites page with stable shortcut IDs and default shortcuts for Learning, Chat Test and VALORANT Event Triggers. Duplicate Action entries are removed, harmless ASR_EMPTY events stay in internal logs instead of creating desktop fault files, and semantic rules now separate core stance from reference phrasing to reduce verbatim repetition."
+            "--title", "XiaoMeili V0.8.8.3",
+            "--notes", "V0.8.8.3 replaces the font-dependent favorite glyph with a custom-painted five-point yellow star, gives every settings card a favorite control including Voice and game-lock tiles, and unifies chat correction with Learning Library rule editing so both use the same core-stance/reference-phrase editor."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -215,8 +222,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.8.2/XiaoMeili_0.8.8.2_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.8.2_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.8.3/XiaoMeili_0.8.8.3_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.8.3_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -239,26 +246,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.8.2/XiaoMeili_0.8.8.2_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.8.3/XiaoMeili_0.8.8.3_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.8.8.2"
+            version = "0.8.8.3"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             notes = @(
-              "V0.8.8.2 新增「常用」基础栏：默认放入学习与养成、对话测试、事件触发，并支持自定义收藏、取消收藏和调整顺序",
-              "所有常用入口使用稳定功能 ID，只调用原功能，不复制设置实例；原页面修改与常用入口始终指向同一份数据",
-              "各设置卡片新增 ☆ / ★ 收藏按钮；系统页功能也可在「管理常用」中加入快捷入口",
-              "动作页删除与动作库重复的「状态动作」「视频素材」两张卡，只保留动作库、白板播报和事件触发",
-              "ASR_EMPTY 空识别继续写内部 speech_worker.log，但不再为环境噪声误触发生成桌面故障 TXT；真正异常仍保留桌面诊断",
-              "语义养成编辑器拆分「核心立场」与「参考说法」；语义回答不再把参考说法当必须复读的台词",
-              "语义规则新增防复读约束：除固定台词外，同一规则连续命中时必须结合当前问题重新组织表达",
-              "默认性格卡优化为更自然的小美丽损友口吻；已有自定义性格卡不会被覆盖"
+              "V0.8.8.3 重做收藏 UI：不再使用 Windows 字体里的 ☆/★ 字符，改为程序直接绘制的标准五角星；选中为黄色实心星，未选中为灰色描边星",
+              "所有由设置卡片系统生成的功能块都会自动获得收藏按钮，避免后续新增功能再次漏掉；已补齐语音对话、唤醒回应、单句语气微调、游戏防误触锁定等入口",
+              "「常用」页面中的快捷卡片也加入黄色实心收藏星，可直接取消收藏，无需必须进入「管理常用」",
+              "养成库双击规则与对话测试里的 👎 纠正现在共用同一套编辑器：触发问题、核心立场、参考说法、场景、必须体现、禁止偏离、语气完全统一",
+              "编辑养成库现有规则时直接覆盖原规则并保留规则编号、分组和命中次数，不再走旧版多行文本编辑窗口",
+              "新增规则触发词历史别名保护：修改触发问题后，旧 feedback 记录不会把旧问题悄悄复活成重复规则"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.8.8.2 manifest"
+          git commit -m "Publish XiaoMeili v0.8.8.3 manifest"
           git push
