@@ -53,6 +53,14 @@ jobs:
           python "build\v083\patch_v083.py" "$src"
           python "build\v084\patch_v084.py" "$src"
           python "build\v085\patch_v085.py" "$src"
+          python "build\v086\patch_v086.py" "$src"
+          python "build\v087\patch_v087.py" "$src"
+          python "build\v088\patch_v088.py" "$src"
+          python "build\v0881\patch_v0881.py" "$src"
+          python "build\v0882\patch_v0882.py" "$src"
+          python "build\v0883\patch_v0883.py" "$src"
+          python "build\v089\patch_v089.py" "$src"
+          python "build\v0891\patch_v0891.py" "$src"
           $main = Join-Path $src "app\src\main.py"
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $voice = Join-Path $src "app\src\voice_qwen.py"
@@ -109,6 +117,34 @@ jobs:
             }
           }
 
+          Write-Host "=== V0891 UPDATE / LOGGING TARGETS ==="
+          $patterns = @("class Update","def _update","def update","download","package_url","latest.json","UPDATE_DIR","desktop_log","小美丽更新错误日志","update_helper","sha256","urllib","urlopen","requests","progress_changed","restart_requested","updates")
+          foreach ($pattern in $patterns) {
+            Write-Host ("--- UPDATE PATTERN: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-55)
+              $b = [Math]::Min($ml.Count, $n+150)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("U{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
+          Write-Host "=== V0891 SPEECH DIAGNOSTIC TARGETS ==="
+          $speech = Join-Path $src "app\src\speech_input.py"
+          $sl = Get-Content -LiteralPath $speech
+          $spatterns = @("desktop_diagnostic","VAD_END_MISSING","ASR_EMPTY","WORKER_FATAL","小美丽语音故障日志")
+          foreach ($pattern in $spatterns) {
+            Write-Host ("--- SPEECH PATTERN: " + $pattern + " ---")
+            $matches = $sl | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-45)
+              $b = [Math]::Min($sl.Count, $n+120)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("D{0}: {1}" -f $i, $sl[$i-1]) }
+            }
+          }
+
           Write-Host "=== CURRENT VOICE_QWEN TARGETS ==="
           $vl = Get-Content -LiteralPath $voice
           $vpatterns = @("PRESETS","design_bean","design_ice","load_voices_async","def preview","def synthesize","def _synthesize","voice_id","speed","instruct","generate_voice_design")
@@ -140,9 +176,12 @@ jobs:
       - name: Upload expanded source
         uses: actions/upload-artifact@v4
         with:
-          name: expanded-source-v080
+          name: expanded-source-v0891
           path: |
             staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/main.py
             staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/brain_qwen.py
             staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/voice_qwen.py
+            staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/speech_input.py
+            staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/ndm_bridge.py
+            staging_inspect/XiaoMeili_V0_6_1_1_Source/app/assets/update_helper.ps1
           if-no-files-found: error
