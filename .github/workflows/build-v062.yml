@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.8.9.1.1
+name: Build and publish XiaoMeili v0.8.9.1
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.8.9.1.1
+      - name: Patch stable source to v0.8.9.1
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -131,28 +131,28 @@ jobs:
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
           if ($brain -notmatch 'def _fast_rule_candidates\(self, user_text, limit=6\):') { throw "V0.8.8 feature verification failed: fast rule retrieval missing" }
           if ($brain -notmatch '\[BRAIN_LATENCY\]') { throw "V0.8.8 feature verification failed: latency diagnostics missing" }
-          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.8.9.1.1 favorites navigation missing" }
-          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.8.9.1.1 favorites manager missing" }
-          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9.1.1 duplicate 状态动作 action entrance remains" }
-          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9.1.1 duplicate 视频素材 action entrance remains" }
+          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.8.9.1 favorites navigation missing" }
+          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.8.9.1 favorites manager missing" }
+          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9.1 duplicate 状态动作 action entrance remains" }
+          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9.1 duplicate 视频素材 action entrance remains" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
-          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.8.9.1.1 behavior-rule prompt missing" }
+          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.8.9.1 behavior-rule prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
-          if ($speech -notmatch '小美丽 V0\.8\.9\.1 语音诊断日志') { throw "V0.8.9.1.1 speech diagnostic label missing" }
-          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.8.9.1.1 vector favorite star class missing" }
-          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.8.9.1.1 voice dialogue favorite mapping missing" }
-          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.8.9.1.1 wake reply favorite mapping missing" }
-          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.8.9.1.1 phrase style favorite mapping missing" }
-          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.8.9.1.1 unified rule editor missing" }
-          if ($brain -notmatch 'feedback_aliases') { throw "V0.8.9.1.1 rule trigger alias protection missing" }
-          if ($main -notmatch 'QPushButton\("模仿"\)') { throw "V0.8.9.1.1 mimic mode switch missing" }
-          if ($main -notmatch 'QPushButton\("固定"\)') { throw "V0.8.9.1.1 fixed mode switch missing" }
-          if ($main -notmatch '⚡ 0 次模型思考') { throw "V0.8.9.1.1 zero-inference fixed pool UI missing" }
-          if ($main -notmatch 'fav_scroll\.viewport\(\)\.setStyleSheet\("background:transparent;"\)') { throw "V0.8.9.1.1 favorites dark-background fix missing" }
-          if ($brain -notmatch 'def _v089_trigger_normalize\(text\):') { throw "V0.8.9.1.1 trigger-only matcher missing" }
-          if ($brain -notmatch 'def _v089_fixed_reply\(self, rule\):') { throw "V0.8.9.1.1 fixed reply pool runtime missing" }
-          if ($brain -notmatch '唯一可能相关的模仿规则') { throw "V0.8.9.1.1 single-rule mimic prompt missing" }
-          if ($brain -notmatch '防复读重写1次') { throw "V0.8.9.1.1 anti-repeat retry missing" }
+          if ($speech -notmatch '小美丽 V0\.8\.9\.1 语音诊断日志') { throw "V0.8.9.1 speech diagnostic label missing" }
+          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.8.9.1 vector favorite star class missing" }
+          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.8.9.1 voice dialogue favorite mapping missing" }
+          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.8.9.1 wake reply favorite mapping missing" }
+          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.8.9.1 phrase style favorite mapping missing" }
+          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.8.9.1 unified rule editor missing" }
+          if ($brain -notmatch 'feedback_aliases') { throw "V0.8.9.1 rule trigger alias protection missing" }
+          if ($main -notmatch 'QPushButton\("模仿"\)') { throw "V0.8.9.1 mimic mode switch missing" }
+          if ($main -notmatch 'QPushButton\("固定"\)') { throw "V0.8.9.1 fixed mode switch missing" }
+          if ($main -notmatch '⚡ 0 次模型思考') { throw "V0.8.9.1 zero-inference fixed pool UI missing" }
+          if ($main -notmatch 'fav_scroll\.viewport\(\)\.setStyleSheet\("background:transparent;"\)') { throw "V0.8.9.1 favorites dark-background fix missing" }
+          if ($brain -notmatch 'def _v089_trigger_normalize\(text\):') { throw "V0.8.9.1 trigger-only matcher missing" }
+          if ($brain -notmatch 'def _v089_fixed_reply\(self, rule\):') { throw "V0.8.9.1 fixed reply pool runtime missing" }
+          if ($brain -notmatch '唯一可能相关的模仿规则') { throw "V0.8.9.1 single-rule mimic prompt missing" }
+          if ($brain -notmatch '防复读重写1次') { throw "V0.8.9.1 anti-repeat retry missing" }
           if ($main -notmatch 'def _v0891_favorites_file\(self\):') { throw "V0.8.9.1 durable Favorites file helper missing" }
           if ($main -notmatch 'favorites_v2\.json') { throw "V0.8.9.1 dedicated Favorites state file missing" }
           if ($main -notmatch 'if self\.v774_nav_names\[index\] == "常用"') { throw "V0.8.9.1 Favorites page-enter refresh missing" }
@@ -211,20 +211,20 @@ jobs:
           "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.8.9.1.1 release asset
+      - name: Publish v0.8.9.1 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.8.9.1.1" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.8.9.1" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.8.9.1.1 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.8.9.1 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.8.9.1.1", "$env:UPDATE_ZIP",
+            "release", "create", "v0.8.9.1", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.8.9.1.1",
+            "--title", "XiaoMeili V0.8.9.1",
             "--notes", "V0.8.9.1 fixes Favorites disappearing after restart or update. Favorites now persist in their own atomic user-data file under XiaoMeiliData instead of depending on the monolithic config snapshot, with a backup copy and compatibility mirror. The Favorites page also refreshes every time it is opened to avoid startup/catalog timing leaving it visually blank."
           )
           & gh @ghargs
@@ -235,7 +235,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.9.1.1/XiaoMeili_0.8.9.1_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.9.1/XiaoMeili_0.8.9.1_update.zip"
           $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.9.1_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -259,7 +259,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.9.1.1/XiaoMeili_0.8.9.1_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.9.1/XiaoMeili_0.8.9.1_update.zip"
           $manifest = [ordered]@{
             protocol = 1
             version = "0.8.9.1"
@@ -278,5 +278,5 @@ jobs:
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.8.9.1.1 manifest"
+          git commit -m "Publish XiaoMeili v0.8.9.1 manifest"
           git push
