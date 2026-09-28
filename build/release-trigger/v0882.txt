@@ -1,0 +1,1 @@
+Trigger XiaoMeili V0.8.8.2 favorites + semantic polish release.
