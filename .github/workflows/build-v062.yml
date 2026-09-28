@@ -123,7 +123,7 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.8\.2"') { throw "Source version verification failed: expected 0.8.8.3" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.8\.3"') { throw "Source version verification failed: expected 0.8.8.3" }
           if ($main -notmatch 'def _v088_selected_exchange\(self\):') { throw "V0.8.8 feature verification failed: direct correction helper missing" }
           if ($main -notmatch 'warm_up_async') { throw "V0.8.8 feature verification failed: warmup missing" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
@@ -136,7 +136,7 @@ jobs:
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
           if ($brain -notmatch '这是一条语义/立场规则，不是台词模板') { throw "V0.8.8.3 semantic anti-repeat prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
-          if ($speech -notmatch '小美丽 V0\.8\.8\.2 语音诊断日志') { throw "V0.8.8.3 speech diagnostic label missing" }
+          if ($speech -notmatch '小美丽 V0\.8\.8\.3 语音诊断日志') { throw "V0.8.8.3 speech diagnostic label missing" }
           if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.8.8.3 vector favorite star class missing" }
           if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.8.8.3 voice dialogue favorite mapping missing" }
           if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.8.8.3 wake reply favorite mapping missing" }
