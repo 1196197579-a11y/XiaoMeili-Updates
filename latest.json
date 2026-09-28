@@ -1,14 +1,17 @@
 {
   "protocol": 1,
-  "version": "0.8.9.1",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.9.1/XiaoMeili_0.8.9.1_update.zip",
-  "sha256": "40f6a728a6df56d6a636605d81cfdd9073713c0b9643225c0e520b60e64fe7de",
+  "version": "0.8.9.2",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.8.9.2/XiaoMeili_0.8.9.2_update.zip",
+  "sha256": "fddd667eda5debb46e61ca3da6e0d397414fa4226320776e35a5c9c0782b340e",
+  "package_size": 197857982,
   "notes": [
-    "V0.8.9.1 修复「常用」收藏在重启或更新后消失的问题",
-    "收藏列表不再只依赖主配置字典，改为单独保存在 XiaoMeiliData 的 ui_state/favorites_v2.json，并使用临时文件原子写入",
-    "每次保存收藏时自动保留一份 .bak 备份；主配置中的 favorites_v0882 仅作为兼容镜像，旧模块覆盖主配置也不会再把收藏抹掉",
-    "首次升级会自动迁移旧收藏；若检测到旧版已经异常丢成空列表，会恢复最初三个默认常用入口，之后用户主动清空则会正常永久保留空状态",
-    "进入「常用」页面时强制重新读取并渲染收藏，避免启动阶段功能目录尚未完成注册而出现视觉空白",
-    "V0.8.9 的模仿/固定语义规则 V2、零模型固定回复池与快速回答机制保持不变"
+    "V0.8.9.2 更新下载接入现有 NDM 配置：选择 NDM 模式时，后续版本更新包会直接交给 Neat Download Manager 下载",
+    "NDM 下载完成后仍由小美丽执行 SHA-256 与 ZIP 完整性校验，再进入原有安全覆盖、回滚和自动重启流程；NDM 只负责下载，不负责安装",
+    "NDM 未开启、连接失败、目录失效或下载校验失败时，会自动回退到小美丽内置下载器，不会因此失去更新能力",
+    "更新清单新增 package_size，NDM 更新可显示更准确的下载进度；下载阶段会明确区分 NDM / 内置下载器 / 校验 / 安装",
+    "正常更新记录改存 XiaoMeiliData/logs/update/updater.log，不再把成功更新也误标成桌面错误日志",
+    "ASR_EMPTY 与偶发 VAD_END_MISSING 降级为可恢复语音事件，只保留在 speech_worker.log，不再单独生成桌面 TXT",
+    "真正的语音异常写入 XiaoMeiliData/logs/diagnostics/speech；更新失败诊断写入 logs/diagnostics/update；主程序 ERROR 也改存内部 diagnostics/app",
+    "系统 → 日志 → 导出诊断包会递归收集新的子目录日志，方便真正出现问题时一次打包"
   ]
 }
