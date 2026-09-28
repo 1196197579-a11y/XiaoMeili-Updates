@@ -284,7 +284,7 @@ jobs:
               "NDM 下载完成后仍由小美丽执行 SHA-256 与 ZIP 完整性校验，再进入原有安全覆盖、回滚和自动重启流程；NDM 只负责下载，不负责安装",
               "NDM 未开启、连接失败、目录失效或下载校验失败时，会自动回退到小美丽内置下载器，不会因此失去更新能力",
               "更新清单新增 package_size，NDM 更新可显示更准确的下载进度；下载阶段会明确区分 NDM / 内置下载器 / 校验 / 安装",
-              "正常更新记录改存 XiaoMeiliData/logs/update/updater.log，不再把成功更新也生成成桌面“错误日志”",
+              "正常更新记录改存 XiaoMeiliData/logs/update/updater.log，不再把成功更新也误标成桌面错误日志",
               "ASR_EMPTY 与偶发 VAD_END_MISSING 降级为可恢复语音事件，只保留在 speech_worker.log，不再单独生成桌面 TXT",
               "真正的语音异常写入 XiaoMeiliData/logs/diagnostics/speech；更新失败诊断写入 logs/diagnostics/update；主程序 ERROR 也改存内部 diagnostics/app",
               "系统 → 日志 → 导出诊断包会递归收集新的子目录日志，方便真正出现问题时一次打包"
