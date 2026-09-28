@@ -125,7 +125,16 @@ emotion：只允许 neutral、happy、teasing、proud、annoyed、concerned 六�
         )
 
 '''
-    b = replace_method(b, "_rule_prompt", "_match_semantic_rule", rule_prompt, "semantic rule prompt")
+    rp_def = b.find("    def _rule_prompt(")
+    if rp_def < 0:
+        raise RuntimeError("V0.8.8.2 semantic rule prompt start missing")
+    rp_start = b.rfind("    @staticmethod\n", 0, rp_def)
+    if rp_start < 0 or rp_def - rp_start > 40:
+        rp_start = rp_def
+    rp_end = b.find("    @staticmethod\n    def _v088_match_text(", rp_def)
+    if rp_end < 0:
+        raise RuntimeError("V0.8.8.2 fast retrieval anchor missing after rule prompt")
+    b = b[:rp_start] + rule_prompt + b[rp_end:]
 
     # Strengthen the single-pass prompt without adding a second model call.
     old = (
@@ -737,7 +746,7 @@ def patch(source_root: Path):
     for token in brain_checks:
         if token not in b:
             raise RuntimeError("V0.8.8.2 brain verification failed: " + token)
-    rule_block = b[b.find("    def _rule_prompt("):b.find("    def _match_semantic_rule(")]
+    rule_block = b[b.find("    def _rule_prompt("):b.find("    def _v088_match_text(")]
     if "reference_answer" in rule_block:
         raise RuntimeError("V0.8.8.2 semantic prompt still injects reference_answer")
 
