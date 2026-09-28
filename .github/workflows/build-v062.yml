@@ -135,7 +135,7 @@ jobs:
           if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9 duplicate 状态动作 action entrance remains" }
           if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9 duplicate 视频素材 action entrance remains" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
-          if ($brain -notmatch '这是一条语义/立场规则，不是台词模板') { throw "V0.8.9 semantic anti-repeat prompt missing" }
+          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.8.9 behavior-rule prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
           if ($speech -notmatch '小美丽 V0\.8\.9 语音诊断日志') { throw "V0.8.9 speech diagnostic label missing" }
           if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.8.9 vector favorite star class missing" }
