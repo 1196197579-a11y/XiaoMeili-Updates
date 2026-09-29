@@ -200,17 +200,30 @@ def patch_main(path: Path):
 '''
     s = s.replace(install_anchor, scale_methods + install_anchor, 1)
 
-    # Apply after the shell/theme layers have been built. Later UI patches may
-    # insert lines between theme installation and the first-run notice, so use
-    # the stable notice call as the anchor instead of requiring adjacency.
-    scale_notice = '        QTimer.singleShot(350, self._v774_first_run_notice)\n'
-    if scale_notice not in s:
-        raise RuntimeError("V0.9.1 first-run notice anchor missing")
-    s = s.replace(
-        scale_notice,
-        '        QTimer.singleShot(0, lambda: self._v091_apply_settings_scale(False))\n' + scale_notice,
-        1,
-    )
+    # Resolve the saved/automatic scale before the shell builds. This avoids
+    # depending on later first-run/theme hooks whose exact order changed across
+    # older UI patches.
+    size_anchor = '''        self.resize(1080, 720)
+        self.setMinimumSize(920, 620)
+'''
+    size_new = '''        self._v091_ui_scale=self._v091_resolve_scale()
+        try:
+            _screen=self.screen() or QApplication.primaryScreen()
+            _area=_screen.availableGeometry() if _screen is not None else None
+            _tw=max(760,int(round(1080*self._v091_ui_scale)))
+            _th=max(520,int(round(720*self._v091_ui_scale)))
+            if _area is not None:
+                _tw=min(_tw,max(680,int(_area.width())-20))
+                _th=min(_th,max(480,int(_area.height())-20))
+            self.setMinimumSize(min(760,_tw),min(500,_th))
+            self.resize(_tw,_th)
+        except Exception:
+            self.setMinimumSize(720,480)
+            self.resize(900,620)
+'''
+    if size_anchor not in s:
+        raise RuntimeError("V0.9.1 initial settings size anchor missing")
+    s = s.replace(size_anchor, size_new, 1)
 
     # ------------------------------------------------------------------
     # 2) Highlight UI: preview controls + clearer state presentation.
