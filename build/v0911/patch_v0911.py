@@ -187,8 +187,8 @@ def patch_main(path: Path):
     s=s.replace(
         import_anchor,
         import_anchor+
-        'from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont\\n'
-        'from PySide6.QtCore import QRect\\n',
+        'from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont\n'
+        'from PySide6.QtCore import QRect\n',
         1,
     )
 
