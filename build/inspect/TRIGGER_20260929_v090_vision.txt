@@ -1,0 +1,1 @@
+Inspect current v0.8.9.2 vision/event/whiteboard architecture for v0.9.0.
