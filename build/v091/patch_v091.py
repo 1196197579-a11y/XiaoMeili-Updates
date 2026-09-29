@@ -200,17 +200,17 @@ def patch_main(path: Path):
 '''
     s = s.replace(install_anchor, scale_methods + install_anchor, 1)
 
-    # Apply after the theme button exists, before the first-run notice.
-    scale_install_old = '''        self._install_v0775_theme_layer()
-        QTimer.singleShot(350, self._v774_first_run_notice)
-'''
-    scale_install_new = '''        self._install_v0775_theme_layer()
-        QTimer.singleShot(0, lambda: self._v091_apply_settings_scale(False))
-        QTimer.singleShot(350, self._v774_first_run_notice)
-'''
-    if scale_install_old not in s:
-        raise RuntimeError("V0.9.1 scale install anchor missing")
-    s = s.replace(scale_install_old, scale_install_new, 1)
+    # Apply after the shell/theme layers have been built. Later UI patches may
+    # insert lines between theme installation and the first-run notice, so use
+    # the stable notice call as the anchor instead of requiring adjacency.
+    scale_notice = '        QTimer.singleShot(350, self._v774_first_run_notice)\n'
+    if scale_notice not in s:
+        raise RuntimeError("V0.9.1 first-run notice anchor missing")
+    s = s.replace(
+        scale_notice,
+        '        QTimer.singleShot(0, lambda: self._v091_apply_settings_scale(False))\n' + scale_notice,
+        1,
+    )
 
     # ------------------------------------------------------------------
     # 2) Highlight UI: preview controls + clearer state presentation.
