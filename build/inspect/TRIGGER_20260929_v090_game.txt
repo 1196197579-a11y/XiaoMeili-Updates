@@ -1,0 +1,1 @@
+Inspect current game recognition + whiteboard before V0.9.0.
