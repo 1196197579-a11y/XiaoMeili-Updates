@@ -61,6 +61,7 @@ jobs:
           python "build\v0883\patch_v0883.py" "$src"
           python "build\v089\patch_v089.py" "$src"
           python "build\v0891\patch_v0891.py" "$src"
+          python "build\v0892\patch_v0892.py" "$src" "$PWD"
           $main = Join-Path $src "app\src\main.py"
           $brain = Join-Path $src "app\src\brain_qwen.py"
           $voice = Join-Path $src "app\src\voice_qwen.py"
@@ -145,6 +146,27 @@ jobs:
             }
           }
 
+          Write-Host "=== V090 VISION / EVENT / BOARD TARGETS ==="
+          $v90patterns = @(
+            "class VisionWorker","def run(self)","def _detect","nickname_edit",
+            "vision_enabled","hp_threshold","nickname_ocr_cb","STATE_NAMES",
+            "kill","击杀","death","死亡","victory","获胜","win","lose",
+            "DialogueBoardOverlay","def show_board","def play","whiteboard",
+            "voice_service","preview_finished","playback_started","playback_finished",
+            "def _v774_open_actions","def open_system_section","game",
+            "report","战报","screen","capture","dxcam","mss","pyautogui"
+          )
+          foreach ($pattern in $v90patterns) {
+            Write-Host ("--- V090 PATTERN: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-80)
+              $b = [Math]::Min($ml.Count, $n+220)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("R{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
           Write-Host "=== CURRENT VOICE_QWEN TARGETS ==="
           $vl = Get-Content -LiteralPath $voice
           $vpatterns = @("PRESETS","design_bean","design_ice","load_voices_async","def preview","def synthesize","def _synthesize","voice_id","speed","instruct","generate_voice_design")
@@ -176,7 +198,7 @@ jobs:
       - name: Upload expanded source
         uses: actions/upload-artifact@v4
         with:
-          name: expanded-source-v0891
+          name: expanded-source-v0892
           path: |
             staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/main.py
             staging_inspect/XiaoMeili_V0_6_1_1_Source/app/src/brain_qwen.py
