@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.8.9.2
+name: Build and publish XiaoMeili v0.9.0
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.8.9.2
+      - name: Patch stable source to v0.9.0
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -90,6 +90,7 @@ jobs:
           Run-PythonChecked "build\v089\patch_v089.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0891\patch_v0891.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0892\patch_v0892.py" "$env:SOURCE_ROOT" "$PWD"
+          Run-PythonChecked "build\v090\patch_v090.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
@@ -126,48 +127,53 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.8\.9\.2"') { throw "Source version verification failed: expected 0.8.9.2" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.9\.0"') { throw "Source version verification failed: expected 0.9.0" }
           if ($main -notmatch 'def _v088_selected_exchange\(self\):') { throw "V0.8.8 feature verification failed: direct correction helper missing" }
           if ($main -notmatch 'warm_up_async') { throw "V0.8.8 feature verification failed: warmup missing" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
           if ($brain -notmatch 'def _fast_rule_candidates\(self, user_text, limit=6\):') { throw "V0.8.8 feature verification failed: fast rule retrieval missing" }
           if ($brain -notmatch '\[BRAIN_LATENCY\]') { throw "V0.8.8 feature verification failed: latency diagnostics missing" }
-          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.8.9.2 favorites navigation missing" }
-          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.8.9.2 favorites manager missing" }
-          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9.2 duplicate 状态动作 action entrance remains" }
-          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.8.9.2 duplicate 视频素材 action entrance remains" }
+          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.9.0 favorites navigation missing" }
+          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.9.0 favorites manager missing" }
+          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.9.0 duplicate 状态动作 action entrance remains" }
+          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.9.0 duplicate 视频素材 action entrance remains" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
-          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.8.9.2 behavior-rule prompt missing" }
+          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.9.0 behavior-rule prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
-          if ($speech -notmatch '小美丽 V0\.8\.9\.2 语音诊断日志') { throw "V0.8.9.2 speech diagnostic label missing" }
-          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.8.9.2 vector favorite star class missing" }
-          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.8.9.2 voice dialogue favorite mapping missing" }
-          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.8.9.2 wake reply favorite mapping missing" }
-          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.8.9.2 phrase style favorite mapping missing" }
-          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.8.9.2 unified rule editor missing" }
-          if ($brain -notmatch 'feedback_aliases') { throw "V0.8.9.2 rule trigger alias protection missing" }
-          if ($main -notmatch 'QPushButton\("模仿"\)') { throw "V0.8.9.2 mimic mode switch missing" }
-          if ($main -notmatch 'QPushButton\("固定"\)') { throw "V0.8.9.2 fixed mode switch missing" }
-          if ($main -notmatch '⚡ 0 次模型思考') { throw "V0.8.9.2 zero-inference fixed pool UI missing" }
-          if ($main -notmatch 'fav_scroll\.viewport\(\)\.setStyleSheet\("background:transparent;"\)') { throw "V0.8.9.2 favorites dark-background fix missing" }
-          if ($brain -notmatch 'def _v089_trigger_normalize\(text\):') { throw "V0.8.9.2 trigger-only matcher missing" }
-          if ($brain -notmatch 'def _v089_fixed_reply\(self, rule\):') { throw "V0.8.9.2 fixed reply pool runtime missing" }
-          if ($brain -notmatch '唯一可能相关的模仿规则') { throw "V0.8.9.2 single-rule mimic prompt missing" }
-          if ($brain -notmatch '防复读重写1次') { throw "V0.8.9.2 anti-repeat retry missing" }
-          if ($main -notmatch 'def _v0891_favorites_file\(self\):') { throw "V0.8.9.2 durable Favorites file helper missing" }
-          if ($main -notmatch 'favorites_v2\.json') { throw "V0.8.9.2 dedicated Favorites state file missing" }
-          if ($main -notmatch 'if self\.v774_nav_names\[index\] == "常用"') { throw "V0.8.9.2 Favorites page-enter refresh missing" }
-          if ($main -notmatch 'ndm_download_and_import') { throw "V0.8.9.2 NDM update integration missing" }
-          if ($main -notmatch 'UPDATE_LOG_DIR = LOG_DIR / "update"') { throw "V0.8.9.2 internal update log routing missing" }
-          if ($main -match '小美丽更新错误日志_请上传给ChatGPT') { throw "V0.8.9.2 still contains automatic desktop updater log" }
-          if ($main -match 'desktop_dir\(\) / "小美丽错误日志_请上传给ChatGPT\.txt"') { throw "V0.8.9.2 still contains automatic desktop app error log" }
-          if ($speech -notmatch 'RECOVERABLE_SPEECH_EVENT') { throw "V0.8.9.2 recoverable speech event routing missing" }
-          if ($speech -notmatch 'diagnostics.*speech') { throw "V0.8.9.2 internal speech diagnostics missing" }
+          if ($speech -notmatch '小美丽 V0\.9\.0 语音诊断日志') { throw "V0.9.0 speech diagnostic label missing" }
+          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.9.0 vector favorite star class missing" }
+          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.9.0 voice dialogue favorite mapping missing" }
+          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.9.0 wake reply favorite mapping missing" }
+          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.9.0 phrase style favorite mapping missing" }
+          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.9.0 unified rule editor missing" }
+          if ($brain -notmatch 'feedback_aliases') { throw "V0.9.0 rule trigger alias protection missing" }
+          if ($main -notmatch 'QPushButton\("模仿"\)') { throw "V0.9.0 mimic mode switch missing" }
+          if ($main -notmatch 'QPushButton\("固定"\)') { throw "V0.9.0 fixed mode switch missing" }
+          if ($main -notmatch '⚡ 0 次模型思考') { throw "V0.9.0 zero-inference fixed pool UI missing" }
+          if ($main -notmatch 'fav_scroll\.viewport\(\)\.setStyleSheet\("background:transparent;"\)') { throw "V0.9.0 favorites dark-background fix missing" }
+          if ($brain -notmatch 'def _v089_trigger_normalize\(text\):') { throw "V0.9.0 trigger-only matcher missing" }
+          if ($brain -notmatch 'def _v089_fixed_reply\(self, rule\):') { throw "V0.9.0 fixed reply pool runtime missing" }
+          if ($brain -notmatch '唯一可能相关的模仿规则') { throw "V0.9.0 single-rule mimic prompt missing" }
+          if ($brain -notmatch '防复读重写1次') { throw "V0.9.0 anti-repeat retry missing" }
+          if ($main -notmatch 'def _v0891_favorites_file\(self\):') { throw "V0.9.0 durable Favorites file helper missing" }
+          if ($main -notmatch 'favorites_v2\.json') { throw "V0.9.0 dedicated Favorites state file missing" }
+          if ($main -notmatch 'if self\.v774_nav_names\[index\] == "常用"') { throw "V0.9.0 Favorites page-enter refresh missing" }
+          if ($main -notmatch 'ndm_download_and_import') { throw "V0.9.0 NDM update integration missing" }
+          if ($main -notmatch 'UPDATE_LOG_DIR = LOG_DIR / "update"') { throw "V0.9.0 internal update log routing missing" }
+          if ($main -match '小美丽更新错误日志_请上传给ChatGPT') { throw "V0.9.0 still contains automatic desktop updater log" }
+          if ($main -match 'desktop_dir\(\) / "小美丽错误日志_请上传给ChatGPT\.txt"') { throw "V0.9.0 still contains automatic desktop app error log" }
+          if ($speech -notmatch 'RECOVERABLE_SPEECH_EVENT') { throw "V0.9.0 recoverable speech event routing missing" }
+          if ($speech -notmatch 'diagnostics.*speech') { throw "V0.9.0 internal speech diagnostics missing" }
           $helperText = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
-          if ($helperText -notmatch '\[string\]\$LogPath') { throw "V0.8.9.2 update helper internal LogPath missing" }
-          if ($helperText -notmatch '\[string\]\$DiagnosticDir') { throw "V0.8.9.2 update helper DiagnosticDir missing" }
-          if ($helperText -match '\$DesktopLog') { throw "V0.8.9.2 update helper still writes DesktopLog" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.8.9.2" -Encoding ascii
+          if ($helperText -notmatch '\[string\]\$LogPath') { throw "V0.9.0 update helper internal LogPath missing" }
+          if ($helperText -notmatch '\[string\]\$DiagnosticDir') { throw "V0.9.0 update helper DiagnosticDir missing" }
+          if ($helperText -match '\$DesktopLog') { throw "V0.9.0 update helper still writes DesktopLog" }
+          if ($main -notmatch 'def _scan_enemy_alive_v090\(') { throw "V0.9.0 enemy alive tracker missing" }
+          if ($main -notmatch 'def _ocr_own_kill_rows_v090\(') { throw "V0.9.0 nickname own-kill verifier missing" }
+          if ($main -notmatch 'self\.highlight_event_id') { throw "V0.9.0 highlight event state missing" }
+          if ($main -notmatch '高光回合 · P100 最高优先级') { throw "V0.9.0 highlight settings UI missing" }
+          if ($main -notmatch 'tag="highlight_cta"') { throw "V0.9.0 highlight TTS trigger missing" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.9.0" -Encoding ascii
 
       - name: Install desktop build dependencies
         shell: pwsh
@@ -213,7 +219,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.8.9.2_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.9.0_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -224,21 +230,21 @@ jobs:
           "UPDATE_SIZE=$size" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish v0.8.9.2 release asset
+      - name: Publish v0.9.0 release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.8.9.2" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.9.0" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.8.9.2 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            throw "Release v0.9.0 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.8.9.2", "$env:UPDATE_ZIP",
+            "release", "create", "v0.9.0", "$env:UPDATE_ZIP",
             "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.8.9.2",
-            "--notes", "V0.8.9.2 routes application, updater and speech diagnostics into XiaoMeiliData instead of automatically creating Desktop TXT files. Recoverable ASR_EMPTY/VAD_END_MISSING events stay only in speech_worker.log. Future app updates reuse the existing NDM component-download configuration, verify SHA-256/ZIP after NDM completes, and automatically fall back to the built-in downloader when NDM is unavailable."
+            "--title", "XiaoMeili V0.9.0",
+            "--notes", "V0.9.0 adds a single-round VALORANT highlight tracker. It counts only kills attributed to the currently bound game nickname, tracks enemy survivors from the top HUD, requires at least two own kills plus the final enemy kill plus survival plus confirmed victory, and triggers a P100 whiteboard/TTS CTA. The test build reuses the existing universal whiteboard animation until the dedicated highlight clip is ready."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -248,8 +254,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.9.2/XiaoMeili_0.8.9.2_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.8.9.2_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.9.0/XiaoMeili_0.9.0_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.9.0_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -272,27 +278,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.8.9.2/XiaoMeili_0.8.9.2_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.9.0/XiaoMeili_0.9.0_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.8.9.2"
+            version = "0.9.0"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             package_size = [int64]$env:UPDATE_SIZE
             notes = @(
-              "V0.8.9.2 更新下载接入现有 NDM 配置：选择 NDM 模式时，后续版本更新包会直接交给 Neat Download Manager 下载",
-              "NDM 下载完成后仍由小美丽执行 SHA-256 与 ZIP 完整性校验，再进入原有安全覆盖、回滚和自动重启流程；NDM 只负责下载，不负责安装",
-              "NDM 未开启、连接失败、目录失效或下载校验失败时，会自动回退到小美丽内置下载器，不会因此失去更新能力",
-              "更新清单新增 package_size，NDM 更新可显示更准确的下载进度；下载阶段会明确区分 NDM / 内置下载器 / 校验 / 安装",
-              "正常更新记录改存 XiaoMeiliData/logs/update/updater.log，不再把成功更新也误标成桌面错误日志",
-              "ASR_EMPTY 与偶发 VAD_END_MISSING 降级为可恢复语音事件，只保留在 speech_worker.log，不再单独生成桌面 TXT",
-              "真正的语音异常写入 XiaoMeiliData/logs/diagnostics/speech；更新失败诊断写入 logs/diagnostics/update；主程序 ERROR 也改存内部 diagnostics/app",
-              "系统 → 日志 → 导出诊断包会递归收集新的子目录日志，方便真正出现问题时一次打包"
+              "V0.9.0 新增「高光回合」系统：满足 本回合本人击杀≥2 + 本人完成敌方最后一杀 + 本人存活 + 本回合确认获胜 才触发",
+              "击杀归属改为读取「系统 → 游戏识别 → 我的游戏昵称」，不再依赖贤者头像，因此更换海神、捷风等角色仍可使用；换账号只需修改绑定昵称",
+              "新增单回合事件记忆：记录本人击杀数、敌方当前存活人数、本人是否死亡、最后一杀是否属于本人，并在新回合重新归零",
+              "顶部敌方5个头像仅用于统计当前敌方存活人数，不识别具体英雄；队友击杀只会更新敌方人数，不会增加本人击杀数",
+              "最后一杀采用完整证据链：击杀前敌方仅剩1人 + 新击杀属于绑定昵称 + 随后敌方归零/稳定胜利，宁可漏判也不猜",
+              "击杀最后一人后仍必须等待现有「获胜」UI确认；炸弹已安装但未拆除最终失败时不会触发高光",
+              "新增 P100 最高优先级高光事件包：会抢占普通TTS和普通白板，播放高光白板并从可编辑台词池随机选一句，用小美丽当前固定声音播报",
+              "高光播报池支持多句随机且避免连续重复；启动后会复用现有 TTS 缓存机制提前预热，触发时尽量直接播放",
+              "V0.9.0 测试版暂时复用现有通用白板动画，默认白板文字为「愣着干嘛，点点关注呀！」，专属高光动画制作好后只需替换素材"
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest.json" -Encoding utf8
           git config user.name "XiaoMeili Update Bot"
           git config user.email "actions@users.noreply.github.com"
           git add latest.json
-          git commit -m "Publish XiaoMeili v0.8.9.2 manifest"
+          git commit -m "Publish XiaoMeili v0.9.0 manifest"
           git push
