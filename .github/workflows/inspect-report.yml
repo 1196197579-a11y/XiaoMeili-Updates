@@ -118,6 +118,19 @@ jobs:
             }
           }
 
+          Write-Host "=== V0892 GAME / WHITEBOARD TARGETS ==="
+          $gpatterns = @("游戏识别","击杀","死亡","战报","白板","event","vision","capture","dxcam","valorant","nickname","我的游戏昵称","purchase","购买阶段","动作库")
+          foreach ($pattern in $gpatterns) {
+            Write-Host ("--- GAME PATTERN: " + $pattern + " ---")
+            $matches = $ml | Select-String -SimpleMatch -Pattern $pattern
+            foreach ($m in $matches) {
+              $n = $m.LineNumber
+              $a = [Math]::Max(1, $n-70)
+              $b = [Math]::Min($ml.Count, $n+180)
+              for ($i=$a; $i -le $b; $i++) { Write-Host ("G{0}: {1}" -f $i, $ml[$i-1]) }
+            }
+          }
+
           Write-Host "=== V0891 UPDATE / LOGGING TARGETS ==="
           $patterns = @("class Update","def _update","def update","download","package_url","latest.json","UPDATE_DIR","desktop_log","小美丽更新错误日志","update_helper","sha256","urllib","urlopen","requests","progress_changed","restart_requested","updates")
           foreach ($pattern in $patterns) {
