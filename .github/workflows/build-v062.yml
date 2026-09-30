@@ -102,6 +102,7 @@ jobs:
           Run-PythonChecked "build\v0923\patch_v0923.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0924\patch_v0924.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0925\patch_v0925.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0925_fullsafe\patch_fullsafe_native.py" "$env:SOURCE_ROOT" "$PWD"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
@@ -306,6 +307,19 @@ jobs:
           if ([string]$active.version -ne "0.9.2.5") { throw "Positive updater did not activate expected version" }
           Write-Host "Positive safe-updater helper smoke test PASS"
 
+      - name: Native no-delete updater integration test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python "build\v0925_fullsafe\test_native_updater.py" "$env:SOURCE_ROOT"
+          if ($LASTEXITCODE -ne 0) { throw "Native updater integration test failed: $LASTEXITCODE" }
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $native = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\native_updater.py" -Raw
+          if ($main -notmatch 'from native_updater import install_update_package') { throw "Native updater import missing" }
+          if ($main -notmatch 'install_update_package\(') { throw "Native updater call missing" }
+          if ($native -notmatch 'native-no-delete-v1') { throw "Native updater safety marker missing" }
+          Write-Host "Native no-delete updater integration test PASS"
+
       - name: Create embedded V0.9.2.5 complete source project
         shell: pwsh
         run: |
@@ -435,7 +449,7 @@ jobs:
           "INSTALLER_SHA256=$installerSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "INSTALLER_SIZE=$((Get-Item -LiteralPath $installer).Length)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Publish v0.9.2.5 release asset
+      - name: Publish or replace v0.9.2.5 full-safe assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -443,16 +457,20 @@ jobs:
           $ErrorActionPreference = "Stop"
           gh release view "v0.9.2.5" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            throw "Release v0.9.2.5 already exists. Refusing to overwrite an existing release asset; bump the version instead."
+            gh release upload "v0.9.2.5" "$env:UPDATE_ZIP" "$env:INSTALLER_EXE" "$env:SOURCE_BUNDLE" --clobber --repo "${{ github.repository }}"
+            if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed: $LASTEXITCODE" }
+            gh release edit "v0.9.2.5" --repo "${{ github.repository }}" --title "XiaoMeili V0.9.2.5 FullSafe" --notes "V0.9.2.5 FullSafe keeps the feature set of V0.9.2.5 and replaces the in-app PowerShell update handoff with a native no-delete versioned updater. Future updates create a fresh versions directory, verify SHA-256/ZIP/version, back up active.json metadata, switch active.json, and never mirror or purge existing user/version files."
+            if ($LASTEXITCODE -ne 0) { throw "Release metadata update failed: $LASTEXITCODE" }
+          } else {
+            $ghargs = @(
+              "release", "create", "v0.9.2.5", "$env:UPDATE_ZIP", "$env:INSTALLER_EXE", "$env:SOURCE_BUNDLE",
+              "--repo", "${{ github.repository }}",
+              "--title", "XiaoMeili V0.9.2.5 FullSafe",
+              "--notes", "V0.9.2.5 FullSafe keeps the feature set of V0.9.2.5 and replaces the in-app PowerShell update handoff with a native no-delete versioned updater."
+            )
+            & gh @ghargs
+            if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
           }
-          $ghargs = @(
-            "release", "create", "v0.9.2.5", "$env:UPDATE_ZIP", "$env:INSTALLER_EXE", "$env:SOURCE_BUNDLE",
-            "--repo", "${{ github.repository }}",
-            "--title", "XiaoMeili V0.9.2.5",
-            "--notes", "V0.9.2.5 removes the visible highlight trigger-condition row, restyles every Settings checkbox as a green toggle switch, synchronizes highlight text/video start to actual TTS playback, and keeps the talking high-glow video looping for 3 seconds after speech before returning to idle. It retains the V0.9.2.3+ non-destructive updater and no-auto-delete guarantees."
-          )
-          & gh @ghargs
-          if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
 
       - name: Verify the public release download before manifest switch
         shell: pwsh
@@ -516,7 +534,7 @@ jobs:
             package_size = [int64]$env:UPDATE_SIZE
             notes = @(
               "V0.9.2.5 建立全新的安全更新基线：固定安装到 %LOCALAPPDATA%\\XiaoMeiliApp",
-              "后续更新采用全新版本目录 + active.json 切换，不覆盖当前版本，不镜像同步，不自动删除旧版本或用户文件",
+              "后续更新由小美丽本体直接创建全新版本目录并切换 active.json；不调用 PowerShell，不覆盖当前版本，不镜像同步，不自动删除旧版本或用户文件",
               "旧版 latest.json 更新通道继续保持关闭；V0.9.2.5 及以后只使用隔离的 latest_safe.json",
               "更新前必须验证专用安装标记、固定安装根目录和受保护路径，Desktop/Documents/Downloads/用户目录/磁盘根目录均无法作为更新目标",
               "保留 V0.9.1.1 的高光白板视频、随机台词同步、文字限制框和战报快照状态条等功能"
