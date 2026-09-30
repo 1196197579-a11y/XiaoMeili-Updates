@@ -387,10 +387,10 @@ jobs:
             throw "Release v0.9.2.2 already exists. Refusing to overwrite an existing release asset; bump the version instead."
           }
           $ghargs = @(
-            "release", "create", "v0.9.2.2", "$env:UPDATE_ZIP", "$env:INSTALLER_EXE",
+            "release", "create", "v0.9.2.2", "$env:UPDATE_ZIP", "$env:INSTALLER_EXE", "$env:SOURCE_BUNDLE",
             "--repo", "${{ github.repository }}",
             "--title", "XiaoMeili V0.9.2.2",
-            "--notes", "V0.9.2.2 is the new non-destructive safe baseline. It installs under %LOCALAPPDATA%\\XiaoMeiliApp, uses immutable version directories plus a stable launcher, isolates future updates on latest_safe.json, forbids mirror/purge/delete update operations, validates a dedicated install marker and protected paths, and leaves old versions/user files untouched."
+            "--notes", "V0.9.2.2 unifies the report snapshot card with highlight qualification, restores freely draggable/resizable highlight whiteboard text using the dialogue-whiteboard typography engine, isolates highlight playback from the idle pet layer, adds one-click complete source export, and keeps the V0.9.2.1 non-destructive update architecture. D-drive migration also retains the original C-drive data copy as a safety backup."
           )
           & gh @ghargs
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
