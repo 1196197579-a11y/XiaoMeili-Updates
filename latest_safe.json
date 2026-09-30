@@ -5,10 +5,10 @@
   "sha256": "59b665367b97a214870e3c6d6bdf2ac7b95aa41657b6ab0093a30f1a42472ef6",
   "package_size": 218242006,
   "notes": [
-    "V0.9.2.3 建立全新的安全更新基线：固定安装到 %LOCALAPPDATA%\\\\XiaoMeiliApp",
-    "后续更新采用全新版本目录 + active.json 切换，不覆盖当前版本，不镜像同步，不自动删除旧版本或用户文件",
-    "旧版 latest.json 更新通道继续保持关闭；V0.9.2.3 及以后只使用隔离的 latest_safe.json",
-    "更新前必须验证专用安装标记、固定安装根目录和受保护路径，Desktop/Documents/Downloads/用户目录/磁盘根目录均无法作为更新目标",
-    "保留 V0.9.1.1 的高光白板视频、随机台词同步、文字限制框和战报快照状态条等功能"
+    "V0.9.2.3 修复 Windows PowerShell 5.1 不支持 System.IO.Path.GetRelativePath 导致的“更新助手启动失败（exit=1）”。",
+    "保留 V0.9.2.2 的战报快照状态卡、高光白板自由拖拽缩放、统一字体渲染、待机动画隔离和一键导出完整源码工程。",
+    "新增正向更新器烟雾测试：真实调用 Windows PowerShell 5.1 完成新版本目录创建、校验和 active.json 切换后才允许发布。",
+    "彻底禁用自动存储清理，不再自动删除更新缓存、旧备份、旧语音目录或其他文件；D盘迁移继续保留C盘原始副本。",
+    "安全更新仍固定在 %LOCALAPPDATA%\\\\XiaoMeiliApp，采用新版本目录 + active.json 切换；Desktop/Documents/Downloads/用户目录/磁盘根目录保持受保护。"
   ]
 }
