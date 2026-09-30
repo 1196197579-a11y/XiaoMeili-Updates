@@ -63,7 +63,7 @@ theme_head = '''    def _v0775_stylesheet(self, dark):
 theme_head_new = '''    def _v0775_stylesheet(self, dark):
         up, down = self._v0775_theme_urls(dark)
         toggle_on = str(Path(resource("assets/v0925/toggle_on.svg"))).replace(chr(92), "/")
-        toggle_off = str(Path(resource(f"assets/v0925/toggle_off_{'dark' if dark else 'light'}.svg"))).replace("\\", "/")
+        toggle_off = str(Path(resource(f"assets/v0925/toggle_off_{'dark' if dark else 'light'}.svg"))).replace(chr(92), "/")
 '''
 if theme_head not in s:
     raise RuntimeError("V0.9.2.5 settings theme header anchor missing")
