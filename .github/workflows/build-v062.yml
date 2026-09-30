@@ -133,9 +133,12 @@ jobs:
           if (($testItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0) { throw "migration source is not a junction" }
           if (-not (Test-Path -LiteralPath (Join-Path $testSrc "brain\models\test.gguf"))) { throw "old compatibility path cannot read migrated file" }
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
-          Write-Host "V0761 migration helper Windows PowerShell 5.1 smoke test PASS"
+          $migrationBackups = @(Get-ChildItem -LiteralPath (Split-Path -Parent $testSrc) -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -like ((Split-Path -Leaf $testSrc) + '.__C_BACKUP__.*') })
+          if ($migrationBackups.Count -lt 1) { throw "V0.9.2.2 migration safety backup was not retained" }
+          if (-not (Test-Path -LiteralPath (Join-Path $migrationBackups[0].FullName "brain\models\test.gguf"))) { throw "V0.9.2.2 migration safety backup is incomplete" }
+          Write-Host "V0.9.2.2 migration helper non-destructive smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.9\.2\.1"') { throw "Source version verification failed: expected 0.9.2.2" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.9\.2\.2"') { throw "Source version verification failed: expected 0.9.2.2" }
           if ($main -notmatch 'def _v088_selected_exchange\(self\):') { throw "V0.8.8 feature verification failed: direct correction helper missing" }
           if ($main -notmatch 'warm_up_async') { throw "V0.8.8 feature verification failed: warmup missing" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
@@ -148,7 +151,7 @@ jobs:
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
           if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.9.2.2 behavior-rule prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
-          if ($speech -notmatch '小美丽 V0\.9\.2\.1 语音诊断日志') { throw "V0.9.2.2 speech diagnostic label missing" }
+          if ($speech -notmatch '小美丽 V0\.9\.2\.2 语音诊断日志') { throw "V0.9.2.2 speech diagnostic label missing" }
           if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.9.2.2 vector favorite star class missing" }
           if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.9.2.2 voice dialogue favorite mapping missing" }
           if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.9.2.2 wake reply favorite mapping missing" }
@@ -198,6 +201,13 @@ jobs:
           if ($helperText -notmatch 'PROTECTED_USER_PATHS') { throw "V0.9.2.2 protected-path validation missing" }
           if ($helperText -match '(?i)/MIR|/PURGE|robocopy\.exe|Remove-Item') { throw "V0.9.2.2 updater contains forbidden destructive operation" }
           Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.9.2.2" -Encoding ascii
+          if ($main -notmatch 'def normalized_highlight_text_layout\(') { throw "V0.9.2.2 highlight shared typography layout missing" }
+          if ($main -notmatch 'def _v0922_export_source_project\(self\):') { throw "V0.9.2.2 source project export UI missing" }
+          if ($main -notmatch 'self\.pet\.hide\(\)') { throw "V0.9.2.2 highlight base-pet isolation missing" }
+          if ($main -notmatch 'remove only from the configured pool') { throw "V0.9.2.2 non-destructive highlight remove policy missing" }
+          $migrationText = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\storage_migrate.ps1" -Raw
+          if ($migrationText -match 'Removing the old C: copy') { throw "V0.9.2.2 migration still deletes the original C copy" }
+          if ($migrationText -notmatch 'Safety backup retained at') { throw "V0.9.2.2 migration backup-retention policy missing" }
 
       - name: Non-destructive updater safety gate
         shell: pwsh
