@@ -11,9 +11,9 @@ s=main.read_text(encoding='utf-8')
 old_import = 'import os, sys, json, shutil, logging, traceback, subprocess, threading, time, ctypes, re, gc, random, tempfile, zipfile, urllib.request, hashlib'
 if old_import in s and 'hashlib, uuid' not in s.splitlines()[1]:
     s=s.replace(old_import, old_import + ', uuid', 1)
-widgets_tail='QFrame, QScrollArea\\n)'
+widgets_tail='QFrame, QScrollArea\n)'
 if widgets_tail in s:
-    s=s.replace(widgets_tail, 'QFrame, QScrollArea, QSizePolicy\\n)', 1)
+    s=s.replace(widgets_tail, 'QFrame, QScrollArea, QSizePolicy\n)', 1)
 elif 'QSizePolicy' not in s.split('from PIL import',1)[0]:
     raise RuntimeError('V0.9.2.2 QSizePolicy import marker missing')
 
