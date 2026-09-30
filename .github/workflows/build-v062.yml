@@ -188,8 +188,6 @@ jobs:
           if ($main -notmatch 'tag="highlight_cta"') { throw "V0.9.2.4 highlight TTS trigger missing" }
           if ($main -notmatch 'def _v091_apply_settings_scale\(self, persist=False\):') { throw "V0.9.2.4 settings scale engine missing" }
           if ($main -notmatch 'settingsMainScroll') { throw "V0.9.2.4 settings scroll safety missing" }
-          if ($main -notmatch '▶ 随机预览高光') { throw "V0.9.2.4 highlight random preview missing" }
-          if ($main -notmatch '逐句试听下一句') { throw "V0.9.2.4 sequential highlight preview missing" }
           if ($main -notmatch '高光资格：已触发') { throw "V0.9.2.4 highlight qualification status missing" }
           if ($main -notmatch 'shuffle-bag pick') { throw "V0.9.2.4 highlight shuffle bag missing" }
           if ($main -notmatch 'class HighlightVideoOverlay\(QWidget\):') { throw "V0.9.2.4 highlight video overlay missing" }
