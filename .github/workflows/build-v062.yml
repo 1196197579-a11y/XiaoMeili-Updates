@@ -230,6 +230,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw "SAFETY BLOCK: helper accepted Desktop as install root." }
           if (-not (Test-Path -LiteralPath $sentinel)) { throw "SAFETY BLOCK: Desktop sentinel was deleted." }
           Write-Host "Non-destructive updater safety gate PASS."
+          exit 0
 
       - name: Install desktop build dependencies
         shell: pwsh
