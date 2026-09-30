@@ -106,6 +106,14 @@ jobs:
           Run-PythonChecked "build\v0926\patch_v0926.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0927\patch_v0927.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0927\test_v0927_contract.py" "$env:SOURCE_ROOT"
+      - name: Probe V0.9.2.8 startup source
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python "build\probe_v0928_startup.py" "$env:SOURCE_ROOT"
+          throw "PROBE_ONLY_V0928"
+
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
