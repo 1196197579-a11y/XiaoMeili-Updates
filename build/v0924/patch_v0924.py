@@ -16,6 +16,7 @@ if 'APP_VERSION = "0.9.2.3"' not in s:
     raise RuntimeError("V0.9.2.4 expected V0.9.2.3 base")
 s = s.replace('APP_VERSION = "0.9.2.3"', 'APP_VERSION = "0.9.2.4"', 1)
 s = s.replace('APP_NAME = "小美丽 V0.9.2.3｜Voice Interaction"', 'APP_NAME = "小美丽 V0.9.2.4｜Voice Interaction"', 1)
+s = s.replace("自动存储清理已禁用：V0.9.2.3 不会自动删除任何文件。", "自动存储清理已禁用：V0.9.2.4 不会自动删除任何文件。", 1)
 
 # ------------------------------------------------------------------
 # Highlight UI: one preview button only.
