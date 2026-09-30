@@ -1,13 +1,13 @@
 {
   "protocol": 1,
-  "version": "0.9.2.1",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.9.2.1/XiaoMeili_0.9.2.1_update.zip",
-  "sha256": "55736fcf6c6a0a55c3d68c9e36a1f4a3b0202249b20f55a197fad067cb1d79f8",
-  "package_size": 197894987,
+  "version": "0.9.2.2",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.9.2.2/XiaoMeili_0.9.2.2_update.zip",
+  "sha256": "78428c2b9fe4638cabcb272b115610561c7dfc7b00a97a87903a5991f23a313f",
+  "package_size": 218243775,
   "notes": [
-    "V0.9.2.1 建立全新的安全更新基线：固定安装到 %LOCALAPPDATA%\\\\XiaoMeiliApp",
+    "V0.9.2.2 建立全新的安全更新基线：固定安装到 %LOCALAPPDATA%\\\\XiaoMeiliApp",
     "后续更新采用全新版本目录 + active.json 切换，不覆盖当前版本，不镜像同步，不自动删除旧版本或用户文件",
-    "旧版 latest.json 更新通道继续保持关闭；V0.9.2.1 及以后只使用隔离的 latest_safe.json",
+    "旧版 latest.json 更新通道继续保持关闭；V0.9.2.2 及以后只使用隔离的 latest_safe.json",
     "更新前必须验证专用安装标记、固定安装根目录和受保护路径，Desktop/Documents/Downloads/用户目录/磁盘根目录均无法作为更新目标",
     "保留 V0.9.1.1 的高光白板视频、随机台词同步、文字限制框和战报快照状态条等功能"
   ]
