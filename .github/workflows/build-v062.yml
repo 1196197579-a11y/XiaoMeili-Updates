@@ -233,6 +233,12 @@ jobs:
             if ($main -match $obsolete) { throw "V0.9.2.5 obsolete preview UI remains: $obsolete" }
           }
 
+      - name: Probe V0.9.2.6 action source
+        shell: pwsh
+        run: |
+          python "build\probe_v0926_action.py" "$env:SOURCE_ROOT"
+          throw "PROBE_ONLY_V0926"
+
       - name: Non-destructive updater safety gate
         shell: pwsh
         run: |
