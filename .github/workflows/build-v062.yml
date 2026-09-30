@@ -311,7 +311,7 @@ jobs:
           $pipelineDir = Join-Path $sourceProject "release_pipeline"
           New-Item -ItemType Directory -Path $pipelineDir -Force | Out-Null
           Copy-Item -LiteralPath (Join-Path $PWD "build") -Destination (Join-Path $pipelineDir "build") -Recurse -Force
-          Copy-Item -LiteralPath (Join-Path $PWD ".github\workflows\build-v062.yml") -Destination (Join-Path $pipelineDir "build-v0923.yml") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD ".github\workflows\build-v062.yml") -Destination (Join-Path $pipelineDir "build-v0924.yml") -Force
           @(
             "XiaoMeili V0.9.2.4 complete editable source project",
             "Generated from the verified release pipeline at commit $env:GITHUB_SHA.",
@@ -416,7 +416,7 @@ jobs:
           $addLauncher = "$env:LAUNCHER_EXE;payload"
           $installerSource = Get-Content -LiteralPath "build\v0921\installer.py" -Raw
           $installerSource = $installerSource.Replace("0.9.2.1","0.9.2.4")
-          $installerScript = Join-Path $env:RUNNER_TEMP "installer_v0923.py"
+          $installerScript = Join-Path $env:RUNNER_TEMP "installer_v0924.py"
           Set-Content -LiteralPath $installerScript -Value $installerSource -Encoding UTF8
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name XiaoMeili_Setup_0.9.2.4 --icon "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico" --distpath $installerOut --workpath "$PWD\installer-work" --specpath "$PWD\installer-spec" --add-data $addUpdate --add-data $addLauncher $installerScript
           if ($LASTEXITCODE -ne 0) { throw "Installer PyInstaller failed: $LASTEXITCODE" }
