@@ -17,6 +17,7 @@ if 'APP_VERSION = "0.9.2.6"' not in s:
 
 s=s.replace('APP_VERSION = "0.9.2.6"','APP_VERSION = "0.9.2.7"',1)
 s=s.replace('APP_NAME = "小美丽 V0.9.2.6｜Voice Interaction"','APP_NAME = "小美丽 V0.9.2.7｜Voice Interaction"',1)
+s=s.replace("自动存储清理已禁用：V0.9.2.6 不会自动删除任何文件。","自动存储清理已禁用：V0.9.2.7 不会自动删除任何文件。",1)
 s=s.replace('"config_version": 22,','"config_version": 23,',1)
 
 # ------------------------------------------------------------------
