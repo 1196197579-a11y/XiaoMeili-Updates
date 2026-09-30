@@ -427,6 +427,12 @@ jobs:
           $selfTest = Start-Process -FilePath $installerVerify -ArgumentList "--self-test" -Wait -PassThru
           if ($selfTest.ExitCode -ne 0) { throw "Public installer self-test failed: $($selfTest.ExitCode)" }
           Write-Host "Public full installer verified: $installerUrl"
+          $sourceUrl = "https://github.com/${{ github.repository }}/releases/download/v0.9.2.2/XiaoMeili_V0.9.2.2_SourceProject.zip"
+          $sourceVerify = Join-Path $env:RUNNER_TEMP "XiaoMeili_V0.9.2.2_SourceProject_verify.zip"
+          Invoke-WebRequest -Uri $sourceUrl -OutFile $sourceVerify -UseBasicParsing
+          $sourceRemoteHash = (Get-FileHash -LiteralPath $sourceVerify -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sourceRemoteHash -ne $env:SOURCE_SHA256) { throw "Source-project release verification failed. local=$env:SOURCE_SHA256 remote=$sourceRemoteHash" }
+          Write-Host "Public complete source project verified: $sourceUrl"
 
       - name: Verify legacy update channel remains disabled
         shell: pwsh
