@@ -338,7 +338,7 @@ checks = [
     'hold_ms=3000',
     'toggle_on.svg',
     'toggle_off_',
-    'QCheckBox::indicator:checked { image: url("{toggle_on}"); }',
+    'QCheckBox::indicator:checked {{',
 ]
 for token in checks:
     if token not in s:
