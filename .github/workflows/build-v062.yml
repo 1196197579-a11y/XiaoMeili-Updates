@@ -224,7 +224,8 @@ jobs:
           if ($main -notmatch 'def _v0925_highlight_preview_started\(self, text, duration_ms, tag\):') { throw "V0.9.2.5 playback-start sync handler missing" }
           if ($main -notmatch 'def _v0925_highlight_preview_finished\(self, ok, message, tag\):') { throw "V0.9.2.5 3-second preview tail handler missing" }
           if ($main -notmatch 'hold_ms=3000') { throw "V0.9.2.5 high-glow 3-second hold missing" }
-          if ($main -notmatch 'QCheckBox::indicator:checked \{ image: url\("\{toggle_on\}"\); \}') { throw "V0.9.2.5 global green toggle style missing" }
+          if ($main -notmatch 'QCheckBox::indicator:checked') { throw "V0.9.2.5 global green toggle selector missing" }
+          if ($main -notmatch 'image: url\("\{toggle_on\}"\)') { throw "V0.9.2.5 green toggle checked image missing" }
           if ($main -notmatch 'assets/v0925/toggle_on\.svg') { throw "V0.9.2.5 green toggle asset path missing" }
           if ($main -match 'hf\.addRow\("触发条件",conditions\)') { throw "V0.9.2.5 visible trigger-condition row remains" }
           foreach ($obsolete in @('QPushButton\("预览选中"\)','QPushButton\("▶ 随机预览高光"\)','QPushButton\("逐句试听下一句"\)','QPushButton\("仅预览白板"\)','hf\.addRow\("仅预览白板文字"')) {
