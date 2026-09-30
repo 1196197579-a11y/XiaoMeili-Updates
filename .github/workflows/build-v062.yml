@@ -208,6 +208,10 @@ jobs:
           $migrationText = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\storage_migrate.ps1" -Raw
           if ($migrationText -match 'Removing the old C: copy') { throw "V0.9.2.2 migration still deletes the original C copy" }
           if ($migrationText -notmatch 'Safety backup retained at') { throw "V0.9.2.2 migration backup-retention policy missing" }
+          if ($main -notmatch 'hashlib, uuid') { throw "V0.9.2.2 uuid import missing" }
+          if ($main -notmatch 'QFrame, QScrollArea, QSizePolicy') { throw "V0.9.2.2 QSizePolicy import missing" }
+          if ($main -match '只有校验通过才删除 C 盘旧副本') { throw "V0.9.2.2 migration UI still promises destructive cleanup" }
+          if ($main -notmatch '程序不会自动删除它') { throw "V0.9.2.2 migration UI safety wording missing" }
 
       - name: Non-destructive updater safety gate
         shell: pwsh
