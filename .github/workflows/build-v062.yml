@@ -361,7 +361,11 @@ jobs:
           $installerOut = Join-Path $PWD "installer-out"
           $addUpdate = "$env:UPDATE_ZIP;payload"
           $addLauncher = "$env:LAUNCHER_EXE;payload"
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name XiaoMeili_Setup_0.9.2.2 --icon "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico" --distpath $installerOut --workpath "$PWD\installer-work" --specpath "$PWD\installer-spec" --add-data $addUpdate --add-data $addLauncher "build\v0921\installer.py"
+          $installerSource = Get-Content -LiteralPath "build\v0921\installer.py" -Raw
+          $installerSource = $installerSource.Replace("0.9.2.1","0.9.2.2")
+          $installerScript = Join-Path $env:RUNNER_TEMP "installer_v0922.py"
+          Set-Content -LiteralPath $installerScript -Value $installerSource -Encoding UTF8
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name XiaoMeili_Setup_0.9.2.2 --icon "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico" --distpath $installerOut --workpath "$PWD\installer-work" --specpath "$PWD\installer-spec" --add-data $addUpdate --add-data $addLauncher $installerScript
           if ($LASTEXITCODE -ne 0) { throw "Installer PyInstaller failed: $LASTEXITCODE" }
           $installer = Join-Path $installerOut "XiaoMeili_Setup_0.9.2.2.exe"
           if (-not (Test-Path $installer)) { throw "Full installer missing." }
