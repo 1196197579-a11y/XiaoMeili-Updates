@@ -15,7 +15,10 @@ s=main.read_text(encoding="utf-8")
 if 'APP_VERSION = "0.9.2.7"' not in s:
     raise RuntimeError("V0.9.2.8 expected V0.9.2.7 base")
 if "import shutil" not in s:
-    raise RuntimeError("V0.9.2.8 expected shutil import")
+    import_anchor="from pathlib import Path"
+    if import_anchor not in s:
+        raise RuntimeError("V0.9.2.8 pathlib import anchor missing")
+    s=s.replace(import_anchor,"import shutil\n"+import_anchor,1)
 
 s=s.replace('APP_VERSION = "0.9.2.7"','APP_VERSION = "0.9.2.8"',1)
 s=s.replace('APP_NAME = "小美丽 V0.9.2.7｜Voice Interaction"','APP_NAME = "小美丽 V0.9.2.8｜Voice Interaction"',1)
