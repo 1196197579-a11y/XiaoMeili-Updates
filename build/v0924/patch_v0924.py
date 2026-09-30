@@ -107,7 +107,7 @@ s = s[:start] + s[end:]
 # preview path. Phrase and video both use shuffle bags: randomized order,
 # every item once per cycle, and no immediate repeat at the cycle boundary.
 start = s.find('    def _v091_preview_pick(self, mode):\n')
-end = s.find('    def _v091_scale_css(self, css, scale):\n', start)
+end = s.find('    def _v0911_style_report_snapshot_bar(self):\n', start)
 if start < 0 or end < 0:
     raise RuntimeError("V0.9.2.4 legacy preview subsystem boundaries missing")
 
