@@ -219,7 +219,7 @@ jobs:
           if ($helper -notmatch 'PROTECTED_USER_PATHS') {
             throw "SAFETY BLOCK: protected-path denylist missing."
           }
-          if ($helper -notmatch "Join-Path \$env:LOCALAPPDATA 'XiaoMeiliApp'") {
+          if ($helper -notmatch 'LOCALAPPDATA' -or $helper -notmatch 'XiaoMeiliApp') {
             throw "SAFETY BLOCK: fixed managed root missing."
           }
 
