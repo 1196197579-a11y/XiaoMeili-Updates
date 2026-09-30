@@ -546,7 +546,7 @@ jobs:
             sha256 = $env:UPDATE_SHA256
             package_size = [int64]$env:UPDATE_SIZE
             notes = @(
-              "V0.9.2.7 修复动作库“测试”按钮的 QAbstractItemView 未定义崩溃；测试窗口继续使用 QListWidget 默认单选，不新增依赖",
+              "V0.9.2.7 修复动作库测试按钮的 QAbstractItemView 未定义崩溃；测试窗口继续使用 QListWidget 默认单选，不新增依赖",
               "修复高光配置升级后重置：load_config 现在保留所有非专用顶层用户配置块，因此 highlight_cta、settings_ui 以及未来扩展设置不会因版本更新被丢弃",
               "高光随机播报池文字现在独立防抖自动保存；导入白板视频、每支视频的文字限制框继续保存在 C:\\Users\\Public\\XiaoMeiliData 用户数据中",
               "更新器继续只创建新的 versions 目录、校验 SHA-256/ZIP/版本并切换 active.json；不调用 PowerShell 更新助手，不镜像同步，不自动删除任何旧版本、用户文件或素材",
