@@ -191,6 +191,27 @@ jobs:
           if ($helperText -notmatch 'Stop-Residual') { throw "V0.9.1.1 updater residual-process cleanup missing" }
           Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.9.1.1" -Encoding ascii
 
+      - name: Emergency updater safety gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $helper = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
+
+          if ($helper -match '(?i)robocopy\.exe[^\r\n]*/MIR') {
+            throw "SAFETY BLOCK: updater uses robocopy /MIR. Destructive mirror synchronization is forbidden."
+          }
+          if ($main -match 'target\s*=\s*Path\(sys\.executable\)\.parent') {
+            throw "SAFETY BLOCK: updater target is derived directly from sys.executable.parent without an install-root safety contract."
+          }
+          if ($helper -notmatch 'XIAOMEILI_INSTALL_ROOT_MARKER') {
+            throw "SAFETY BLOCK: updater helper lacks dedicated install-root marker validation."
+          }
+          if ($helper -notmatch 'PROTECTED_USER_PATHS') {
+            throw "SAFETY BLOCK: updater helper lacks protected Desktop/Documents/Downloads/UserProfile path denylist."
+          }
+          Write-Host "Updater destructive-path safety gate passed."
+
       - name: Install desktop build dependencies
         shell: pwsh
         run: |
