@@ -329,6 +329,9 @@ jobs:
           $abilityDst = Join-Path $env:SOURCE_ROOT "app\assets\xiaomeili_ability_form_v01002.webp"
           [System.IO.File]::WriteAllBytes($abilityDst, $abilityBytes)
           if ((Get-Item -LiteralPath $abilityDst).Length -lt 1000000) { throw "V0.10.0.2 ability animation reconstruction failed" }
+          New-Item -ItemType Directory -Force -Path (Join-Path $env:SOURCE_ROOT "tests") | Out-Null
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01002\test_v01002_contract.py") -Destination (Join-Path $env:SOURCE_ROOT "tests\test_v01002_contract.py") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01002\V01002_CHANGELOG.txt") -Destination (Join-Path $env:SOURCE_ROOT "V01002_CHANGELOG.txt") -Force
           python "$env:SOURCE_ROOT\tests\test_v01002_contract.py"
           if ($LASTEXITCODE -ne 0) { throw "V0.10.0.2 contract failed: $LASTEXITCODE" }
           python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\ability_sidebar.py"
