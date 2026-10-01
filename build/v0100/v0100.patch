@@ -1,0 +1,1000 @@
+--- a/app/src/main.py
++++ b/app/src/main.py
+@@ -27,8 +27,10 @@
+ import cv2
+ import numpy as np
+ 
+-APP_NAME = "小美丽 V0.9.2.8｜Voice Interaction"
+-APP_VERSION = "0.9.2.8"
++from ability_sidebar import AbilitySidebar, FEATURES as ABILITY_FEATURES
++
++APP_NAME = "小美丽 V0.10.0｜Beauty Ability Sidebar"
++APP_VERSION = "0.10.0"
+ UPDATE_PROTOCOL_VERSION = 1
+ ORG_NAME = "XiaoMeili"
+ ASSET_RNG = random.SystemRandom()  # independent draw with replacement; consecutive repeats are allowed
+@@ -345,7 +347,7 @@
+ 
+ def default_config():
+     return {
+-        "config_version": 23,
++        "config_version": 24,
+         "always_on_top": True,
+         "click_through": False,
+         "lock_position": False,
+@@ -360,6 +362,19 @@
+         "report_font_path": "",
+         "report_duration_ms": 10000,
+         "report_layouts": {},
++        "ability_sidebar": {
++            "enabled": True,
++            "hover_open": True,
++            "voice_feedback": True,
++            "collapse_delay_ms": 900,
++            "states": {
++                "beauty_lock": False,
++                "beauty_insight": False,
++                "power_20": False,
++                "power_50": False,
++                "beauty_god": False,
++            },
++        },
+         "mouse_interaction": {
+             "enabled": True,
+             "attention_radius": 1.85,
+@@ -507,7 +522,7 @@
+     # a later feature was not yet added to default_config() in the old base.
+     _schema_sections = {
+         "hotkeys", "assets", "vision", "mouse_interaction",
+-        "voice", "speech", "whiteboard", "brain", "updates",
++        "voice", "speech", "whiteboard", "brain", "updates", "ability_sidebar",
+     }
+     for k, v in old_data.items():
+         if k in _schema_sections:
+@@ -565,6 +580,16 @@
+     old_whiteboard = old_data.get("whiteboard", {}) if isinstance(old_data.get("whiteboard"), dict) else {}
+     cfg["whiteboard"].update({k: v for k, v in old_whiteboard.items() if k in cfg["whiteboard"]})
+ 
++    old_ability = old_data.get("ability_sidebar", {}) if isinstance(old_data.get("ability_sidebar"), dict) else {}
++    for _key in ("enabled", "hover_open", "voice_feedback", "collapse_delay_ms"):
++        if _key in old_ability:
++            cfg["ability_sidebar"][_key] = old_ability[_key]
++    if isinstance(old_ability.get("states"), dict):
++        cfg["ability_sidebar"]["states"].update({
++            k: bool(v) for k, v in old_ability["states"].items()
++            if k in cfg["ability_sidebar"]["states"]
++        })
++
+     old_brain = old_data.get("brain", {}) if isinstance(old_data.get("brain"), dict) else {}
+     cfg["brain"].update({k: v for k, v in old_brain.items() if k in cfg["brain"]})
+     if "spoken_text" in str(cfg["brain"].get("persona", "")) and "board_text" in str(cfg["brain"].get("persona", "")):
+@@ -600,9 +625,9 @@
+     # Mark the migrated file as the current schema only after all old values
+     # have been carried through. This does not remove any unknown user fields.
+     try:
+-        cfg["config_version"] = max(23, int(cfg.get("config_version", 0) or 0))
++        cfg["config_version"] = max(24, int(cfg.get("config_version", 0) or 0))
+     except Exception:
+-        cfg["config_version"] = 23
++        cfg["config_version"] = 24
+ 
+     return cfg
+ 
+@@ -1682,8 +1707,93 @@
+         p.end()
+ 
+ 
++
++class AbilityAuraOverlay(QWidget):
++    """Very light cosmetic aura driven only by XiaoMeili ability switches."""
++
++    def __init__(self, parent=None):
++        super().__init__(parent)
++        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
++        self._states = {}
++        self._phase = 0.0
++        self._timer = QTimer(self)
++        self._timer.setInterval(45)
++        self._timer.timeout.connect(self._tick)
++        self._timer.start()
++        self.hide()
++
++    def set_states(self, states):
++        self._states = dict(states or {})
++        active = any(bool(v) for v in self._states.values())
++        self.setVisible(active)
++        if active:
++            self.raise_()
++        self.update()
++
++    def _tick(self):
++        if not self.isVisible():
++            return
++        self._phase = (self._phase + 0.045) % 1.0
++        self.update()
++
++    def paintEvent(self, event):
++        if not any(bool(v) for v in self._states.values()):
++            return
++        p = QPainter(self)
++        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
++        w, h = self.width(), self.height()
++        pulse = 0.5 + 0.5 * __import__('math').sin(self._phase * 6.283185307)
++
++        strength = 0.18
++        if self._states.get('power_20'):
++            strength = max(strength, 0.34)
++        if self._states.get('power_50'):
++            strength = max(strength, 0.58)
++        if self._states.get('beauty_god'):
++            strength = 1.0
++
++        # Peripheral halo. Keep the face/body itself untouched.
++        aura_rect = QRectF(w * 0.12, h * 0.055, w * 0.76, h * 0.90)
++        for extra, alpha, width in ((11, 20, 7), (6, 34, 4), (0, 95, 1.6)):
++            rr = aura_rect.adjusted(-extra, -extra, extra, extra)
++            pen = QPen(QColor(59, 239, 181, int(alpha * strength * (0.72 + pulse * 0.28))))
++            pen.setWidthF(float(width))
++            p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush)
++            p.drawEllipse(rr)
++
++        if self._states.get('beauty_lock'):
++            # Restrained lock glow around the upper body, not a gameplay reticle.
++            lock_rect = QRectF(w * 0.28, h * 0.11, w * 0.44, h * 0.44)
++            pen = QPen(QColor(126, 255, 219, int(70 + pulse * 75)))
++            pen.setWidthF(1.4); p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush)
++            p.drawEllipse(lock_rect)
++
++        if self._states.get('beauty_insight'):
++            # A scan shimmer clipped to XiaoMeili's own canvas only.
++            y = int(h * (0.19 + 0.58 * self._phase))
++            grad_alpha = int(45 + pulse * 65)
++            pen = QPen(QColor(83, 249, 194, grad_alpha)); pen.setWidthF(1.2)
++            p.setPen(pen)
++            p.drawLine(int(w * 0.20), y, int(w * 0.80), y)
++
++        if self._states.get('beauty_god'):
++            # Sparse particles around the edge. No fullscreen/game overlay.
++            import math
++            p.setPen(Qt.PenStyle.NoPen)
++            for i in range(8):
++                a = self._phase * 6.283185307 + i * (6.283185307 / 8.0)
++                x = w * 0.50 + math.cos(a) * w * 0.38
++                y = h * 0.49 + math.sin(a * 1.07) * h * 0.42
++                r = 1.4 + ((i % 3) * 0.45)
++                p.setBrush(QColor(104, 255, 211, int(75 + pulse * 95)))
++                p.drawEllipse(QPointF(float(x), float(y)), r, r)
++        p.end()
++
++
+ class PetWindow(QWidget):
+     request_settings = Signal()
++    request_abilities = Signal()
+     config_changed = Signal()
+     dialogue_asset_ready = Signal(str)
+ 
+@@ -1757,6 +1867,10 @@
+         self.drag_layer.settled.connect(self._finish_drag_interaction)
+         self.drag_layer.hide()
+ 
++        self.ability_aura = AbilityAuraOverlay(self)
++        self.ability_aura.setGeometry(0, 0, self.width(), self.height())
++        self.ability_aura.set_states(self.cfg.get("ability_sidebar", {}).get("states", {}))
++
+         self.report_overlay = ReportTextOverlay(self.cfg, self)
+         self.report_active = False
+         self.report_timer = QTimer(self)
+@@ -1849,6 +1963,9 @@
+             self.mouse_layer.setGeometry(0, 0, w, h)
+         if hasattr(self, "drag_layer"):
+             self.drag_layer.setGeometry(0, 0, w, h)
++        if hasattr(self, "ability_aura"):
++            self.ability_aura.setGeometry(0, 0, w, h)
++            self.ability_aura.raise_()
+         if hasattr(self, "report_overlay"):
+             # Overlay spans the whole pet canvas; each report asset owns a normalized
+             # whiteboard rectangle in report_layouts.
+@@ -1861,6 +1978,17 @@
+             lamp = max(22, int(round(w * 0.105)))
+             self.dialogue_indicator.setGeometry(max(0, w-lamp-5), 5, lamp, lamp)
+             self.dialogue_indicator.raise_()
++
++    def set_ability_states(self, states):
++        if hasattr(self, "ability_aura"):
++            self.ability_aura.set_states(states if isinstance(states, dict) else {})
++            # Speech/report layers must remain above the decorative aura.
++            try:
++                self.report_overlay.raise_()
++                self.dialogue_overlay.raise_()
++                self.dialogue_indicator.raise_()
++            except Exception:
++                pass
+ 
+     def ensure_on_screen(self):
+         try:
+@@ -2498,12 +2626,15 @@
+ 
+         menu = QMenu(self)
+         lock_action = menu.addAction("锁定小美丽（游戏防误触）")
++        ability_action = menu.addAction("美丽能力")
+         menu.addSeparator()
+         showhide = menu.addAction("显示/隐藏")
+         settings = menu.addAction("设置")
+         chosen = menu.exec(event.globalPos())
+         if chosen == lock_action:
+             self.set_interaction_lock(True)
++        elif chosen == ability_action:
++            self.request_abilities.emit()
+         elif chosen == showhide:
+             self.toggle_show_hide()
+         elif chosen == settings:
+@@ -5611,7 +5742,7 @@
+ 
+ def cleanup_obsolete_storage():
+     # V0.9.2.3 safety baseline: never delete files automatically.
+-    LOGGER.info("自动存储清理已禁用：V0.9.2.8 不会自动删除任何文件。")
++    LOGGER.info("自动存储清理已禁用：V0.10.0 不会自动删除任何文件。")
+ 
+ 
+ def xiaomeili_logical_data_root():
+@@ -6493,8 +6624,9 @@
+ 
+         target_row = QWidget(); target_l = QHBoxLayout(target_row); target_l.setContentsMargins(0,0,0,0)
+         self.storage_target = QLineEdit(r"D:\XiaoMeiliData")
+-        self.storage_browse = QPushButton("选择目录")
+-        self.storage_browse.clicked.connect(self._storage_browse)
++        self.storage_target.setReadOnly(True)
++        self.storage_browse = QPushButton("固定安全目录")
++        self.storage_browse.setEnabled(False)
+         target_l.addWidget(self.storage_target, 1); target_l.addWidget(self.storage_browse)
+         sf.addRow("迁移目标", target_row)
+ 
+@@ -9930,10 +10062,10 @@
+             )
+ 
+     def _storage_browse(self):
+-        start = self.storage_target.text().strip() or r"D:\\XiaoMeiliData"
+-        chosen = QFileDialog.getExistingDirectory(self, "选择 D 盘中的小美丽数据目录", start)
+-        if chosen:
+-            self.storage_target.setText(chosen)
++        # V0.10.0: migration destination is fixed to XiaoMeili's own D-drive folder.
++        # Arbitrary user folders are no longer accepted as a safety boundary.
++        self.storage_target.setText(r"D:\XiaoMeiliData")
++
+ 
+     def _storage_migrate(self):
+         if sys.platform != "win32":
+@@ -9944,16 +10076,10 @@
+             self._refresh_storage_status()
+             return
+ 
+-        target = self.storage_target.text().strip()
+-        if not target:
+-            target = r"D:\\XiaoMeiliData"
+-        try:
+-            target_path = Path(target)
+-        except Exception:
+-            QMessageBox.warning(self, "存储迁移", "目标路径无效。")
+-            return
++        target_path = Path(r"D:\XiaoMeiliData")
++        self.storage_target.setText(str(target_path))
+         if str(target_path.drive or "").upper() != "D:":
+-            QMessageBox.warning(self, "存储迁移", "为了把小美丽的数据安全复制到 D 盘，请选择 D: 盘中的目录。")
++            QMessageBox.warning(self, "存储迁移", "小美丽的固定安全迁移目录无效，迁移已停止。")
+             return
+         if not Path("D:/").exists():
+             QMessageBox.warning(self, "存储迁移", "没有检测到 D: 盘。")
+@@ -11378,6 +11504,10 @@
+     def __init__(self,app,cfg):
+         super().__init__()
+         self.app=app; self.cfg=cfg; self.bridge=Bridge(); self.pet=PetWindow(cfg); self.settings=None
++        self.ability_sidebar=AbilitySidebar()
++        self.ability_sidebar.set_states(self.cfg.get("ability_sidebar", {}).get("states", {}))
++        self._ability_leave_since=None
++        self._ability_last_voice_at=0.0
+         self.hotkeys=HotkeyManager(self.bridge)
+         self.vision=VisionWorker(cfg)
+         self.voice_service=VoiceService()
+@@ -11398,7 +11528,9 @@
+         self.bridge.toggle_lock.connect(self.pet.toggle_interaction_lock)
+         self.bridge.show_hide.connect(self.pet.toggle_show_hide)
+         self.pet.request_settings.connect(self.open_settings)
++        self.pet.request_abilities.connect(self.toggle_ability_sidebar)
+         self.pet.config_changed.connect(self.update_tray_checks)
++        self.ability_sidebar.state_changed.connect(self._on_ability_state_changed)
+         self.vision.state_requested.connect(self.pet.play_state)
+         self.vision.report_ready.connect(self.pet.show_report)
+         self.vision.snapshot.connect(self.on_vision_snapshot)
+@@ -11424,7 +11556,119 @@
+         QTimer.singleShot(2600,self._warm_highlight_cta_cache)
+ 
+         self.tray=self.make_tray(); self.app.setProperty("tray",self.tray)
+-        self.hotkeys.register(cfg); self.pet.show(); self.vision.start(); QTimer.singleShot(1800, self.refresh_speech_interaction); QTimer.singleShot(5000, cleanup_obsolete_storage); QTimer.singleShot(9000, lambda: self.brain_service.cleanup_ndm_leftovers(str(self.cfg.get("brain", {}).get("ndm_download_dir", "") or "")))
++        self.ability_hover_timer=QTimer(self); self.ability_hover_timer.setInterval(70); self.ability_hover_timer.timeout.connect(self._poll_ability_sidebar); self.ability_hover_timer.start()
++        self.hotkeys.register(cfg); self.pet.show(); self.vision.start(); QTimer.singleShot(1800, self.refresh_speech_interaction); QTimer.singleShot(5000, cleanup_obsolete_storage)
++
++    def _ability_anchor_rect(self):
++        return QRect(self.pet.x(), self.pet.y(), self.pet.width(), self.pet.height())
++
++    def toggle_ability_sidebar(self):
++        cfg = self.cfg.setdefault("ability_sidebar", {})
++        if not bool(cfg.get("enabled", True)):
++            return
++        anchor = self._ability_anchor_rect()
++        if self.ability_sidebar.isVisible() and self.ability_sidebar.is_open():
++            self.ability_sidebar.hide_animated()
++        else:
++            self.ability_sidebar.set_states(cfg.get("states", {}))
++            self.ability_sidebar.show_animated(anchor)
++            QTimer.singleShot(0, self.pet.raise_)
++        self._ability_leave_since = None
++
++    def _poll_ability_sidebar(self):
++        try:
++            acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
++            if not bool(acfg.get("enabled", True)) or not self.pet.isVisible():
++                if self.ability_sidebar.isVisible():
++                    self.ability_sidebar.hide()
++                self._ability_leave_since = None
++                return
++
++            # Preserve the existing game-safe click-through contract. Auto-hover
++            # never creates an interactive window while XiaoMeili is locked.
++            if bool(self.cfg.get("lock_position", False) or self.cfg.get("click_through", False)):
++                if self.ability_sidebar.isVisible():
++                    self.ability_sidebar.hide_animated()
++                self._ability_leave_since = None
++                return
++
++            anchor = self._ability_anchor_rect()
++            if self.ability_sidebar.isVisible():
++                self.ability_sidebar.sync_to_anchor(anchor)
++
++            if not bool(acfg.get("hover_open", True)):
++                return
++
++            pos = QCursor.pos()
++            # Only the left-side approach zone opens the panel. Merely moving across
++            # XiaoMeili's face/body will not constantly trigger it.
++            activation = QRect(
++                anchor.left() - 76,
++                anchor.top() + int(anchor.height() * 0.10),
++                98,
++                int(anchor.height() * 0.80),
++            )
++            over_activation = activation.contains(pos)
++            over_panel = self.ability_sidebar.isVisible() and self.ability_sidebar.frameGeometry().adjusted(-10, -10, 10, 10).contains(pos)
++
++            if over_activation or over_panel:
++                self._ability_leave_since = None
++                if over_activation and not self.ability_sidebar.isVisible():
++                    self.ability_sidebar.set_states(acfg.get("states", {}))
++                    self.ability_sidebar.show_animated(anchor)
++                    QTimer.singleShot(0, self.pet.raise_)
++                return
++
++            if self.ability_sidebar.isVisible() and self.ability_sidebar.is_open():
++                now = time.monotonic()
++                if self._ability_leave_since is None:
++                    self._ability_leave_since = now
++                delay = max(300, min(3000, int(acfg.get("collapse_delay_ms", 900) or 900))) / 1000.0
++                if now - self._ability_leave_since >= delay:
++                    self.ability_sidebar.hide_animated()
++                    self._ability_leave_since = None
++        except Exception:
++            LOGGER.debug("美丽能力侧栏 hover 轮询异常", exc_info=True)
++
++    def _on_ability_state_changed(self, feature_id, checked):
++        acfg = self.cfg.setdefault("ability_sidebar", {})
++        states = acfg.setdefault("states", {})
++        feature_id = str(feature_id or "")
++        if feature_id not in {key for key, _, _ in ABILITY_FEATURES}:
++            return
++        states[feature_id] = bool(checked)
++        save_config(self.cfg)
++        self.pet.set_ability_states(states)
++        LOGGER.info("[ABILITY] %s=%s (cosmetic only)", feature_id, bool(checked))
++
++        # Voice feedback is intentionally local to XiaoMeili. It never issues game input.
++        if not checked or not bool(acfg.get("voice_feedback", True)):
++            return
++        phrases = {
++            "beauty_lock": "锁定。",
++            "beauty_insight": "看清了。",
++            "power_20": "两成功力已开启。",
++            "power_50": "五成功力已开启。",
++            "beauty_god": "美丽之神降临。",
++        }
++        phrase = phrases.get(feature_id, "")
++        voice = self._speech_voice_cfg()
++        vid = str(voice.get("voice_id") or "").strip()
++        if not phrase or not vid or not self.voice_service.ready():
++            return
++        # Avoid stacking several TTS requests when the user rapidly flicks switches.
++        now = time.monotonic()
++        if now - float(getattr(self, "_ability_last_voice_at", 0.0) or 0.0) < 0.20:
++            return
++        self._ability_last_voice_at = now
++        self.voice_service.speak(
++            phrase,
++            vid,
++            float(voice.get("speed", 1.0) or 1.0),
++            str(voice.get("output_device", "default") or "default"),
++            tag="ability_feedback",
++            extra_instruct="短促、冷静、酷一点，不甜腻。",
++        )
+ 
+     def make_tray(self):
+         tray=QSystemTrayIcon(QIcon(resource("assets/xiaomeili_icon.png")),self.app)
+@@ -11433,6 +11677,7 @@
+             act=QAction(name,menu); act.triggered.connect(lambda checked=False,s=key:self.pet.play_state(s)); menu.addAction(act)
+         menu.addSeparator()
+         self.lock_act=QAction("锁定（位置 + 点击穿透）",menu); self.lock_act.setCheckable(True); self.lock_act.setChecked(self.cfg.get("click_through",False)); self.lock_act.triggered.connect(self.pet.set_interaction_lock); menu.addAction(self.lock_act)
++        abilities=QAction("美丽能力",menu); abilities.triggered.connect(self.toggle_ability_sidebar); menu.addAction(abilities)
+         menu.addSeparator()
+         settings=QAction("设置...",menu); settings.triggered.connect(self.open_settings); menu.addAction(settings)
+         check_updates=QAction("检查更新",menu); check_updates.triggered.connect(self.check_updates_from_tray); menu.addAction(check_updates)
+@@ -11458,7 +11703,10 @@
+             self.settings._check_update()
+ 
+     def update_tray_checks(self):
+-        self.lock_act.setChecked(bool(self.cfg.get("click_through",False)))
++        locked = bool(self.cfg.get("click_through",False) or self.cfg.get("lock_position",False))
++        self.lock_act.setChecked(locked)
++        if locked and getattr(self, "ability_sidebar", None) is not None and self.ability_sidebar.isVisible():
++            self.ability_sidebar.hide_animated()
+ 
+     def _on_settings_changed(self):
+         self.update_tray_checks()
+@@ -11879,7 +12127,10 @@
+                 raise FileNotFoundError(f"存储迁移助手缺失：{helper}")
+ 
+             source = xiaomeili_logical_data_root()
+-            target = Path(str(target or r"D:\XiaoMeiliData"))
++            requested = Path(str(target or r"D:\XiaoMeiliData"))
++            target = Path(r"D:\XiaoMeiliData")
++            if os.path.normcase(str(requested)) != os.path.normcase(str(target)):
++                raise RuntimeError("V0.10.0 只允许迁移到 D:\\XiaoMeiliData 安全目录。")
+             migration_token = uuid.uuid4().hex[:10]
+             desktop_log = STORAGE_DIAGNOSTIC_DIR / f"migration_{time.strftime('%Y%m%d_%H%M%S')}_{migration_token}.log"
+             ready_file = Path(tempfile.gettempdir()) / f"XiaoMeili_storage_ready_{os.getpid()}_{migration_token}.txt"
+@@ -11974,6 +12225,8 @@
+     def quit(self):
+         try:
+             self.cfg["x"],self.cfg["y"]=self.pet.x(),self.pet.y(); save_config(self.cfg)
++            try: self.ability_sidebar.hide()
++            except Exception: pass
+             self.pet.lock_bubble.hide(); self.hotkeys.unregister_all(); self.vision.stop(); self.vision.wait(1800)
+             try: self.speech_service.shutdown()
+             except Exception: pass
+--- a/app/src/brain_qwen.py
++++ b/app/src/brain_qwen.py
+@@ -1772,43 +1772,11 @@
+         return dict(self._last_exchange or {})
+ 
+     def cleanup_ndm_leftovers(self, download_root):
+-        if not self.ready():
+-            return {"removed": 0, "bytes": 0}
+-        import fnmatch
+-        root = Path(str(download_root or "")).expanduser()
+-        if not root.exists() or not root.is_dir():
+-            return {"removed": 0, "bytes": 0}
+-        patterns = (
+-            "cudart-llama-bin-win-cuda-12.4-x64*.zip",
+-            "llama-*-bin-win-cuda-12.4-x64*.zip",
+-            "Qwen3-8B-Q4_K_M*.gguf",
+-            "Qwen3-8B-Q4_K_M*.gguf.part",
+-            "Qwen3-8B-Q4_K_M*.gguf.tmp",
+-        )
+-        removed = 0
+-        reclaimed = 0
+-        now = time.time()
+-        for p in list(root.rglob("*")):
+-            if not p.is_file():
+-                continue
+-            if not any(fnmatch.fnmatch(p.name.lower(), pat.lower()) for pat in patterns):
+-                continue
+-            try:
+-                st1 = p.stat()
+-                if now - st1.st_mtime < 8:
+-                    continue
+-                time.sleep(0.15)
+-                st2 = p.stat()
+-                if st1.st_size != st2.st_size or st1.st_mtime_ns != st2.st_mtime_ns:
+-                    continue
+-                size = st2.st_size
+-                p.unlink()
+-                removed += 1
+-                reclaimed += size
+-                LOGGER.info("Removed XiaoMeili NDM leftover: %s (%.1f MB)", p, size / 1024 / 1024)
+-            except Exception:
+-                LOGGER.warning("Failed to remove NDM leftover: %s", p, exc_info=True)
+-        return {"removed": removed, "bytes": reclaimed}
++        # V0.10.0 hard safety rule: never recursively scan or delete a user-selected
++        # NDM/Downloads directory. Leftovers are deliberately retained for the user
++        # to manage manually.
++        LOGGER.info("NDM 自动残留清理已永久禁用：不扫描、不删除用户下载目录。")
++        return {"removed": 0, "bytes": 0}
+ 
+     def shutdown(self):
+         with self._lock:
+--- a/app/src/ndm_bridge.py
++++ b/app/src/ndm_bridge.py
+@@ -6,6 +6,7 @@
+ import os
+ import shutil
+ import time
++import uuid
+ from pathlib import Path
+ from urllib.parse import urlparse
+ 
+@@ -59,37 +60,29 @@
+ 
+ 
+ def _candidate_files(root: Path, filename: str, started_at: float | None = None):
+-    wanted = Path(filename)
+-    wanted_stem = _norm_name(wanted.stem)
+-    wanted_suffix = wanted.suffix.lower()
++    """Return only exact task-owned filenames in the selected NDM directory.
++
++    V0.10.0 deliberately does NOT recurse and does NOT guess by extension. If NDM
++    ignores the requested filename, XiaoMeili falls back to its built-in downloader
++    rather than risking adoption of an unrelated user file.
++    """
++    wanted = Path(filename).name
++    wanted_lower = wanted.lower()
++    allowed = {wanted_lower}
++    for suffix in _TEMP_SUFFIXES:
++        allowed.add((wanted + suffix).lower())
+     out = []
+     try:
+-        for p in root.rglob("*"):
+-            if not p.is_file():
++        for p in root.iterdir():
++            if not p.is_file() or p.name.lower() not in allowed:
+                 continue
+             try:
+                 st = p.stat()
+             except Exception:
+                 continue
+-            # Ignore obviously ancient unrelated files once a task has been sent.
+-            if started_at and st.st_mtime < started_at - 15:
+-                continue
+-            name = _norm_name(p.stem)
+-            suffix = p.suffix.lower()
+-            # NDM may ignore the extension-side requested filename and choose the server filename,
+-            # or append duplicate markers. Be deliberately tolerant.
+-            stem_match = (
+-                name == wanted_stem
+-                or name.startswith(wanted_stem + "(")
+-                or wanted_stem in name
+-            )
+-            suffix_match = (
+-                suffix == wanted_suffix
+-                or wanted_suffix in p.name.lower()
+-                or suffix in _TEMP_SUFFIXES
+-            )
+-            if stem_match and suffix_match:
+-                out.append(p)
++            if started_at and st.st_mtime < started_at - 2:
++                continue
++            out.append(p)
+     except Exception:
+         pass
+     return out
+@@ -135,21 +128,43 @@
+         return False
+ 
+ 
++
++
++def _controlled_destination_roots():
++    roots = []
++    try:
++        if os.name == "nt":
++            public = os.environ.get("PUBLIC") or r"C:\Users\Public"
++            roots.append((Path(public) / "XiaoMeiliData").resolve())
++            local = str(os.environ.get("LOCALAPPDATA", "") or "").strip()
++            if local:
++                roots.append((Path(local) / "XiaoMeiliApp").resolve())
++        else:
++            roots.append((Path.home() / ".xiaomeili").resolve())
++    except Exception:
++        pass
++    return roots
++
++
++def _assert_controlled_destination(dest: Path):
++    resolved = Path(dest).expanduser().resolve()
++    for root in _controlled_destination_roots():
++        try:
++            resolved.relative_to(root)
++            return resolved
++        except Exception:
++            continue
++    raise PermissionError(f"NDM 导入目标不在小美丽受控目录内：{resolved}")
++
+ def _import_file(src: Path, dest: Path):
++    """Copy an NDM result into XiaoMeili without deleting/moving the source file."""
++    dest = _assert_controlled_destination(Path(dest))
+     dest.parent.mkdir(parents=True, exist_ok=True)
+-    if dest.exists():
+-        try:
+-            dest.unlink()
+-        except Exception:
+-            pass
+-    try:
+-        shutil.move(str(src), str(dest))
+-    except Exception:
+-        shutil.copy2(str(src), str(dest))
+-        try:
+-            src.unlink()
+-        except Exception:
+-            pass
++    tmp = dest.with_name(f".{dest.name}.xiaomeili-copy-{uuid.uuid4().hex[:8]}")
++    shutil.copy2(str(src), str(tmp))
++    # Destination is XiaoMeili's private staging/model path. Atomic replacement is
++    # permitted there; the user-owned NDM source is never moved or deleted.
++    tmp.replace(dest)
+ 
+ 
+ def download_and_import(
+@@ -172,18 +187,8 @@
+     # update progress honest while preserving the same completion checks.
+     expected = max(0, int(expected_bytes or 0))
+ 
+-    # First reuse any completed file already sitting in the NDM directory. This matters
+-    # when the user updated XiaoMeili while NDM kept downloading in the background.
+-    existing = sorted(_candidate_files(root, filename), key=lambda p: p.stat().st_mtime, reverse=True)
+-    for p in existing:
+-        try:
+-            if _stable_final(p, min_bytes, 1.0):
+-                _emit(progress_cb, f"发现已完成文件，正在导入：{p.name}", p.stat().st_size, expected, 0)
+-                _import_file(p, dest)
+-                return dest
+-        except Exception:
+-            continue
+-
++    # Snapshot exact task names before sending. Pre-existing files are never adopted
++    # merely because their name/extension happens to match.
+     baseline = _snapshot(root, filename)
+     ok, _ = test_connection()
+     if not ok:
+@@ -202,23 +207,17 @@
+             key=lambda p: p.stat().st_mtime if p.exists() else 0,
+             reverse=True,
+         )
+-
+-        # If NDM renamed the file unexpectedly, fall back to the newest matching-extension
+-        # file created after this task started. This is limited to the chosen NDM directory.
+-        if not candidates:
++        owned = []
++        for p in candidates:
+             try:
+-                wanted_suffix = Path(filename).suffix.lower()
+-                for p in root.rglob("*"):
+-                    if not p.is_file():
+-                        continue
+-                    st = p.stat()
+-                    if st.st_mtime < started - 5:
+-                        continue
+-                    if wanted_suffix and (p.suffix.lower() == wanted_suffix or wanted_suffix in p.name.lower()):
+-                        candidates.append(p)
+-                candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
++                st = p.stat()
++                before = baseline.get(str(p))
++                current = (st.st_size, st.st_mtime_ns)
++                if before is None or current != before:
++                    owned.append(p)
+             except Exception:
+-                pass
++                continue
++        candidates = owned
+ 
+         if candidates:
+             p = candidates[0]
+--- a/app/src/speech_input.py
++++ b/app/src/speech_input.py
+@@ -134,7 +134,7 @@
+         except Exception as exc:
+             tail = f"<读取 speech_worker.log 失败: {exc}>"
+         body = [
+-            "小美丽 V0.9.2.8 语音诊断日志",
++            "小美丽 V0.10.0 语音诊断日志",
+             f"时间: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+             f"故障代码: {code}",
+             f"说明: {message}",
+--- a/app/assets/storage_migrate.ps1
++++ b/app/assets/storage_migrate.ps1
+@@ -64,14 +64,48 @@
+     Log "Source: $Source"
+     Log "Target: $Target"
+ 
+-    if (-not $Target.StartsWith('D:\', [System.StringComparison]::OrdinalIgnoreCase)) {
+-        throw "Target must be on D: drive. Current target: $Target"
++    $sourceFull = [System.IO.Path]::GetFullPath($Source).TrimEnd('\')
++    $targetFull = [System.IO.Path]::GetFullPath($Target).TrimEnd('\')
++    $expectedSource = [System.IO.Path]::GetFullPath((Join-Path $env:PUBLIC 'XiaoMeiliData')).TrimEnd('\')
++    $expectedTarget = [System.IO.Path]::GetFullPath('D:\XiaoMeiliData').TrimEnd('\')
++
++    if (-not $sourceFull.Equals($expectedSource, [System.StringComparison]::OrdinalIgnoreCase)) {
++        throw "Source is outside XiaoMeili's protected data directory. Migration stopped."
++    }
++    if (-not $targetFull.Equals($expectedTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
++        throw "Target must be exactly D:\XiaoMeiliData. Migration stopped."
+     }
+     if (-not (Test-Path -LiteralPath 'D:\')) {
+         throw "D: drive was not found."
+     }
+     if (-not (Test-Path -LiteralPath $Source)) {
+         throw "Source data folder was not found: $Source"
++    }
++    $sourceInfo = Get-Item -LiteralPath $Source -Force
++    if (($sourceInfo.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
++        Log "Source is already a reparse point/junction. No migration is required."
++        Restart-XiaoMeili
++        exit 0
++    }
++
++    # The target is XiaoMeili-owned only. Never merge into an arbitrary existing D: folder.
++    $markerName = '.xiaomeili-storage.json'
++    if (Test-Path -LiteralPath $Target) {
++        $targetItem = Get-Item -LiteralPath $Target -Force
++        if (($targetItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
++            throw "Target is a reparse point/junction. Migration stopped."
++        }
++        $marker = Join-Path $Target $markerName
++        $existing = @(Get-ChildItem -LiteralPath $Target -Force -ErrorAction Stop)
++        if ($existing.Count -gt 0 -and -not (Test-Path -LiteralPath $marker -PathType Leaf)) {
++            throw "D:\XiaoMeiliData already contains files but has no XiaoMeili safety marker. Nothing was changed."
++        }
++    } else {
++        New-Item -ItemType Directory -Path $Target -ErrorAction Stop | Out-Null
++    }
++    $markerPath = Join-Path $Target $markerName
++    if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
++        '{"product":"XiaoMeili","schema":1,"deletion_policy":"NO_AUTOMATIC_FILE_DELETION"}' | Set-Content -LiteralPath $markerPath -Encoding UTF8
+     }
+ 
+     # Handshake with the GUI. The GUI will not close until this marker exists.
+@@ -87,13 +121,6 @@
+         throw "XiaoMeili did not exit within 60 seconds. Migration was cancelled."
+     }
+     Start-Sleep -Seconds 2
+-
+-    $sourceItem = Get-Item -LiteralPath $Source -Force
+-    if (($sourceItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+-        Log "Source is already a reparse point/junction. No migration is required."
+-        Restart-XiaoMeili
+-        exit 0
+-    }
+ 
+     $srcStats = Get-FolderStats $Source
+     $drive = Get-PSDrive -Name D -ErrorAction Stop
+@@ -103,8 +130,6 @@
+     if ($drive.Free -lt $need) {
+         throw ("Not enough free space on D:. Required approximately {0:N2} GB including safety margin." -f ($need / 1GB))
+     }
+-
+-    New-Item -ItemType Directory -Path $Target -Force | Out-Null
+ 
+     Log "Copying XiaoMeili data to D: ..."
+     & robocopy.exe $Source $Target /E /COPY:DAT /DCOPY:DAT /R:3 /W:2 /XJ /FFT /NFL /NDL /NP
+--- a/app/assets/VERSION.txt
++++ b/app/assets/VERSION.txt
+@@ -1 +1 @@
+-0.9.2.8
++0.10.0
+--- a/app/requirements.txt
++++ b/app/requirements.txt
+@@ -10,3 +10,4 @@
+ soundfile>=0.13,<1
+ sounddevice>=0.5,<1
+ websocket-client>=1.8,<2
++psutil>=6,<8
+--- a/BUILD_EXE.bat
++++ b/BUILD_EXE.bat
+@@ -1,17 +1,20 @@
+ @echo off
+ setlocal
+-set "ROOT=%PUBLIC%\XiaoMeili"
+-set "APP_DIR=%ROOT%\app"
+-if not exist "%APP_DIR%\.venv\Scripts\python.exe" (
+-  echo Run INSTALL_AND_RUN.bat first.
++set "ROOT=%~dp0"
++set "APP_DIR=%ROOT%app"
++set "PY=%APP_DIR%\.venv\Scripts\python.exe"
++if not exist "%PY%" (
++  echo Missing app\.venv. Run INSTALL.ps1 once for development dependencies.
+   pause
+   exit /b 1
+ )
+-"%APP_DIR%\.venv\Scripts\python.exe" -m pip install "pyinstaller>=6.10,<7"
++"%PY%" -m pip install -r "%APP_DIR%\requirements.txt" "pyinstaller>=6.10,<7"
++if errorlevel 1 exit /b 1
+ set "DXCAM_ARG="
+-"%APP_DIR%\.venv\Scripts\python.exe" -c "import dxcam" >nul 2>nul && set "DXCAM_ARG=--collect-all dxcam"
+-"%APP_DIR%\.venv\Scripts\pyinstaller.exe" --noconfirm --clean --windowed --name "XiaoMeili" --icon "%APP_DIR%\assets\xiaomeili_icon.ico" --distpath "%ROOT%\DesktopApp" --workpath "%ROOT%\build" --specpath "%ROOT%" --collect-all rapidocr --collect-all onnxruntime --collect-all espeakng_loader --collect-all kokoro_onnx --collect-all misaki --collect-all jieba --collect-all pypinyin --collect-all pypinyin_dict --collect-all cn2an --collect-all ordered_set --collect-all soundfile %DXCAM_ARG% --add-data "%APP_DIR%\assets;assets" "%APP_DIR%\src\main.py"
++"%PY%" -c "import dxcam" >nul 2>nul && set "DXCAM_ARG=--collect-all dxcam"
++"%APP_DIR%\.venv\Scripts\pyinstaller.exe" --noconfirm --clean --windowed --name "XiaoMeili" --icon "%APP_DIR%\assets\xiaomeili_icon.ico" --distpath "%ROOT%dist" --workpath "%ROOT%build_local" --specpath "%ROOT%" --collect-all rapidocr --collect-all onnxruntime --collect-all soundfile %DXCAM_ARG% --add-data "%APP_DIR%\assets;assets" "%APP_DIR%\src\main.py"
++if errorlevel 1 exit /b 1
+ echo.
+ echo Build finished:
+-echo %ROOT%\DesktopApp\XiaoMeili\XiaoMeili.exe
++echo %ROOT%dist\XiaoMeili\XiaoMeili.exe
+ pause
+--- a/INSTALL.ps1
++++ b/INSTALL.ps1
+@@ -241,15 +241,11 @@
+ import mss
+ import rapidocr
+ import onnxruntime
+-import kokoro_onnx
+-import espeakng_loader
+-from pathlib import Path
+-from misaki import zh
+ import soundfile
+-assert Path(espeakng_loader.get_library_path()).exists(), espeakng_loader.get_library_path()
+-assert Path(espeakng_loader.get_data_path()).exists(), espeakng_loader.get_data_path()
+-_ = zh.ZHG2P(version=None)
+-print("runtime imports OK + Kokoro/eSpeak voice runtime OK")
++import sounddevice
++import websocket
++import psutil
++print("runtime imports OK")
+ '@
+     Set-Content -LiteralPath $SelfTestPy -Value $SelfTestCode -Encoding ASCII
+     try {
+@@ -278,14 +274,6 @@
+         '--specpath',$InstallRoot,
+         '--collect-all','rapidocr',
+         '--collect-all','onnxruntime',
+-        '--collect-all','espeakng_loader',
+-        '--collect-all','kokoro_onnx',
+-        '--collect-all','misaki',
+-        '--collect-all','jieba',
+-        '--collect-all','pypinyin',
+-        '--collect-all','pypinyin_dict',
+-        '--collect-all','cn2an',
+-        '--collect-all','ordered_set',
+         '--collect-all','soundfile'
+     )
+     if ($DxcamInstalled) { $buildArgs += @('--collect-all','dxcam') }
+@@ -299,7 +287,7 @@
+         throw "Build finished but EXE was not found: $ExePath"
+     }
+ 
+-    Write-Log 'Running frozen EXE runtime self-test (including bundled eSpeak-NG data)...'
++    Write-Log 'Running frozen EXE runtime self-test...'
+     $self = Start-Process -FilePath $ExePath -ArgumentList @('--runtime-self-test') -Wait -PassThru
+     if ($self.ExitCode -ne 0) {
+         throw "Frozen runtime self-test failed with exit code $($self.ExitCode). The EXE will not be accepted."
+--- a/DEVELOPMENT.md
++++ b/DEVELOPMENT.md
+@@ -1,4 +1,13 @@
+-# XiaoMeili V0.9.2.8 development
+-Windows 10/11 x64 + Python 3.12 x64
+-Run: python app\src\main.py
+-The complete release pipeline is in release_pipeline.
++# XiaoMeili V0.10.0 development
++
++Baseline: V0.9.2.8 complete source project.
++
++## V0.10.0
++- Adds the cosmetic “美丽能力” sidebar: 美丽锁定 / 美丽洞察 / 二成功力 / 五成功力 / 美丽之神.
++- Sidebar is hidden by default and slides out from XiaoMeili's left side when the cursor approaches that side.
++- No five left-side feature icons; minimal border, emerald guide line, smooth switches and local XiaoMeili-only aura feedback.
++- Ability switches do not read game memory, inject into VALORANT, control mouse/keyboard, or reveal hidden game state.
++- NDM safety: no recursive user-folder scan, no extension guessing, no moving/deleting NDM source files.
++- Automatic NDM leftover cleanup is permanently disabled.
++- D-drive migration is limited to D:\XiaoMeiliData and refuses unrelated existing folders without the XiaoMeili safety marker.
++- Existing native updater remains versioned/no-delete.
+--- a/SOURCE_PROVENANCE.txt
++++ b/SOURCE_PROVENANCE.txt
+@@ -1,4 +1,4 @@
+-XiaoMeili V0.9.2.8 complete editable source project
+-Generated from the verified release pipeline at commit 73a4fbaa3064fed1f509b1a403e88b15de523804.
+-Contains final application source/assets plus the release patch pipeline.
+-Excludes user data, downloaded model weights, personal memories/logs and user-imported media.
++XiaoMeili V0.10.0 complete editable source project
++Derived directly from the user-provided XiaoMeili V0.9.2.8 complete original source project.
++V0.10.0 adds the Beauty Ability Sidebar and hardens file-safety boundaries.
++The original uploaded V0.9.2.8 archive was not modified.
+--- /dev/null
++++ b/app/src/ability_sidebar.py
+@@ -0,0 +1,344 @@
++# -*- coding: utf-8 -*-
++"""XiaoMeili V0.10.0 cosmetic ability sidebar.
++
++This module is intentionally UI-only. It does not read VALORANT memory, inject into
++any process, synthesize input, aim, reveal hidden game state, or modify game files.
++It only controls XiaoMeili's own local visual/audio reactions.
++"""
++from __future__ import annotations
++
++from PySide6.QtCore import (
++    Qt, Signal, QRect, QPoint, QTimer, QVariantAnimation, QEasingCurve, QPropertyAnimation,
++)
++from PySide6.QtGui import QColor, QPainter, QPen, QBrush, QFont
++from PySide6.QtWidgets import (
++    QWidget, QFrame, QLabel, QVBoxLayout, QHBoxLayout, QAbstractButton, QPushButton,
++)
++
++
++FEATURES = (
++    ("beauty_lock", "美丽锁定", "LOCK"),
++    ("beauty_insight", "美丽洞察", "INSIGHT"),
++    ("power_20", "二成功力", "20%"),
++    ("power_50", "五成功力", "50%"),
++    ("beauty_god", "美丽之神", "MAX"),
++)
++
++
++class AnimatedToggle(QAbstractButton):
++    """Tiny smooth switch used by the ability sidebar."""
++
++    def __init__(self, parent=None):
++        super().__init__(parent)
++        self.setCheckable(True)
++        self.setCursor(Qt.CursorShape.PointingHandCursor)
++        self.setFixedSize(44, 24)
++        self._progress = 0.0
++        self._anim = QVariantAnimation(self)
++        self._anim.setDuration(170)
++        self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
++        self._anim.valueChanged.connect(self._on_anim)
++        self.toggled.connect(self._animate_to_state)
++
++    def _on_anim(self, value):
++        try:
++            self._progress = float(value)
++        except Exception:
++            self._progress = 1.0 if self.isChecked() else 0.0
++        self.update()
++
++    def _animate_to_state(self, checked):
++        self._anim.stop()
++        self._anim.setStartValue(float(self._progress))
++        self._anim.setEndValue(1.0 if checked else 0.0)
++        self._anim.start()
++
++    def setChecked(self, checked):  # noqa: N802 - Qt naming
++        super().setChecked(bool(checked))
++        if self._anim.state() != QVariantAnimation.State.Running:
++            self._progress = 1.0 if checked else 0.0
++            self.update()
++
++    def paintEvent(self, event):
++        p = QPainter(self)
++        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
++        on = max(0.0, min(1.0, float(self._progress)))
++        off = QColor(57, 69, 66, 210)
++        green = QColor(52, 239, 177, 245)
++        bg = QColor(
++            int(off.red() * (1.0 - on) + green.red() * on),
++            int(off.green() * (1.0 - on) + green.green() * on),
++            int(off.blue() * (1.0 - on) + green.blue() * on),
++            225,
++        )
++        p.setPen(Qt.PenStyle.NoPen)
++        p.setBrush(QBrush(bg))
++        p.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1), 12, 12)
++
++        x0, x1 = 4.0, float(self.width() - 20)
++        knob_x = x0 + (x1 - x0) * on
++        knob = QColor(245, 255, 251, 255)
++        p.setBrush(QBrush(knob))
++        p.drawEllipse(int(knob_x), 4, 16, 16)
++        p.end()
++
++
++class AbilitySidebar(QWidget):
++    """Frameless panel that slides from behind XiaoMeili's left side."""
++
++    state_changed = Signal(str, bool)
++    visibility_changed = Signal(bool)
++
++    PANEL_W = 236
++    PANEL_H = 326
++    PET_OVERLAP = 10
