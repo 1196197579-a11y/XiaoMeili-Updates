@@ -5667,6 +5667,15 @@ class UpdateService(QObject):
 
                 brain_cfg = self.cfg.get("brain", {}) if isinstance(self.cfg.get("brain"), dict) else {}
                 mode = str(brain_cfg.get("download_mode", "ndm") or "ndm").strip().lower()
+                # V0.10.0.2: official GitHub Release packages bypass NDM.
+                # Some Windows/NDM combinations report a socket error on GitHub
+                # redirects even though the built-in HTTPS downloader succeeds.
+                if mode == "ndm" and "github.com/" in url.lower() and "/releases/download/" in url.lower():
+                    mode = "builtin"
+                    self.progress_changed.emit(
+                        0,
+                        "GitHub 更新包自动使用小美丽内置下载器，跳过 NDM 套接字兼容问题…",
+                    )
                 ndm_dir_raw = str(brain_cfg.get("ndm_download_dir") or (Path.home() / "Downloads")).strip()
                 ndm_dir = Path(ndm_dir_raw) if ndm_dir_raw else Path.home() / "Downloads"
 
