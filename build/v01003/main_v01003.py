@@ -11983,15 +11983,19 @@ class AppController(QObject):
             self.ability_node.hide()
             self.ability_sidebar.apply_config(cfg)
             self.ability_sidebar.set_states(cfg.get("states", {}))
+            self._warm_ability_voice_cache()
             self.ability_sidebar.show_animated(anchor)
 
-    def _warm_ability_voice_cache(self):
+    def _warm_ability_voice_cache(self, retry=0):
         try:
             acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
             if not bool(acfg.get("voice_enabled", True)): return
             voice = self._speech_voice_cfg()
             vid = str(voice.get("voice_id") or "").strip()
-            if not vid or not self.voice_service.ready(): return
+            if not vid or not self.voice_service.ready():
+                if int(retry) < 8:
+                    QTimer.singleShot(900, lambda r=int(retry)+1: self._warm_ability_voice_cache(r))
+                return
             vals = [str(x or "").strip() for x in (acfg.get("voice_phrases", {}) or {}).values() if str(x or "").strip()]
             if vals:
                 self.voice_service.warm_phrase_cache(vals, vid, float(voice.get("speed",1.0) or 1.0),
