@@ -41,8 +41,8 @@ s=s.replace("自动存储清理已禁用：V0.9.2.8 不会自动删除任何文�
 # Dedicated imports are intentionally explicit so the sidebar remains isolated
 # from the existing pet / vision / speech implementation.
 import_anchor="from pathlib import Path"
-extra_imports='''from PySide6.QtCore import QVariantAnimation, QRectF, QPointF
-from PySide6.QtGui import QPen, QBrush, QFont, QColor
+extra_imports='''from PySide6.QtCore import QVariantAnimation, QRectF, QPointF, QEasingCurve
+from PySide6.QtGui import QPen, QBrush, QFont, QColor, QFontDatabase, QPainter, QPixmap
 '''
 if extra_imports.strip() not in s:
     if import_anchor not in s:
@@ -368,8 +368,7 @@ s=s.replace(pet_anchor,ability_classes+"\n"+pet_anchor,1)
 
 # PetWindow construction: add the two child visuals without touching existing
 # media layers or user-data paths.
-ctor_anchor='''        self.dialogue_indicator=DialogueWakeIndicator(self)
-        self.dialogue_indicator.set_active(False)
+ctor_anchor='''        self.dialogue_indicator = DialogueIndicator(self)
 '''
 ctor_new=ctor_anchor+'''        self.ability_form_overlay=AbilityFormOverlay(self)
         self.ability_sidebar=AbilitySidebarWindow(self.cfg,self)
