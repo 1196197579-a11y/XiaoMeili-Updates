@@ -56,3 +56,7 @@ for bad in ('unlink(', 'rmtree(', 'os.remove(', 'shutil.move(', 'Remove-Item'):
     assert bad not in SIDEBAR
 
 print("V01003_CONTRACT_PASS")
+
+# Ability character geometry must not be owned by QStackedLayout.
+assert 'self.stack.addWidget(self.ability_form_label)' not in MAIN
+assert 'def refresh_ability_form_layout' in MAIN
