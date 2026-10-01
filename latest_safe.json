@@ -2,8 +2,8 @@
   "protocol": 1,
   "version": "0.10.0.2",
   "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.2/XiaoMeili_0.10.0.2_update.zip",
-  "sha256": "b67efded17755ab53e92dc5ca78e19e8f549e85f7a926f5bcd5347554c01875f",
-  "package_size": 253052101,
+  "sha256": "f1dbeb9e125b0dc688f50e82bb3abeffb2dc08a6785c4082eda9a321bc155ca5",
+  "package_size": 253054879,
   "notes": [
     "V0.10.0.2：能力侧栏不再使用整张参考图作为背景，改为真正透明的青蓝玻璃矢量 UI；发光圆角外框就是视觉边界，不再出现矩形裁切痕迹",
     "外框新增两个同色青绿色光点沿完整圆角边框持续扫动；动画仅在侧栏可见时运行，收起后立即停止，不做后台持续重绘",
