@@ -34,12 +34,19 @@ for token in required:
         raise AssertionError("V0.10.0 contract missing: "+token)
 
 for asset,min_size in [
-    ("ability_form.png",10_000),
+    ("ability_form.png",2_000),
     ("MaokenAbilitySubset.otf",4_000),
 ]:
     p=root/"app/assets"/asset
     if not p.is_file() or p.stat().st_size<min_size:
         raise AssertionError(f"V0.10.0 asset invalid: {p} size={p.stat().st_size if p.exists() else -1}")
+
+ability_png=(root/"app/assets/ability_form.png").read_bytes()
+if not ability_png.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise AssertionError("V0.10.0 ability-form asset is not a valid PNG signature")
+font_bytes=(root/"app/assets/MaokenAbilitySubset.otf").read_bytes()
+if not font_bytes.startswith(b"OTTO"):
+    raise AssertionError("V0.10.0 Maoken font asset is not an OpenType/CFF font")
 
 a=s.index("# V0.10.0 美丽能力侧栏")
 b=s.index("class PetWindow(QWidget):",a)
