@@ -536,7 +536,7 @@ class AbilitySidebar(QWidget):
         node_y = panel.top() + 128.0
         if self._side == "left":
             node_x = panel.right()
-            end_x = self.width() - self.PAD - 1.0
+            end_x = self._base_total_w() - self.PAD - 1.0
             line_start = QPointF(node_x + 8.0, node_y)
             line_end = QPointF(end_x, node_y + 34.0)
             c1 = QPointF(node_x + 21.0, node_y + 1.0)
