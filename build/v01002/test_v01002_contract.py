@@ -80,3 +80,7 @@ for token in ('never mirrors, purges, removes, unlinks, or recursively deletes f
     assert token in NATIVE, token
 
 print('V01002_CONTRACT_PASS')
+
+# Official GitHub update packages bypass the NDM socket-error path.
+assert 'GitHub 更新包自动使用小美丽内置下载器' in MAIN
+assert '"/releases/download/" in url.lower()' in MAIN
