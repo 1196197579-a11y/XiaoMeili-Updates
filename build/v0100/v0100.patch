@@ -998,3 +998,333 @@
 +    PANEL_W = 236
 +    PANEL_H = 326
 +    PET_OVERLAP = 10
++
++    def __init__(self, parent=None):
++        super().__init__(parent)
++        flags = (
++            Qt.WindowType.FramelessWindowHint
++            | Qt.WindowType.Tool
++            | Qt.WindowType.WindowStaysOnTopHint
++        )
++        self.setWindowFlags(flags)
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
++        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
++        self.setFixedSize(self.PANEL_W, self.PANEL_H)
++        self.setWindowOpacity(0.0)
++        self._states = {key: False for key, _, _ in FEATURES}
++        self._anchor_rect = QRect()
++        self._open = False
++        self._closing = False
++        self._pulse = 0.0
++        self._pulse_dir = 1.0
++        self._button_guard = False
++        self._buttons = {}
++        self._last_feature = ""
++
++        self._pulse_timer = QTimer(self)
++        self._pulse_timer.setInterval(40)
++        self._pulse_timer.timeout.connect(self._tick_pulse)
++        self._pulse_timer.start()
++
++        self._slide = QPropertyAnimation(self, b"geometry", self)
++        self._slide.setDuration(260)
++        self._slide.setEasingCurve(QEasingCurve.Type.OutCubic)
++        self._slide.finished.connect(self._slide_finished)
++        self._fade = QVariantAnimation(self)
++        self._fade.setDuration(220)
++        self._fade.setEasingCurve(QEasingCurve.Type.OutCubic)
++        self._fade.valueChanged.connect(lambda v: self.setWindowOpacity(float(v)))
++
++        self._build_ui()
++        self.hide()
++
++    def _build_ui(self):
++        root = QHBoxLayout(self)
++        root.setContentsMargins(8, 8, 30, 8)
++        root.setSpacing(0)
++
++        card = QFrame(self)
++        card.setObjectName("abilityCard")
++        card.setStyleSheet(
++            "QFrame#abilityCard{"
++            "background:rgba(10,20,18,242);"
++            "border:1px solid rgba(74,236,188,92);"
++            "border-radius:15px;"
++            "}"
++            "QLabel{color:#E9FFF7;background:transparent;}"
++            "QPushButton#abilityClose{"
++            "color:#83BBAA;background:transparent;border:0px;"
++            "font-size:18px;font-weight:600;padding:0px;"
++            "}"
++            "QPushButton#abilityClose:hover{color:#DFFFF3;}"
++        )
++        root.addWidget(card, 1)
++
++        v = QVBoxLayout(card)
++        v.setContentsMargins(16, 13, 14, 12)
++        v.setSpacing(7)
++
++        head = QHBoxLayout()
++        title_box = QVBoxLayout(); title_box.setSpacing(0)
++        title = QLabel("美丽能力")
++        tf = QFont(); tf.setPointSize(12); tf.setBold(True); title.setFont(tf)
++        sub = QLabel("BEAUTY LINK")
++        sub.setStyleSheet("color:#58CDB0;font-size:8px;letter-spacing:1px;")
++        title_box.addWidget(title); title_box.addWidget(sub)
++        head.addLayout(title_box, 1)
++        close = QPushButton("×")
++        close.setObjectName("abilityClose")
++        close.setFixedSize(24, 24)
++        close.setCursor(Qt.CursorShape.PointingHandCursor)
++        close.clicked.connect(self.hide_animated)
++        head.addWidget(close)
++        v.addLayout(head)
++
++        line = QFrame(); line.setFixedHeight(1)
++        line.setStyleSheet("background:rgba(87,230,187,36);border:0px;")
++        v.addWidget(line)
++
++        for key, name, code in FEATURES:
++            row = QFrame(card)
++            row.setObjectName("abilityRow")
++            row.setFixedHeight(39)
++            row.setStyleSheet(
++                "QFrame#abilityRow{background:rgba(255,255,255,8);border:0px;border-radius:9px;}"
++                "QFrame#abilityRow:hover{background:rgba(78,232,184,15);}"
++            )
++            h = QHBoxLayout(row); h.setContentsMargins(11, 0, 9, 0); h.setSpacing(8)
++            text_box = QVBoxLayout(); text_box.setSpacing(0)
++            lab = QLabel(name); lab.setStyleSheet("font-size:12px;font-weight:650;color:#E8FFF7;")
++            tiny = QLabel(code); tiny.setStyleSheet("font-size:8px;color:#54786E;")
++            text_box.addWidget(lab); text_box.addWidget(tiny)
++            h.addLayout(text_box, 1)
++            sw = AnimatedToggle(row)
++            sw.toggled.connect(lambda checked, fid=key: self._on_toggled(fid, checked))
++            h.addWidget(sw)
++            v.addWidget(row)
++            self._buttons[key] = sw
++
++        self._status = QLabel("靠近小美丽左侧即可展开")
++        self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
++        self._status.setStyleSheet("color:#698D82;font-size:8px;padding-top:2px;")
++        v.addWidget(self._status)
++
++        safety = QLabel("仅改变小美丽自身表现 · 不读取游戏数据")
++        safety.setAlignment(Qt.AlignmentFlag.AlignCenter)
++        safety.setStyleSheet("color:#42645B;font-size:7px;")
++        v.addWidget(safety)
++
++    def _tick_pulse(self):
++        self._pulse += 0.055 * self._pulse_dir
++        if self._pulse >= 1.0:
++            self._pulse = 1.0; self._pulse_dir = -1.0
++        elif self._pulse <= 0.0:
++            self._pulse = 0.0; self._pulse_dir = 1.0
++        if self.isVisible():
++            self.update()
++
++    def _on_toggled(self, feature_id, checked):
++        if self._button_guard:
++            return
++        self._states[str(feature_id)] = bool(checked)
++        self._last_feature = str(feature_id)
++        label = next((name for key, name, _ in FEATURES if key == feature_id), feature_id)
++        self._status.setText(f"{label}  {'ON' if checked else 'OFF'}")
++        self.state_changed.emit(str(feature_id), bool(checked))
++        self.update()
++
++    def set_states(self, states):
++        data = states if isinstance(states, dict) else {}
++        self._button_guard = True
++        try:
++            for key, _, _ in FEATURES:
++                checked = bool(data.get(key, False))
++                self._states[key] = checked
++                btn = self._buttons.get(key)
++                if btn is not None:
++                    btn.setChecked(checked)
++        finally:
++            self._button_guard = False
++        self.update()
++
++    def states(self):
++        return dict(self._states)
++
++    def is_open(self):
++        return bool(self._open and self.isVisible() and not self._closing)
++
++    def _open_geometry(self, anchor: QRect):
++        x = int(anchor.left() - self.width() + self.PET_OVERLAP)
++        y = int(anchor.top() + (anchor.height() - self.height()) * 0.42)
++        # Keep the panel on the current screen without moving XiaoMeili herself.
++        try:
++            from PySide6.QtWidgets import QApplication
++            screen = QApplication.screenAt(anchor.center()) or QApplication.primaryScreen()
++            if screen:
++                area = screen.availableGeometry()
++                x = max(area.left() + 3, min(x, area.right() - self.width() - 3))
++                y = max(area.top() + 3, min(y, area.bottom() - self.height() - 3))
++        except Exception:
++            pass
++        return QRect(x, y, self.width(), self.height())
++
++    def sync_to_anchor(self, anchor: QRect, force=False):
++        if not isinstance(anchor, QRect):
++            return
++        self._anchor_rect = QRect(anchor)
++        if not self.isVisible():
++            return
++        target = self._open_geometry(anchor)
++        if force or self._slide.state() != QPropertyAnimation.State.Running:
++            self.setGeometry(target)
++
++    def show_animated(self, anchor: QRect):
++        if isinstance(anchor, QRect):
++            self._anchor_rect = QRect(anchor)
++        target = self._open_geometry(self._anchor_rect)
++        if self._open and self.isVisible() and not self._closing:
++            self.setGeometry(target)
++            return
++        self._open = True
++        self._closing = False
++        self._slide.stop(); self._fade.stop()
++        # Start mostly behind XiaoMeili, then glide left into place.
++        start = QRect(self._anchor_rect.left() - 58, target.y(), self.width(), self.height())
++        self.setGeometry(start)
++        self.setWindowOpacity(0.0)
++        self.show(); self.raise_()
++        self._slide.setStartValue(start); self._slide.setEndValue(target)
++        self._fade.setStartValue(0.0); self._fade.setEndValue(1.0)
++        self._slide.start(); self._fade.start()
++        self.visibility_changed.emit(True)
++
++    def hide_animated(self):
++        if not self.isVisible() or self._closing:
++            self._open = False
++            return
++        self._closing = True
++        self._slide.stop(); self._fade.stop()
++        start = self.geometry()
++        end = QRect(self._anchor_rect.left() - 58, start.y(), self.width(), self.height())
++        self._slide.setDuration(210)
++        self._slide.setEasingCurve(QEasingCurve.Type.InCubic)
++        self._slide.setStartValue(start); self._slide.setEndValue(end)
++        self._fade.setDuration(180); self._fade.setStartValue(self.windowOpacity()); self._fade.setEndValue(0.0)
++        self._slide.start(); self._fade.start()
++
++    def _slide_finished(self):
++        if self._closing:
++            self._closing = False
++            self._open = False
++            self.hide()
++            self.visibility_changed.emit(False)
++        self._slide.setDuration(260)
++        self._slide.setEasingCurve(QEasingCurve.Type.OutCubic)
++        self._fade.setDuration(220)
++
++    def paintEvent(self, event):
++        p = QPainter(self)
++        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
++        cy = int(self.height() * 0.48)
++        x1 = self.width() - 30
++        x2 = self.width() - 2
++        pulse = float(self._pulse)
++
++        # Soft connector glow that visually grows from XiaoMeili toward the card.
++        for width, alpha in ((8, 18), (4, 35), (2, 140)):
++            pen = QPen(QColor(51, 244, 181, int(alpha + pulse * 24)))
++            pen.setWidth(width); pen.setCapStyle(Qt.PenCapStyle.RoundCap)
++            p.setPen(pen)
++            p.drawLine(QPoint(x1, cy), QPoint(x2, cy))
++        p.setPen(Qt.PenStyle.NoPen)
++        p.setBrush(QColor(118, 255, 213, int(105 + pulse * 110)))
++        r = 3.0 + pulse * 1.2
++        p.drawEllipse(QPoint(x2 - 1, cy), r, r)
++
++        # The strongest state gets a restrained peripheral shimmer, not a game overlay.
++        if self._states.get("beauty_god"):
++            pen = QPen(QColor(64, 244, 188, int(35 + pulse * 45)))
++            pen.setWidth(1)
++            p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush)
++            p.drawRoundedRect(self.rect().adjusted(3, 3, -28, -3), 17, 17)
++        p.end()
+--- /dev/null
++++ b/V0100_CHANGELOG.txt
+@@ -0,0 +1,20 @@
++小美丽 V0.10.0｜美丽能力侧栏
++
++【新功能】
++1. 新增贴身“美丽能力”侧栏，位于小美丽左侧。
++2. 默认隐藏，鼠标靠近小美丽左侧时平滑滑出；离开后延迟收起。
++3. 五项能力：美丽锁定、美丽洞察、二成功力、五成功力、美丽之神。
++4. 删除五项功能左侧图标，使用极简边框、青绿色拨动开关与右侧能量引导线。
++5. 开启能力时只改变小美丽自身的光效/扫描感/能量表现；美丽之神为最强青绿色能量效果。
++6. 已固定声音可用时，开启能力会触发短促本地语音反馈。
++7. 右键小美丽与系统托盘均可手动打开/收起“美丽能力”。
++
++【安全修正】
++1. 永久停用 NDM 下载目录自动残留清理，不再递归扫描或删除 Downloads/用户自选目录。
++2. NDM 只接收本次任务精确文件名，不再按“最近同扩展名文件”猜测。
++3. NDM 导入改为复制，绝不移动/删除用户下载源文件。
++4. D 盘迁移目标固定为 D:\XiaoMeiliData；陌生非空目录无安全标记时直接停止。
++5. 原生更新器继续采用独立版本目录 + SHA-256 + VERSION 校验 + active.json 切换，不删除旧版本。
++
++【性质说明】
++美丽能力侧栏是纯视觉娱乐功能，不读取 VALORANT 内存、不注入游戏、不控制键鼠、不提供真实锁头/透视等功能。
+--- /dev/null
++++ b/tests/test_v0100_contract.py
+@@ -0,0 +1,54 @@
++from pathlib import Path
++import re
++
++ROOT = Path(__file__).resolve().parents[1]
++MAIN = (ROOT / 'app/src/main.py').read_text(encoding='utf-8')
++SIDEBAR = (ROOT / 'app/src/ability_sidebar.py').read_text(encoding='utf-8')
++NDM = (ROOT / 'app/src/ndm_bridge.py').read_text(encoding='utf-8')
++BRAIN = (ROOT / 'app/src/brain_qwen.py').read_text(encoding='utf-8')
++MIGRATE = (ROOT / 'app/assets/storage_migrate.ps1').read_text(encoding='utf-8')
++NATIVE = (ROOT / 'app/src/native_updater.py').read_text(encoding='utf-8')
++REQ = (ROOT / 'app/requirements.txt').read_text(encoding='utf-8')
++
++assert 'APP_VERSION = "0.10.0"' in MAIN
++assert (ROOT / 'app/assets/VERSION.txt').read_text(encoding='ascii').strip() == '0.10.0'
++for name in ('美丽锁定','美丽洞察','二成功力','五成功力','美丽之神'):
++    assert name in SIDEBAR
++assert 'class AbilitySidebar' in SIDEBAR
++assert 'class AbilityAuraOverlay' in MAIN
++assert 'self.ability_hover_timer' in MAIN
++assert 'request_abilities' in MAIN
++assert 'cosmetic only' in MAIN
++
++# Startup must not invoke NDM cleanup anymore.
++startup_tail = MAIN[MAIN.index('class AppController'):]
++assert 'QTimer.singleShot(9000, lambda: self.brain_service.cleanup_ndm_leftovers' not in startup_tail
++
++# cleanup_ndm_leftovers is a no-op and must contain no destructive filesystem call.
++m = re.search(r'def cleanup_ndm_leftovers\(self, download_root\):(.*?)(?=\n    def shutdown)', BRAIN, re.S)
++assert m, 'cleanup_ndm_leftovers missing'
++cleanup = m.group(1)
++for bad in ('rglob(', '.unlink(', 'shutil.rmtree', 'os.remove(', 'Remove-Item'):
++    assert bad not in cleanup, f'destructive NDM cleanup token returned: {bad}'
++
++# NDM adoption must be exact, non-recursive and copy-only.
++assert 'root.iterdir()' in NDM
++assert 'root.rglob(' not in NDM
++assert 'shutil.move(' not in NDM
++assert 'src.unlink(' not in NDM
++assert 'matching-extension' not in NDM
++assert '_assert_controlled_destination' in NDM
++assert 'shutil.copy2' in NDM
++
++# Migration can only target the app-owned D-drive directory and refuses unknown populated targets.
++assert "$expectedTarget = [System.IO.Path]::GetFullPath('D:\\XiaoMeiliData')" in MIGRATE
++assert ".xiaomeili-storage.json" in MIGRATE
++assert 'already contains files but has no XiaoMeili safety marker' in MIGRATE
++assert 'Safety backup retained at' in MIGRATE
++
++# Native updater remains no-delete/versioned.
++for token in ('never mirrors, purges, removes, unlinks, or recursively deletes files', 'versions', 'active.json'):
++    assert token in NATIVE
++
++assert 'psutil>=' in REQ
++print('V0100_CONTRACT_PASS')
