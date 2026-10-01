@@ -1,14 +1,14 @@
 {
   "protocol": 1,
-  "version": "0.9.2.8",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.9.2.8/XiaoMeili_0.9.2.8_update.zip",
-  "sha256": "248ccb49967e4e4945c704b5ed839b8399355f81b1226d4e4bbd7829bb50a065",
-  "package_size": 226575122,
+  "version": "0.10.0",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0/XiaoMeili_0.10.0_update.zip",
+  "sha256": "32b202134eae47dab9c902f8f9b33a05aac86f4d83a8b40793df317010d5319c",
+  "package_size": 226711045,
   "notes": [
-    "V0.9.2.8 新增固定桌面入口：首次启动后自动创建小美丽.exe，它是轻量启动器，不是某个旧版本安装包；以后双击它会读取 active.json 并启动当前已激活的最新版",
+    "V0.10.0 新增固定桌面入口：首次启动后自动创建小美丽.exe，它是轻量启动器，不是某个旧版本安装包；以后双击它会读取 active.json 并启动当前已激活的最新版",
     "真正的程序完整包继续保存在 %LOCALAPPDATA%\\\\XiaoMeiliApp\\\\versions\\\\v版本号_时间_随机码 中；每次安全更新都会创建新的独立版本目录，不覆盖旧版本",
     "桌面启动器采用 create-new-only 策略：仅在桌面不存在小美丽.exe时创建，不覆盖、不改名、不移动、不删除任何现有桌面文件",
-    "V0.9.2.8 更新包内同时携带带小美丽图标的 XiaoMeiliLauncher.exe，因此从本版开始即使只在设置里更新，也能自动恢复稳定桌面入口",
+    "V0.10.0 更新包内同时携带带小美丽图标的 XiaoMeiliLauncher.exe，因此从本版开始即使只在设置里更新，也能自动恢复稳定桌面入口",
     "继续使用 FullSafe 原生无删除更新器；旧版 latest.json 通道保持关闭，只通过 latest_safe.json 发布"
   ]
 }
