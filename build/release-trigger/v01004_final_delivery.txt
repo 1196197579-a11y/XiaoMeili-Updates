@@ -1,0 +1,1 @@
+Build and publish final XiaoMeili V0.10.0.4: smooth elapsed-time arc-length sweep lights, no header dots, no visible 01-05, centered four-character labels, equal top/bottom margins, FullSafe no-delete.
