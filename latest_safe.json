@@ -2,8 +2,8 @@
   "protocol": 1,
   "version": "0.10.0.3",
   "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.3/XiaoMeili_0.10.0.3_update.zip",
-  "sha256": "9ab5a57229441ecb6183a55b9b3949f9c060258ad6d6eff530f9e09e2ae6549c",
-  "package_size": 253250355,
+  "sha256": "a82c0118fb252690665dcadb0a1b3a12a182356826f05841e6181ca4ecee877a",
+  "package_size": 253254394,
   "notes": [
     "V0.10.0.3：美丽能力名称支持自定义，固定最多四个字；五个显示名称与内部能力ID完全分离，改名不会影响功能",
     "新增布局实时调整：侧栏大小、小美丽大小、两者距离、侧栏上下、小美丽左右/上下位置均可自己微调，并可恢复参考图默认布局",
