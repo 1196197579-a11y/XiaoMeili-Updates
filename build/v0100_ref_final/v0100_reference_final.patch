@@ -1,0 +1,1479 @@
+--- a/app/src/main.py
++++ b/app/src/main.py
+@@ -27,10 +27,12 @@
+ import cv2
+ import numpy as np
+ 
+-from ability_sidebar import AbilitySidebar, FEATURES as ABILITY_FEATURES
++from ability_sidebar import AbilitySidebar, AbilityNode, FEATURES as ABILITY_FEATURES
+ 
+ APP_NAME = "小美丽 V0.10.0｜Beauty Ability Sidebar"
+ APP_VERSION = "0.10.0"
++# Internal safe-update revision. UI continues to display V0.10.0.
++APP_UPDATE_VERSION = "0.10.0.1"
+ UPDATE_PROTOCOL_VERSION = 1
+ ORG_NAME = "XiaoMeili"
+ ASSET_RNG = random.SystemRandom()  # independent draw with replacement; consecutive repeats are allowed
+@@ -364,9 +366,15 @@
+         "report_layouts": {},
+         "ability_sidebar": {
+             "enabled": True,
+-            "hover_open": True,
+-            "voice_feedback": True,
+-            "collapse_delay_ms": 900,
++            "voice_enabled": True,
++            "voice_command_enabled": True,
++            "voice_phrases": {
++                "beauty_lock": "",
++                "beauty_insight": "",
++                "power_20": "",
++                "power_50": "",
++                "beauty_god": "",
++            },
+             "states": {
+                 "beauty_lock": False,
+                 "beauty_insight": False,
+@@ -581,14 +589,20 @@
+     cfg["whiteboard"].update({k: v for k, v in old_whiteboard.items() if k in cfg["whiteboard"]})
+ 
+     old_ability = old_data.get("ability_sidebar", {}) if isinstance(old_data.get("ability_sidebar"), dict) else {}
+-    for _key in ("enabled", "hover_open", "voice_feedback", "collapse_delay_ms"):
++    for _key in ("enabled", "voice_enabled", "voice_command_enabled"):
+         if _key in old_ability:
+-            cfg["ability_sidebar"][_key] = old_ability[_key]
+-    if isinstance(old_ability.get("states"), dict):
+-        cfg["ability_sidebar"]["states"].update({
+-            k: bool(v) for k, v in old_ability["states"].items()
+-            if k in cfg["ability_sidebar"]["states"]
++            cfg["ability_sidebar"][_key] = bool(old_ability[_key])
++    # V0.10.0 compatibility: old experimental voice_feedback maps to the final setting.
++    if "voice_feedback" in old_ability and "voice_enabled" not in old_ability:
++        cfg["ability_sidebar"]["voice_enabled"] = bool(old_ability.get("voice_feedback", True))
++    if isinstance(old_ability.get("voice_phrases"), dict):
++        cfg["ability_sidebar"]["voice_phrases"].update({
++            k: str(v or "") for k, v in old_ability["voice_phrases"].items()
++            if k in cfg["ability_sidebar"]["voice_phrases"]
+         })
++    # Every launch intentionally starts all five cosmetic abilities OFF.
++    for _ability_key in tuple(cfg["ability_sidebar"]["states"].keys()):
++        cfg["ability_sidebar"]["states"][_ability_key] = False
+ 
+     old_brain = old_data.get("brain", {}) if isinstance(old_data.get("brain"), dict) else {}
+     cfg["brain"].update({k: v for k, v in old_brain.items() if k in cfg["brain"]})
+@@ -1709,18 +1723,17 @@
+ 
+ 
+ class AbilityAuraOverlay(QWidget):
+-    """Very light cosmetic aura driven only by XiaoMeili ability switches."""
++    """Static, ultra-light cosmetic aura for XiaoMeili abilities.
++
++    No ability-specific frame timer exists in V0.10.0. The overlay repaints only
++    when a switch changes or the pet is resized.
++    """
+ 
+     def __init__(self, parent=None):
+         super().__init__(parent)
+         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+         self._states = {}
+-        self._phase = 0.0
+-        self._timer = QTimer(self)
+-        self._timer.setInterval(45)
+-        self._timer.timeout.connect(self._tick)
+-        self._timer.start()
+         self.hide()
+ 
+     def set_states(self, states):
+@@ -1731,63 +1744,42 @@
+             self.raise_()
+         self.update()
+ 
+-    def _tick(self):
+-        if not self.isVisible():
+-            return
+-        self._phase = (self._phase + 0.045) % 1.0
+-        self.update()
+-
+     def paintEvent(self, event):
+         if not any(bool(v) for v in self._states.values()):
+             return
+         p = QPainter(self)
+         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+         w, h = self.width(), self.height()
+-        pulse = 0.5 + 0.5 * __import__('math').sin(self._phase * 6.283185307)
+-
+-        strength = 0.18
++        strength = 0.16
+         if self._states.get('power_20'):
+-            strength = max(strength, 0.34)
++            strength = max(strength, 0.28)
+         if self._states.get('power_50'):
+-            strength = max(strength, 0.58)
++            strength = max(strength, 0.42)
+         if self._states.get('beauty_god'):
+-            strength = 1.0
+-
+-        # Peripheral halo. Keep the face/body itself untouched.
++            strength = 0.64
++
+         aura_rect = QRectF(w * 0.12, h * 0.055, w * 0.76, h * 0.90)
+-        for extra, alpha, width in ((11, 20, 7), (6, 34, 4), (0, 95, 1.6)):
++        for extra, alpha, width in ((9, 15, 6), (5, 28, 3), (0, 78, 1.4)):
+             rr = aura_rect.adjusted(-extra, -extra, extra, extra)
+-            pen = QPen(QColor(59, 239, 181, int(alpha * strength * (0.72 + pulse * 0.28))))
++            pen = QPen(QColor(59, 239, 221, int(alpha * strength)))
+             pen.setWidthF(float(width))
+             p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush)
+             p.drawEllipse(rr)
+ 
+         if self._states.get('beauty_lock'):
+-            # Restrained lock glow around the upper body, not a gameplay reticle.
+-            lock_rect = QRectF(w * 0.28, h * 0.11, w * 0.44, h * 0.44)
+-            pen = QPen(QColor(126, 255, 219, int(70 + pulse * 75)))
+-            pen.setWidthF(1.4); p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush)
+-            p.drawEllipse(lock_rect)
++            lock_rect = QRectF(w * 0.29, h * 0.12, w * 0.42, h * 0.42)
++            p.setPen(QPen(QColor(126, 255, 242, 82), 1.3))
++            p.setBrush(Qt.BrushStyle.NoBrush); p.drawEllipse(lock_rect)
+ 
+         if self._states.get('beauty_insight'):
+-            # A scan shimmer clipped to XiaoMeili's own canvas only.
+-            y = int(h * (0.19 + 0.58 * self._phase))
+-            grad_alpha = int(45 + pulse * 65)
+-            pen = QPen(QColor(83, 249, 194, grad_alpha)); pen.setWidthF(1.2)
+-            p.setPen(pen)
+-            p.drawLine(int(w * 0.20), y, int(w * 0.80), y)
++            y = int(h * 0.43)
++            p.setPen(QPen(QColor(92, 248, 236, 82), 1.0))
++            p.drawLine(int(w * 0.23), y, int(w * 0.77), y)
+ 
+         if self._states.get('beauty_god'):
+-            # Sparse particles around the edge. No fullscreen/game overlay.
+-            import math
+-            p.setPen(Qt.PenStyle.NoPen)
+-            for i in range(8):
+-                a = self._phase * 6.283185307 + i * (6.283185307 / 8.0)
+-                x = w * 0.50 + math.cos(a) * w * 0.38
+-                y = h * 0.49 + math.sin(a * 1.07) * h * 0.42
+-                r = 1.4 + ((i % 3) * 0.45)
+-                p.setBrush(QColor(104, 255, 211, int(75 + pulse * 95)))
+-                p.drawEllipse(QPointF(float(x), float(y)), r, r)
++            p.setPen(QPen(QColor(84, 251, 237, 90), 1.5))
++            p.setBrush(Qt.BrushStyle.NoBrush)
++            p.drawEllipse(QRectF(w * 0.16, h * 0.075, w * 0.68, h * 0.86))
+         p.end()
+ 
+ 
+@@ -1795,6 +1787,9 @@
+     request_settings = Signal()
+     request_abilities = Signal()
+     config_changed = Signal()
++    ability_hover_entered = Signal()
++    ability_hover_left = Signal()
++    ability_geometry_changed = Signal()
+     dialogue_asset_ready = Signal(str)
+ 
+     def __init__(self, cfg):
+@@ -1855,6 +1850,16 @@
+             self.labels.append(lab)
+             self.effects.append(eff)
+ 
++        # V0.10.0 approved ability-form XiaoMeili. This is a real transparent
++        # program asset, not the old idle/alternate action clip.
++        self._ability_form_requested = False
++        self.ability_form_label = QLabel(self)
++        self.ability_form_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
++        self.ability_form_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
++        self._ability_form_source = QPixmap(resource("assets/xiaomeili_ability_form_v0100.png"))
++        self.stack.addWidget(self.ability_form_label)
++        self.ability_form_label.hide()
++
+         self.mouse_layer = MouseInteractionLayer(self.cfg, self)
+         self.mouse_layer.setGeometry(0, 0, self.width(), self.height())
+         self.mouse_effect = QGraphicsOpacityEffect(self.mouse_layer)
+@@ -1959,6 +1964,16 @@
+         self.setFixedSize(w, h)
+         for lab in self.labels:
+             lab.setFixedSize(w, h)
++        if hasattr(self, "ability_form_label"):
++            self.ability_form_label.setFixedSize(w, h)
++            if not getattr(self, "_ability_form_source", QPixmap()).isNull():
++                pm = self._ability_form_source.scaled(
++                    max(1, int(w * 0.96)), max(1, int(h * 0.98)),
++                    Qt.AspectRatioMode.KeepAspectRatio,
++                    Qt.TransformationMode.SmoothTransformation,
++                )
++                self.ability_form_label.setPixmap(pm)
++            self._refresh_ability_form_visibility()
+         if hasattr(self, "mouse_layer"):
+             self.mouse_layer.setGeometry(0, 0, w, h)
+         if hasattr(self, "drag_layer"):
+@@ -1989,6 +2004,56 @@
+                 self.dialogue_indicator.raise_()
+             except Exception:
+                 pass
++
++    def set_ability_form_requested(self, active):
++        self._ability_form_requested = bool(active)
++        self._refresh_ability_form_visibility()
++
++    def _refresh_ability_form_visibility(self):
++        label = getattr(self, "ability_form_label", None)
++        if label is None:
++            return
++        show_form = bool(
++            getattr(self, "_ability_form_requested", False)
++            and self.current_state == "idle"
++            and not self.report_active
++            and not self.dialogue_board_active
++            and not self.drag_visual_active
++        )
++        if show_form:
++            for lab in self.labels:
++                lab.hide()
++            try:
++                self.mouse_layer.hide()
++            except Exception:
++                pass
++            label.show(); label.raise_()
++            try:
++                self.ability_aura.raise_()
++                self.report_overlay.raise_(); self.dialogue_overlay.raise_(); self.dialogue_indicator.raise_()
++            except Exception:
++                pass
++        else:
++            label.hide()
++            for lab in self.labels:
++                lab.show()
++            if getattr(self, "mouse_interaction_active", False):
++                try:
++                    self.mouse_layer.show(); self.mouse_layer.raise_()
++                except Exception:
++                    pass
++
++    def enterEvent(self, event):
++        self.ability_hover_entered.emit()
++        super().enterEvent(event)
++
++    def leaveEvent(self, event):
++        self.ability_hover_left.emit()
++        super().leaveEvent(event)
++
++    def moveEvent(self, event):
++        super().moveEvent(event)
++        self.ability_geometry_changed.emit()
+ 
+     def ensure_on_screen(self):
+         try:
+@@ -2270,6 +2335,7 @@
+             self.current_state = state
+             self.cfg["last_state"] = state
+             save_config(self.cfg)
++            self._refresh_ability_form_visibility()
+             LOGGER.info("切换状态 -> %s | 素材=%s", STATE_NAMES[state], Path(path).name)
+         except Exception:
+             LOGGER.exception("播放状态失败: %s", state)
+@@ -2346,6 +2412,7 @@
+         old = self.current_slot
+         if self.movies[old]: self.movies[old].stop()
+         self.current_slot = new; self.current_state = "dialogue"
++        self._refresh_ability_form_visibility()
+         return True
+ 
+     def start_dialogue_board(self, text, duration_ms):
+@@ -2506,6 +2573,7 @@
+         if self.mouse_interaction_active:
+             self._exit_mouse_interaction(resume_idle=False)
+         self.drag_visual_active = True
++        self._refresh_ability_form_visibility()
+         for lab in self.labels:
+             lab.hide()
+         self.mouse_layer.hide()
+@@ -2539,6 +2607,7 @@
+             for lab in self.labels:
+                 lab.show()
+             self.play_state("idle", force_new_clip=True, immediate=True)
++        self._refresh_ability_form_visibility()
+         LOGGER.info("拖拽互动结束：恢复待机")
+ 
+     def _cancel_drag_interaction(self):
+@@ -2548,6 +2617,7 @@
+         self.drag_layer.cancel()
+         for lab in self.labels:
+             lab.show()
++        self._refresh_ability_form_visibility()
+         LOGGER.info("拖拽互动被更高优先级状态打断")
+ 
+     def mousePressEvent(self, event):
+@@ -2611,6 +2681,7 @@
+                 # A click without enough movement must not leave V2 hidden.
+                 for lab in self.labels:
+                     lab.show()
++                self._refresh_ability_form_visibility()
+             event.accept()
+             return
+         super().mouseReleaseEvent(event)
+@@ -5494,7 +5565,7 @@
+                 if protocol > UPDATE_PROTOCOL_VERSION:
+                     raise RuntimeError("更新协议版本过新，当前更新器无法安全处理。")
+                 self._latest_manifest = manifest
+-                if _version_tuple(version) > _version_tuple(APP_VERSION):
++                if _version_tuple(version) > _version_tuple(APP_UPDATE_VERSION):
+                     notes = manifest.get("notes", "")
+                     if isinstance(notes, list):
+                         notes = "\n".join("• " + str(x) for x in notes)
+@@ -6936,6 +7007,7 @@
+             "主动互动": ("interaction.proactive", "互动"),
+             "点击反馈": ("interaction.click", "互动"),
+             "动画过渡": ("interaction.transition", "互动"),
++            "美丽能力": ("interaction.abilities", "互动"),
+             "动作库": ("actions.library", "动作"),
+             "白板播报": ("actions.whiteboard", "动作"),
+             "事件触发": ("actions.event_trigger", "动作"),
+@@ -8069,6 +8141,49 @@
+ 
+     def _v774_set_strength_index(self, index):
+         self._v774_schedule_apply()
++
++    def _v0100_refresh_ability_summary(self):
++        if not hasattr(self, "v0100_ability_value"):
++            return
++        acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
++        parts = ["已启用" if bool(acfg.get("enabled", True)) else "已关闭"]
++        parts.append("语音反馈开" if bool(acfg.get("voice_enabled", True)) else "语音反馈关")
++        parts.append("语音控制开" if bool(acfg.get("voice_command_enabled", True)) else "语音控制关")
++        self.v0100_ability_value.setText(" · ".join(parts))
++
++    def _v0100_open_ability_settings(self):
++        dlg = QDialog(self)
++        dlg.setWindowTitle("美丽能力")
++        dlg.setModal(True)
++        dlg.resize(470, 290)
++        root = QVBoxLayout(dlg)
++        title = QLabel("美丽能力")
++        title.setObjectName("pageTitle")
++        root.addWidget(title)
++        note = QLabel("侧栏视觉固定使用 V0.10.0 参考图方案。这里只保留必要开关，不提供复杂视觉参数。")
++        note.setWordWrap(True); note.setObjectName("pageSubtitle"); root.addWidget(note)
++        acfg = self.cfg.setdefault("ability_sidebar", {})
++        enabled = QCheckBox("启用美丽能力侧栏")
++        enabled.setChecked(bool(acfg.get("enabled", True)))
++        voice = QCheckBox("启用能力语音反馈")
++        voice.setChecked(bool(acfg.get("voice_enabled", True)))
++        command = QCheckBox("允许语音打开 / 收起侧栏")
++        command.setChecked(bool(acfg.get("voice_command_enabled", True)))
++        root.addWidget(enabled); root.addWidget(voice); root.addWidget(command); root.addStretch(1)
++        buttons = QHBoxLayout(); buttons.addStretch(1)
++        cancel = QPushButton("取消"); ok = QPushButton("保存并应用")
++        buttons.addWidget(cancel); buttons.addWidget(ok); root.addLayout(buttons)
++        cancel.clicked.connect(dlg.reject)
++        def save_ability():
++            acfg["enabled"] = bool(enabled.isChecked())
++            acfg["voice_enabled"] = bool(voice.isChecked())
++            acfg["voice_command_enabled"] = bool(command.isChecked())
++            save_config(self.cfg)
++            self._v0100_refresh_ability_summary()
++            self.config_changed.emit()
++            dlg.accept()
++        ok.clicked.connect(save_ability)
++        dlg.exec()
+ 
+     def _v774_refresh_action_summary(self):
+         if not hasattr(self, "v774_action_value"):
+@@ -9305,6 +9420,15 @@
+         card, _ = self._v774_card("动画过渡", "动作切换速度", control=self.v774_transition_combo)
+         int_cards.append(card)
+ 
++        _acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
++        ability_summary = "已启用" if bool(_acfg.get("enabled", True)) else "已关闭"
++        card, self.v0100_ability_value = self._v774_card(
++            "美丽能力", ability_summary,
++            "参考图同款青蓝玻璃侧栏 + 能力形态小美丽。五个能力每次启动默认全部 OFF。",
++            "设置", self._v0100_open_ability_settings
++        )
++        int_cards.append(card)
++
+         iv.addWidget(self._v774_scroll_grid(int_cards, 2), 1)
+         self.v774_stack.addWidget(interact)
+ 
+@@ -9510,6 +9634,7 @@
+         self._v774_refresh_brain_summary()
+         self._v774_refresh_voice_summary()
+         self._v774_refresh_action_summary()
++        self._v0100_refresh_ability_summary()
+         self._v080_refresh_speech_summary()
+         self._v774_set_expression(self.v774_expression_slider.value())
+ 
+@@ -11505,9 +11630,9 @@
+         super().__init__()
+         self.app=app; self.cfg=cfg; self.bridge=Bridge(); self.pet=PetWindow(cfg); self.settings=None
+         self.ability_sidebar=AbilitySidebar()
++        self.ability_node=AbilityNode()
+         self.ability_sidebar.set_states(self.cfg.get("ability_sidebar", {}).get("states", {}))
+-        self._ability_leave_since=None
+-        self._ability_last_voice_at=0.0
++        self._ability_hover_token=0
+         self.hotkeys=HotkeyManager(self.bridge)
+         self.vision=VisionWorker(cfg)
+         self.voice_service=VoiceService()
+@@ -11530,7 +11655,14 @@
+         self.pet.request_settings.connect(self.open_settings)
+         self.pet.request_abilities.connect(self.toggle_ability_sidebar)
+         self.pet.config_changed.connect(self.update_tray_checks)
++        self.pet.ability_hover_entered.connect(self._on_pet_ability_hover_enter)
++        self.pet.ability_hover_left.connect(self._on_pet_ability_hover_leave)
++        self.pet.ability_geometry_changed.connect(self._sync_ability_ui)
++        self.ability_node.clicked.connect(self.toggle_ability_sidebar)
++        self.ability_node.hover_entered.connect(self._on_node_ability_hover_enter)
++        self.ability_node.hover_left.connect(self._on_node_ability_hover_leave)
+         self.ability_sidebar.state_changed.connect(self._on_ability_state_changed)
++        self.ability_sidebar.visibility_changed.connect(self._on_ability_sidebar_visibility)
+         self.vision.state_requested.connect(self.pet.play_state)
+         self.vision.report_ready.connect(self.pet.show_report)
+         self.vision.snapshot.connect(self.on_vision_snapshot)
+@@ -11556,79 +11688,100 @@
+         QTimer.singleShot(2600,self._warm_highlight_cta_cache)
+ 
+         self.tray=self.make_tray(); self.app.setProperty("tray",self.tray)
+-        self.ability_hover_timer=QTimer(self); self.ability_hover_timer.setInterval(70); self.ability_hover_timer.timeout.connect(self._poll_ability_sidebar); self.ability_hover_timer.start()
+         self.hotkeys.register(cfg); self.pet.show(); self.vision.start(); QTimer.singleShot(1800, self.refresh_speech_interaction); QTimer.singleShot(5000, cleanup_obsolete_storage)
+ 
+     def _ability_anchor_rect(self):
+         return QRect(self.pet.x(), self.pet.y(), self.pet.width(), self.pet.height())
+ 
++    def _ability_available(self):
++        acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
++        return bool(
++            acfg.get("enabled", True)
++            and self.pet.isVisible()
++            and not self.cfg.get("lock_position", False)
++            and not self.cfg.get("click_through", False)
++        )
++
++    def _position_ability_node(self):
++        if not getattr(self, "ability_node", None):
++            return
++        anchor = self._ability_anchor_rect()
++        side = self.ability_sidebar.side_for_anchor(anchor)
++        screen = QApplication.screenAt(anchor.center()) or QApplication.primaryScreen()
++        area = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
++        node = self.ability_node
++        y = anchor.top() + int(anchor.height() * 0.43) - node.height() // 2
++        if side == "left":
++            x = anchor.left() - node.width() - 6
++        else:
++            x = anchor.right() + 6
++        x = max(area.left() + 2, min(x, area.right() - node.width() - 2))
++        y = max(area.top() + 2, min(y, area.bottom() - node.height() - 2))
++        node.move(int(x), int(y))
++
++    def _sync_ability_ui(self):
++        try:
++            anchor = self._ability_anchor_rect()
++            if self.ability_sidebar.isVisible():
++                self.ability_sidebar.sync_to_anchor(anchor, force=True)
++            if self.ability_node.isVisible():
++                self._position_ability_node()
++        except Exception:
++            LOGGER.debug("同步美丽能力UI位置失败", exc_info=True)
++
++    def _show_ability_node(self):
++        if not self._ability_available() or self.ability_sidebar.isVisible():
++            return
++        self._ability_hover_token += 1
++        self._position_ability_node()
++        self.ability_node.show(); self.ability_node.raise_()
++
++    def _schedule_hide_ability_node(self, delay_ms=520):
++        self._ability_hover_token += 1
++        token = int(self._ability_hover_token)
++        def later():
++            if token != int(self._ability_hover_token):
++                return
++            pos = QCursor.pos()
++            over_pet = self.pet.isVisible() and self.pet.frameGeometry().contains(pos)
++            over_node = self.ability_node.isVisible() and self.ability_node.frameGeometry().contains(pos)
++            over_panel = self.ability_sidebar.isVisible() and self.ability_sidebar.frameGeometry().contains(pos)
++            if not over_pet and not over_node and not over_panel and not self.ability_sidebar.isVisible():
++                self.ability_node.hide()
++        QTimer.singleShot(max(120, int(delay_ms)), later)
++
++    def _on_pet_ability_hover_enter(self):
++        self._show_ability_node()
++
++    def _on_pet_ability_hover_leave(self):
++        self._schedule_hide_ability_node()
++
++    def _on_node_ability_hover_enter(self):
++        self._ability_hover_token += 1
++
++    def _on_node_ability_hover_leave(self):
++        self._schedule_hide_ability_node(420)
++
++    def _on_ability_sidebar_visibility(self, visible):
++        visible = bool(visible)
++        self.pet.set_ability_form_requested(visible)
++        if visible:
++            self.ability_node.hide()
++            QTimer.singleShot(0, self.pet.raise_)
++        else:
++            self._schedule_hide_ability_node(260)
++
+     def toggle_ability_sidebar(self):
++        if not self._ability_available():
++            return
+         cfg = self.cfg.setdefault("ability_sidebar", {})
+-        if not bool(cfg.get("enabled", True)):
+-            return
+         anchor = self._ability_anchor_rect()
+         if self.ability_sidebar.isVisible() and self.ability_sidebar.is_open():
+             self.ability_sidebar.hide_animated()
+         else:
++            self.ability_node.hide()
+             self.ability_sidebar.set_states(cfg.get("states", {}))
+             self.ability_sidebar.show_animated(anchor)
+-            QTimer.singleShot(0, self.pet.raise_)
+-        self._ability_leave_since = None
+-
+-    def _poll_ability_sidebar(self):
+-        try:
+-            acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
+-            if not bool(acfg.get("enabled", True)) or not self.pet.isVisible():
+-                if self.ability_sidebar.isVisible():
+-                    self.ability_sidebar.hide()
+-                self._ability_leave_since = None
+-                return
+-
+-            # Preserve the existing game-safe click-through contract. Auto-hover
+-            # never creates an interactive window while XiaoMeili is locked.
+-            if bool(self.cfg.get("lock_position", False) or self.cfg.get("click_through", False)):
+-                if self.ability_sidebar.isVisible():
+-                    self.ability_sidebar.hide_animated()
+-                self._ability_leave_since = None
+-                return
+-
+-            anchor = self._ability_anchor_rect()
+-            if self.ability_sidebar.isVisible():
+-                self.ability_sidebar.sync_to_anchor(anchor)
+-
+-            if not bool(acfg.get("hover_open", True)):
+-                return
+-
+-            pos = QCursor.pos()
+-            # Only the left-side approach zone opens the panel. Merely moving across
+-            # XiaoMeili's face/body will not constantly trigger it.
+-            activation = QRect(
+-                anchor.left() - 76,
+-                anchor.top() + int(anchor.height() * 0.10),
+-                98,
+-                int(anchor.height() * 0.80),
+-            )
+-            over_activation = activation.contains(pos)
+-            over_panel = self.ability_sidebar.isVisible() and self.ability_sidebar.frameGeometry().adjusted(-10, -10, 10, 10).contains(pos)
+-
+-            if over_activation or over_panel:
+-                self._ability_leave_since = None
+-                if over_activation and not self.ability_sidebar.isVisible():
+-                    self.ability_sidebar.set_states(acfg.get("states", {}))
+-                    self.ability_sidebar.show_animated(anchor)
+-                    QTimer.singleShot(0, self.pet.raise_)
+-                return
+-
+-            if self.ability_sidebar.isVisible() and self.ability_sidebar.is_open():
+-                now = time.monotonic()
+-                if self._ability_leave_since is None:
+-                    self._ability_leave_since = now
+-                delay = max(300, min(3000, int(acfg.get("collapse_delay_ms", 900) or 900))) / 1000.0
+-                if now - self._ability_leave_since >= delay:
+-                    self.ability_sidebar.hide_animated()
+-                    self._ability_leave_since = None
+-        except Exception:
+-            LOGGER.debug("美丽能力侧栏 hover 轮询异常", exc_info=True)
+ 
+     def _on_ability_state_changed(self, feature_id, checked):
+         acfg = self.cfg.setdefault("ability_sidebar", {})
+@@ -11639,36 +11792,50 @@
+         states[feature_id] = bool(checked)
+         save_config(self.cfg)
+         self.pet.set_ability_states(states)
+-        LOGGER.info("[ABILITY] %s=%s (cosmetic only)", feature_id, bool(checked))
+-
+-        # Voice feedback is intentionally local to XiaoMeili. It never issues game input.
+-        if not checked or not bool(acfg.get("voice_feedback", True)):
+-            return
+-        phrases = {
+-            "beauty_lock": "锁定。",
+-            "beauty_insight": "看清了。",
+-            "power_20": "两成功力已开启。",
+-            "power_50": "五成功力已开启。",
+-            "beauty_god": "美丽之神降临。",
+-        }
+-        phrase = phrases.get(feature_id, "")
++        LOGGER.info("[ABILITY] %s=%s (XiaoMeili cosmetic only)", feature_id, bool(checked))
++
++        # V0.10.0 deliberately does not hard-code the five voice lines. The
++        # per-ability event signals exist now; optional phrases can be added later
++        # without rewriting the sidebar.
++        if not checked or not bool(acfg.get("voice_enabled", True)):
++            return
++        phrases = acfg.get("voice_phrases", {}) if isinstance(acfg.get("voice_phrases"), dict) else {}
++        phrase = str(phrases.get(feature_id, "") or "").strip()
+         voice = self._speech_voice_cfg()
+         vid = str(voice.get("voice_id") or "").strip()
+         if not phrase or not vid or not self.voice_service.ready():
+             return
+-        # Avoid stacking several TTS requests when the user rapidly flicks switches.
+-        now = time.monotonic()
+-        if now - float(getattr(self, "_ability_last_voice_at", 0.0) or 0.0) < 0.20:
+-            return
+-        self._ability_last_voice_at = now
+         self.voice_service.speak(
+-            phrase,
+-            vid,
+-            float(voice.get("speed", 1.0) or 1.0),
++            phrase, vid, float(voice.get("speed", 1.0) or 1.0),
+             str(voice.get("output_device", "default") or "default"),
+-            tag="ability_feedback",
+-            extra_instruct="短促、冷静、酷一点，不甜腻。",
++            tag="ability_feedback", extra_instruct="短促、冷静、酷一点，不甜腻。",
+         )
++
++    def _refresh_ability_config(self):
++        if not self._ability_available():
++            self.ability_node.hide()
++            if self.ability_sidebar.isVisible():
++                self.ability_sidebar.hide_animated()
++            self.pet.set_ability_form_requested(False)
++        else:
++            self._sync_ability_ui()
++
++    def _handle_ability_voice_command(self, text):
++        acfg = self.cfg.get("ability_sidebar", {}) if isinstance(self.cfg.get("ability_sidebar"), dict) else {}
++        if not bool(acfg.get("enabled", True)) or not bool(acfg.get("voice_command_enabled", True)):
++            return False
++        raw = re.sub(r"[\s，,。.!！？?、:：]+", "", str(text or ""))
++        if not raw:
++            return False
++        if any(k in raw for k in ("打开能力侧栏", "开启能力侧栏", "打开美丽能力", "开启美丽能力", "开挂")):
++            if not self.ability_sidebar.isVisible():
++                QTimer.singleShot(0, self.toggle_ability_sidebar)
++            return True
++        if any(k in raw for k in ("收起能力侧栏", "关闭能力侧栏", "关掉能力侧栏", "收起美丽能力", "关闭美丽能力")):
++            if self.ability_sidebar.isVisible():
++                QTimer.singleShot(0, self.ability_sidebar.hide_animated)
++            return True
++        return False
+ 
+     def make_tray(self):
+         tray=QSystemTrayIcon(QIcon(resource("assets/xiaomeili_icon.png")),self.app)
+@@ -11705,11 +11872,16 @@
+     def update_tray_checks(self):
+         locked = bool(self.cfg.get("click_through",False) or self.cfg.get("lock_position",False))
+         self.lock_act.setChecked(locked)
+-        if locked and getattr(self, "ability_sidebar", None) is not None and self.ability_sidebar.isVisible():
+-            self.ability_sidebar.hide_animated()
++        if locked:
++            try: self.ability_node.hide()
++            except Exception: pass
++            if getattr(self, "ability_sidebar", None) is not None and self.ability_sidebar.isVisible():
++                self.ability_sidebar.hide_animated()
++            self.pet.set_ability_form_requested(False)
+ 
+     def _on_settings_changed(self):
+         self.update_tray_checks()
++        self._refresh_ability_config()
+         self.refresh_speech_interaction()
+ 
+     def _speech_cfg(self):
+@@ -11804,6 +11976,8 @@
+         if not self._speech_session_active:
+             woke,rest=self._split_wake_phrase(text)
+             if not woke:return
++            if self._handle_ability_voice_command(rest):
++                return
+             self._begin_speech_session(rest)
+             return
+         if self._speech_waiting_question:
+@@ -11811,6 +11985,9 @@
+             question=rest if woke else text
+             question=str(question or "").strip()
+             if question:
++                if self._handle_ability_voice_command(question):
++                    self._end_speech_session(resume=True)
++                    return
+                 self._speech_waiting_question=False; self._speech_session_token+=1
+                 self.speech_service.pause(); self._ask_voice_question(question)
+ 
+@@ -12226,6 +12403,8 @@
+         try:
+             self.cfg["x"],self.cfg["y"]=self.pet.x(),self.pet.y(); save_config(self.cfg)
+             try: self.ability_sidebar.hide()
++            except Exception: pass
++            try: self.ability_node.hide()
+             except Exception: pass
+             self.pet.lock_bubble.hide(); self.hotkeys.unregister_all(); self.vision.stop(); self.vision.wait(1800)
+             try: self.speech_service.shutdown()
+@@ -12340,6 +12519,28 @@
+         if dialog.windowTitle() != "小美丽 设置":
+             raise RuntimeError(f"unexpected settings title: {dialog.windowTitle()}")
+ 
++        # V0.10.0 approved-reference ability UI must be present in the frozen build.
++        panel_asset = Path(resource("assets/ability_panel_reference_v0100.png"))
++        form_asset = Path(resource("assets/xiaomeili_ability_form_v0100.png"))
++        if not panel_asset.exists() or not form_asset.exists():
++            raise RuntimeError("V0.10.0 approved-reference ability assets missing")
++        if getattr(pet, "_ability_form_source", QPixmap()).isNull():
++            raise RuntimeError("V0.10.0 ability-form XiaoMeili failed to load")
++        ability_probe = AbilitySidebar()
++        try:
++            if ability_probe.PANEL_W != 230 or ability_probe.PANEL_H != 320:
++                raise RuntimeError("V0.10.0 approved panel geometry regressed")
++            if ability_probe._panel_pixmap.isNull():
++                raise RuntimeError("V0.10.0 approved panel reference failed to load")
++            ability_probe.set_states({"beauty_insight": True})
++            if not ability_probe.states().get("beauty_insight", False):
++                raise RuntimeError("V0.10.0 ability switch state failed")
++        finally:
++            ability_probe.hide()
++            ability_probe.deleteLater()
++        if not hasattr(dialog, "v0100_ability_value"):
++            raise RuntimeError("V0.10.0 美丽能力 settings entry missing")
++
+         for legacy_title in ("快捷键", "大脑", "动画素材"):
+             child, page, original_idx = dialog._v0775_build_legacy_dialog(
+                 legacy_title, f"UI smoke: {legacy_title}", (820, 580)
+--- a/app/src/ability_sidebar.py
++++ b/app/src/ability_sidebar.py
+@@ -1,38 +1,45 @@
+ # -*- coding: utf-8 -*-
+-"""XiaoMeili V0.10.0 cosmetic ability sidebar.
+-
+-This module is intentionally UI-only. It does not read VALORANT memory, inject into
+-any process, synthesize input, aim, reveal hidden game state, or modify game files.
+-It only controls XiaoMeili's own local visual/audio reactions.
++"""XiaoMeili V0.10.0 approved beauty ability sidebar.
++
++This module is UI-only. It never reads VALORANT memory, injects code, controls
++keyboard/mouse, scans the screen, or performs file cleanup. The visual language
++is intentionally locked to the user's approved reference image.
+ """
+ from __future__ import annotations
+ 
+-from PySide6.QtCore import (
+-    Qt, Signal, QRect, QPoint, QTimer, QVariantAnimation, QEasingCurve, QPropertyAnimation,
++import sys
++from pathlib import Path
++
++from PySide6.QtCore import Qt, Signal, QRect, QPointF, QVariantAnimation, QEasingCurve, QPropertyAnimation
++from PySide6.QtGui import QColor, QPainter, QPen, QBrush, QPainterPath, QPixmap
++from PySide6.QtWidgets import QWidget, QAbstractButton, QApplication
++
++
++FEATURES = (
++    ("beauty_lock", "01", "美丽锁定"),
++    ("beauty_insight", "02", "美丽洞察"),
++    ("power_20", "03", "二成功力"),
++    ("power_50", "04", "五成功力"),
++    ("beauty_god", "05", "美丽之神"),
+ )
+-from PySide6.QtGui import QColor, QPainter, QPen, QBrush, QFont
+-from PySide6.QtWidgets import (
+-    QWidget, QFrame, QLabel, QVBoxLayout, QHBoxLayout, QAbstractButton, QPushButton,
+-)
+-
+-
+-FEATURES = (
+-    ("beauty_lock", "美丽锁定", "LOCK"),
+-    ("beauty_insight", "美丽洞察", "INSIGHT"),
+-    ("power_20", "二成功力", "20%"),
+-    ("power_50", "五成功力", "50%"),
+-    ("beauty_god", "美丽之神", "MAX"),
+-)
++
++
++def _asset(name: str) -> str:
++    if getattr(sys, "frozen", False):
++        root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
++    else:
++        root = Path(__file__).resolve().parent.parent
++    return str(root / "assets" / name)
+ 
+ 
+ class AnimatedToggle(QAbstractButton):
+-    """Tiny smooth switch used by the ability sidebar."""
++    """Reference-matched toggle with a 170 ms slide and no idle animation."""
+ 
+     def __init__(self, parent=None):
+         super().__init__(parent)
+         self.setCheckable(True)
+         self.setCursor(Qt.CursorShape.PointingHandCursor)
+-        self.setFixedSize(44, 24)
++        self.setFixedSize(54, 29)
+         self._progress = 0.0
+         self._anim = QVariantAnimation(self)
+         self._anim.setDuration(170)
+@@ -46,6 +53,9 @@
+         except Exception:
+             self._progress = 1.0 if self.isChecked() else 0.0
+         self.update()
++        p = self.parentWidget()
++        if p is not None:
++            p.update()
+ 
+     def _animate_to_state(self, checked):
+         self._anim.stop()
+@@ -53,7 +63,7 @@
+         self._anim.setEndValue(1.0 if checked else 0.0)
+         self._anim.start()
+ 
+-    def setChecked(self, checked):  # noqa: N802 - Qt naming
++    def setChecked(self, checked):  # noqa: N802
+         super().setChecked(bool(checked))
+         if self._anim.state() != QVariantAnimation.State.Running:
+             self._progress = 1.0 if checked else 0.0
+@@ -62,63 +72,130 @@
+     def paintEvent(self, event):
+         p = QPainter(self)
+         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+-        on = max(0.0, min(1.0, float(self._progress)))
+-        off = QColor(57, 69, 66, 210)
+-        green = QColor(52, 239, 177, 245)
+-        bg = QColor(
+-            int(off.red() * (1.0 - on) + green.red() * on),
+-            int(off.green() * (1.0 - on) + green.green() * on),
+-            int(off.blue() * (1.0 - on) + green.blue() * on),
+-            225,
++        t = max(0.0, min(1.0, float(self._progress)))
++
++        # Soft cyan glow belongs to the switch itself only.
++        if t > 0.01:
++            for inset, alpha in ((0, int(42 * t)), (2, int(70 * t)), (4, int(60 * t))):
++                pen = QPen(QColor(40, 249, 250, alpha))
++                pen.setWidth(max(1, 6 - inset))
++                p.setPen(pen)
++                p.setBrush(Qt.BrushStyle.NoBrush)
++                p.drawRoundedRect(self.rect().adjusted(2 + inset, 2 + inset, -2 - inset, -2 - inset), 14, 14)
++
++        off = QColor(23, 54, 75, 238)
++        on = QColor(13, 194, 199, 240)
++        track = QColor(
++            int(off.red() * (1 - t) + on.red() * t),
++            int(off.green() * (1 - t) + on.green() * t),
++            int(off.blue() * (1 - t) + on.blue() * t),
++            244,
+         )
++        p.setPen(QPen(QColor(192, 245, 255, int(110 + 85 * t)), 1))
++        p.setBrush(QBrush(track))
++        p.drawRoundedRect(self.rect().adjusted(2, 2, -2, -2), 13, 13)
++
++        # Bright white knob with the same soft metallic feel as the approved image.
++        x0 = 5.0
++        x1 = float(self.width() - 25)
++        x = x0 + (x1 - x0) * t
+         p.setPen(Qt.PenStyle.NoPen)
+-        p.setBrush(QBrush(bg))
+-        p.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1), 12, 12)
+-
+-        x0, x1 = 4.0, float(self.width() - 20)
+-        knob_x = x0 + (x1 - x0) * on
+-        knob = QColor(245, 255, 251, 255)
+-        p.setBrush(QBrush(knob))
+-        p.drawEllipse(int(knob_x), 4, 16, 16)
++        p.setBrush(QBrush(QColor(255, 255, 255, 255)))
++        p.drawEllipse(QRect(int(round(x)), 5, 20, 20))
++        p.setBrush(QBrush(QColor(225, 231, 234, 130)))
++        p.drawEllipse(QRect(int(round(x)) + 2, 7, 16, 16))
+         p.end()
+ 
+ 
++class AbilityNode(QWidget):
++    """Small static cyan node that appears beside XiaoMeili on hover."""
++
++    clicked = Signal()
++    hover_entered = Signal()
++    hover_left = Signal()
++
++    def __init__(self, parent=None):
++        super().__init__(parent)
++        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint)
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
++        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
++        self.setFixedSize(34, 34)
++        self.setCursor(Qt.CursorShape.PointingHandCursor)
++        self.hide()
++
++    def paintEvent(self, event):
++        p = QPainter(self)
++        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
++        c = QPointF(self.width() / 2.0, self.height() / 2.0)
++        p.setPen(Qt.PenStyle.NoPen)
++        p.setBrush(QColor(40, 235, 242, 24))
++        p.drawEllipse(c, 15.0, 15.0)
++        p.setBrush(QColor(48, 242, 244, 52))
++        p.drawEllipse(c, 11.0, 11.0)
++        p.setBrush(QColor(238, 255, 255, 245))
++        p.drawEllipse(c, 6.3, 6.3)
++        p.setBrush(QColor(44, 224, 226, 255))
++        p.drawEllipse(c, 4.2, 4.2)
++        p.end()
++
++    def mouseReleaseEvent(self, event):
++        if event.button() == Qt.MouseButton.LeftButton:
++            self.clicked.emit()
++            event.accept()
++            return
++        super().mouseReleaseEvent(event)
++
++    def enterEvent(self, event):
++        self.hover_entered.emit()
++        super().enterEvent(event)
++
++    def leaveEvent(self, event):
++        self.hover_left.emit()
++        super().leaveEvent(event)
++
++
+ class AbilitySidebar(QWidget):
+-    """Frameless panel that slides from behind XiaoMeili's left side."""
++    """Approved reference sidebar with static connector and smooth expansion."""
+ 
+     state_changed = Signal(str, bool)
+     visibility_changed = Signal(bool)
+ 
+-    PANEL_W = 236
+-    PANEL_H = 326
++    # Dedicated event interface reserved for future per-ability voice/action bindings.
++    ability_lock_on = Signal(); ability_lock_off = Signal()
++    ability_insight_on = Signal(); ability_insight_off = Signal()
++    ability_power2_on = Signal(); ability_power2_off = Signal()
++    ability_power5_on = Signal(); ability_power5_off = Signal()
++    ability_god_on = Signal(); ability_god_off = Signal()
++
++    PANEL_W = 230
++    PANEL_H = 320
++    LINK_W = 54
++    TOTAL_W = PANEL_W + LINK_W
++    TOTAL_H = PANEL_H
+     PET_OVERLAP = 10
++
++    # Coordinates are scaled 1/2 from the approved 460x640 panel crop.
++    _ROW_TOPS = (41, 95, 149, 203, 257)
++    _ROW_H = 47
++    _TOGGLE_X = 163
++    _TOGGLE_YS = (47, 101, 155, 209, 263)
+ 
+     def __init__(self, parent=None):
+         super().__init__(parent)
+-        flags = (
+-            Qt.WindowType.FramelessWindowHint
+-            | Qt.WindowType.Tool
+-            | Qt.WindowType.WindowStaysOnTopHint
+-        )
+-        self.setWindowFlags(flags)
++        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint)
+         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+-        self.setFixedSize(self.PANEL_W, self.PANEL_H)
++        self.setFixedSize(self.TOTAL_W, self.TOTAL_H)
+         self.setWindowOpacity(0.0)
++
+         self._states = {key: False for key, _, _ in FEATURES}
++        self._buttons = {}
++        self._button_guard = False
+         self._anchor_rect = QRect()
+         self._open = False
+         self._closing = False
+-        self._pulse = 0.0
+-        self._pulse_dir = 1.0
+-        self._button_guard = False
+-        self._buttons = {}
+-        self._last_feature = ""
+-
+-        self._pulse_timer = QTimer(self)
+-        self._pulse_timer.setInterval(40)
+-        self._pulse_timer.timeout.connect(self._tick_pulse)
+-        self._pulse_timer.start()
++        self._side = "left"
++        self._panel_pixmap = QPixmap(_asset("ability_panel_reference_v0100.png"))
+ 
+         self._slide = QPropertyAnimation(self, b"geometry", self)
+         self._slide.setDuration(260)
+@@ -129,138 +206,47 @@
+         self._fade.setEasingCurve(QEasingCurve.Type.OutCubic)
+         self._fade.valueChanged.connect(lambda v: self.setWindowOpacity(float(v)))
+ 
+-        self._build_ui()
++        for idx, (key, _num, _name) in enumerate(FEATURES):
++            sw = AnimatedToggle(self)
++            sw.toggled.connect(lambda checked, fid=key: self._on_toggled(fid, checked))
++            self._buttons[key] = sw
++        self._layout_children()
+         self.hide()
+ 
+-    def _build_ui(self):
+-        root = QHBoxLayout(self)
+-        root.setContentsMargins(8, 8, 30, 8)
+-        root.setSpacing(0)
+-
+-        card = QFrame(self)
+-        card.setObjectName("abilityCard")
+-        card.setStyleSheet(
+-            "QFrame#abilityCard{"
+-            "background:rgba(10,20,18,242);"
+-            "border:1px solid rgba(74,236,188,92);"
+-            "border-radius:15px;"
+-            "}"
+-            "QLabel{color:#E9FFF7;background:transparent;}"
+-            "QPushButton#abilityClose{"
+-            "color:#83BBAA;background:transparent;border:0px;"
+-            "font-size:18px;font-weight:600;padding:0px;"
+-            "}"
+-            "QPushButton#abilityClose:hover{color:#DFFFF3;}"
+-        )
+-        root.addWidget(card, 1)
+-
+-        v = QVBoxLayout(card)
+-        v.setContentsMargins(16, 13, 14, 12)
+-        v.setSpacing(7)
+-
+-        head = QHBoxLayout()
+-        title_box = QVBoxLayout(); title_box.setSpacing(0)
+-        title = QLabel("美丽能力")
+-        tf = QFont(); tf.setPointSize(12); tf.setBold(True); title.setFont(tf)
+-        sub = QLabel("BEAUTY LINK")
+-        sub.setStyleSheet("color:#58CDB0;font-size:8px;letter-spacing:1px;")
+-        title_box.addWidget(title); title_box.addWidget(sub)
+-        head.addLayout(title_box, 1)
+-        close = QPushButton("×")
+-        close.setObjectName("abilityClose")
+-        close.setFixedSize(24, 24)
+-        close.setCursor(Qt.CursorShape.PointingHandCursor)
+-        close.clicked.connect(self.hide_animated)
+-        head.addWidget(close)
+-        v.addLayout(head)
+-
+-        line = QFrame(); line.setFixedHeight(1)
+-        line.setStyleSheet("background:rgba(87,230,187,36);border:0px;")
+-        v.addWidget(line)
+-
+-        for key, name, code in FEATURES:
+-            row = QFrame(card)
+-            row.setObjectName("abilityRow")
+-            row.setFixedHeight(39)
+-            row.setStyleSheet(
+-                "QFrame#abilityRow{background:rgba(255,255,255,8);border:0px;border-radius:9px;}"
+-                "QFrame#abilityRow:hover{background:rgba(78,232,184,15);}"
+-            )
+-            h = QHBoxLayout(row); h.setContentsMargins(11, 0, 9, 0); h.setSpacing(8)
+-            text_box = QVBoxLayout(); text_box.setSpacing(0)
+-            lab = QLabel(name); lab.setStyleSheet("font-size:12px;font-weight:650;color:#E8FFF7;")
+-            tiny = QLabel(code); tiny.setStyleSheet("font-size:8px;color:#54786E;")
+-            text_box.addWidget(lab); text_box.addWidget(tiny)
+-            h.addLayout(text_box, 1)
+-            sw = AnimatedToggle(row)
+-            sw.toggled.connect(lambda checked, fid=key: self._on_toggled(fid, checked))
+-            h.addWidget(sw)
+-            v.addWidget(row)
+-            self._buttons[key] = sw
+-
+-        self._status = QLabel("靠近小美丽左侧即可展开")
+-        self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+-        self._status.setStyleSheet("color:#698D82;font-size:8px;padding-top:2px;")
+-        v.addWidget(self._status)
+-
+-        safety = QLabel("仅改变小美丽自身表现 · 不读取游戏数据")
+-        safety.setAlignment(Qt.AlignmentFlag.AlignCenter)
+-        safety.setStyleSheet("color:#42645B;font-size:7px;")
+-        v.addWidget(safety)
+-
+-    def _tick_pulse(self):
+-        self._pulse += 0.055 * self._pulse_dir
+-        if self._pulse >= 1.0:
+-            self._pulse = 1.0; self._pulse_dir = -1.0
+-        elif self._pulse <= 0.0:
+-            self._pulse = 0.0; self._pulse_dir = 1.0
+-        if self.isVisible():
+-            self.update()
+-
+-    def _on_toggled(self, feature_id, checked):
+-        if self._button_guard:
+-            return
+-        self._states[str(feature_id)] = bool(checked)
+-        self._last_feature = str(feature_id)
+-        label = next((name for key, name, _ in FEATURES if key == feature_id), feature_id)
+-        self._status.setText(f"{label}  {'ON' if checked else 'OFF'}")
+-        self.state_changed.emit(str(feature_id), bool(checked))
+-        self.update()
+-
+-    def set_states(self, states):
+-        data = states if isinstance(states, dict) else {}
+-        self._button_guard = True
+-        try:
+-            for key, _, _ in FEATURES:
+-                checked = bool(data.get(key, False))
+-                self._states[key] = checked
+-                btn = self._buttons.get(key)
+-                if btn is not None:
+-                    btn.setChecked(checked)
+-        finally:
+-            self._button_guard = False
+-        self.update()
+-
+-    def states(self):
+-        return dict(self._states)
+-
+-    def is_open(self):
+-        return bool(self._open and self.isVisible() and not self._closing)
+-
+-    def _open_geometry(self, anchor: QRect):
+-        x = int(anchor.left() - self.width() + self.PET_OVERLAP)
+-        y = int(anchor.top() + (anchor.height() - self.height()) * 0.42)
+-        # Keep the panel on the current screen without moving XiaoMeili herself.
+-        try:
+-            from PySide6.QtWidgets import QApplication
+-            screen = QApplication.screenAt(anchor.center()) or QApplication.primaryScreen()
+-            if screen:
+-                area = screen.availableGeometry()
+-                x = max(area.left() + 3, min(x, area.right() - self.width() - 3))
+-                y = max(area.top() + 3, min(y, area.bottom() - self.height() - 3))
+-        except Exception:
+-            pass
+-        return QRect(x, y, self.width(), self.height())
++    def _layout_children(self):
++        panel_x = 0 if self._side == "left" else self.LINK_W
++        for idx, (key, _num, _name) in enumerate(FEATURES):
++            self._buttons[key].move(panel_x + self._TOGGLE_X, self._TOGGLE_YS[idx])
++
++    def _screen_area(self, anchor: QRect):
++        screen = QApplication.screenAt(anchor.center()) or QApplication.primaryScreen()
++        return screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
++
++    def side_for_anchor(self, anchor: QRect) -> str:
++        area = self._screen_area(anchor)
++        left_space = anchor.left() - area.left()
++        right_space = area.right() - anchor.right()
++        need = self.TOTAL_W - self.PET_OVERLAP + 8
++        if left_space >= need:
++            return "left"
++        if right_space >= need:
++            return "right"
++        return "left" if left_space >= right_space else "right"
++
++    def _target_geometry(self, anchor: QRect):
++        area = self._screen_area(anchor)
++        side = self.side_for_anchor(anchor)
++        if side != self._side:
++            self._side = side
++            self._layout_children()
++        if self._side == "left":
++            x = anchor.left() - self.TOTAL_W + self.PET_OVERLAP
++        else:
++            x = anchor.right() - self.PET_OVERLAP
++        y = anchor.top() + int((anchor.height() - self.TOTAL_H) * 0.36)
++        x = max(area.left() + 2, min(x, area.right() - self.TOTAL_W - 2))
++        y = max(area.top() + 2, min(y, area.bottom() - self.TOTAL_H - 2))
++        return QRect(int(x), int(y), self.TOTAL_W, self.TOTAL_H)
+ 
+     def sync_to_anchor(self, anchor: QRect, force=False):
+         if not isinstance(anchor, QRect):
+@@ -268,25 +254,31 @@
+         self._anchor_rect = QRect(anchor)
+         if not self.isVisible():
+             return
+-        target = self._open_geometry(anchor)
++        target = self._target_geometry(anchor)
+         if force or self._slide.state() != QPropertyAnimation.State.Running:
+             self.setGeometry(target)
++            self.update()
+ 
+     def show_animated(self, anchor: QRect):
+-        if isinstance(anchor, QRect):
+-            self._anchor_rect = QRect(anchor)
+-        target = self._open_geometry(self._anchor_rect)
++        self._anchor_rect = QRect(anchor)
++        target = self._target_geometry(self._anchor_rect)
+         if self._open and self.isVisible() and not self._closing:
+             self.setGeometry(target)
+             return
+         self._open = True
+         self._closing = False
+         self._slide.stop(); self._fade.stop()
+-        # Start mostly behind XiaoMeili, then glide left into place.
+-        start = QRect(self._anchor_rect.left() - 58, target.y(), self.width(), self.height())
++        shift = self.PANEL_W - 26
++        if self._side == "left":
++            start = target.translated(shift, 0)
++        else:
++            start = target.translated(-shift, 0)
+         self.setGeometry(start)
+         self.setWindowOpacity(0.0)
+         self.show(); self.raise_()
++        self._slide.setDuration(260)
++        self._slide.setEasingCurve(QEasingCurve.Type.OutCubic)
++        self._fade.setDuration(220)
+         self._slide.setStartValue(start); self._slide.setEndValue(target)
+         self._fade.setStartValue(0.0); self._fade.setEndValue(1.0)
+         self._slide.start(); self._fade.start()
+@@ -299,11 +291,13 @@
+         self._closing = True
+         self._slide.stop(); self._fade.stop()
+         start = self.geometry()
+-        end = QRect(self._anchor_rect.left() - 58, start.y(), self.width(), self.height())
++        shift = self.PANEL_W - 26
++        end = start.translated(shift if self._side == "left" else -shift, 0)
+         self._slide.setDuration(210)
+         self._slide.setEasingCurve(QEasingCurve.Type.InCubic)
+         self._slide.setStartValue(start); self._slide.setEndValue(end)
+-        self._fade.setDuration(180); self._fade.setStartValue(self.windowOpacity()); self._fade.setEndValue(0.0)
++        self._fade.setDuration(180)
++        self._fade.setStartValue(self.windowOpacity()); self._fade.setEndValue(0.0)
+         self._slide.start(); self._fade.start()
+ 
+     def _slide_finished(self):
+@@ -312,33 +306,103 @@
+             self._open = False
+             self.hide()
+             self.visibility_changed.emit(False)
+-        self._slide.setDuration(260)
+-        self._slide.setEasingCurve(QEasingCurve.Type.OutCubic)
+-        self._fade.setDuration(220)
++
++    def is_open(self):
++        return bool(self._open and self.isVisible() and not self._closing)
++
++    def set_states(self, states):
++        data = states if isinstance(states, dict) else {}
++        self._button_guard = True
++        try:
++            for key, _, _ in FEATURES:
++                value = bool(data.get(key, False))
++                self._states[key] = value
++                self._buttons[key].setChecked(value)
++        finally:
++            self._button_guard = False
++        self.update()
++
++    def states(self):
++        return dict(self._states)
++
++    def _emit_feature_event(self, feature_id, checked):
++        signals = {
++            ("beauty_lock", True): self.ability_lock_on,
++            ("beauty_lock", False): self.ability_lock_off,
++            ("beauty_insight", True): self.ability_insight_on,
++            ("beauty_insight", False): self.ability_insight_off,
++            ("power_20", True): self.ability_power2_on,
++            ("power_20", False): self.ability_power2_off,
++            ("power_50", True): self.ability_power5_on,
++            ("power_50", False): self.ability_power5_off,
++            ("beauty_god", True): self.ability_god_on,
++            ("beauty_god", False): self.ability_god_off,
++        }
++        sig = signals.get((feature_id, bool(checked)))
++        if sig is not None:
++            sig.emit()
++
++    def _on_toggled(self, feature_id, checked):
++        if self._button_guard:
++            return
++        self._states[str(feature_id)] = bool(checked)
++        self.state_changed.emit(str(feature_id), bool(checked))
++        self._emit_feature_event(str(feature_id), bool(checked))
++        self.update()
+ 
+     def paintEvent(self, event):
+         p = QPainter(self)
+         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+-        cy = int(self.height() * 0.48)
+-        x1 = self.width() - 30
+-        x2 = self.width() - 2
+-        pulse = float(self._pulse)
+-
+-        # Soft connector glow that visually grows from XiaoMeili toward the card.
+-        for width, alpha in ((8, 18), (4, 35), (2, 140)):
+-            pen = QPen(QColor(51, 244, 181, int(alpha + pulse * 24)))
+-            pen.setWidth(width); pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+-            p.setPen(pen)
+-            p.drawLine(QPoint(x1, cy), QPoint(x2, cy))
+-        p.setPen(Qt.PenStyle.NoPen)
+-        p.setBrush(QColor(118, 255, 213, int(105 + pulse * 110)))
+-        r = 3.0 + pulse * 1.2
+-        p.drawEllipse(QPoint(x2 - 1, cy), r, r)
+-
+-        # The strongest state gets a restrained peripheral shimmer, not a game overlay.
+-        if self._states.get("beauty_god"):
+-            pen = QPen(QColor(64, 244, 188, int(35 + pulse * 45)))
+-            pen.setWidth(1)
+-            p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush)
+-            p.drawRoundedRect(self.rect().adjusted(3, 3, -28, -3), 17, 17)
++        panel_x = 0 if self._side == "left" else self.LINK_W
++        panel_rect = QRect(panel_x, 0, self.PANEL_W, self.PANEL_H)
++
++        # The approved reference image is the visual base, clipped to the same rounded silhouette.
++        clip = QPainterPath()
++        clip.addRoundedRect(float(panel_rect.x()), float(panel_rect.y()), float(panel_rect.width()), float(panel_rect.height()), 24.0, 24.0)
++        p.save(); p.setClipPath(clip)
++        if not self._panel_pixmap.isNull():
++            p.drawPixmap(panel_rect, self._panel_pixmap)
++        else:
++            p.fillRect(panel_rect, QColor(19, 118, 157, 225))
++        p.restore()
++
++        # Neutralize the baked selected-row glow and redraw each row state dynamically.
++        for idx, (key, _num, _name) in enumerate(FEATURES):
++            row = QRect(panel_x + 22, self._ROW_TOPS[idx], 202, self._ROW_H)
++            on = bool(self._states.get(key, False))
++            p.setPen(QPen(QColor(172, 246, 255, 235 if on else 150), 1.2))
++            p.setBrush(QColor(9, 81, 116, 52 if on else 82))
++            p.drawRoundedRect(row, 12, 12)
++            if on:
++                glow = QPen(QColor(28, 244, 245, 70), 5)
++                p.setPen(glow); p.setBrush(Qt.BrushStyle.NoBrush)
++                p.drawRoundedRect(row.adjusted(2, 2, -2, -2), 11, 11)
++
++        # Static guide line. No pulse, no flowing particles, no periodic repaint timer.
++        link_y = 112
++        if self._side == "left":
++            start_x = panel_x + self.PANEL_W - 1
++            end_x = self.TOTAL_W - 2
++            node_x = start_x + 7
++            path = QPainterPath(QPointF(node_x + 5, link_y))
++            path.cubicTo(QPointF(node_x + 14, link_y), QPointF(end_x - 14, link_y + 32), QPointF(end_x, link_y + 34))
++        else:
++            start_x = panel_x + 1
++            end_x = 2
++            node_x = start_x - 7
++            path = QPainterPath(QPointF(node_x - 5, link_y))
++            path.cubicTo(QPointF(node_x - 14, link_y), QPointF(end_x + 14, link_y + 32), QPointF(end_x, link_y + 34))
++        for width, alpha in ((6, 38), (3, 80), (1, 245)):
++            pen = QPen(QColor(68, 250, 250, alpha), width)
++            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
++            p.setPen(pen); p.setBrush(Qt.BrushStyle.NoBrush); p.drawPath(path)
++        p.setPen(QPen(QColor(222, 255, 255, 240), 1))
++        p.setBrush(QColor(48, 226, 230, 105))
++        p.drawEllipse(QPointF(float(node_x), float(link_y)), 8.0, 8.0)
++
++        # Beauty God only strengthens the panel silhouette slightly; nothing flows along the connector.
++        if self._states.get("beauty_god", False):
++            p.setPen(QPen(QColor(39, 246, 245, 100), 3))
++            p.setBrush(Qt.BrushStyle.NoBrush)
++            p.drawRoundedRect(panel_rect.adjusted(3, 3, -3, -3), 23, 23)
+         p.end()
+--- a/tests/test_v0100_contract.py
++++ b/tests/test_v0100_contract.py
+@@ -1,54 +1,88 @@
+ from pathlib import Path
+ import re
++import struct
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ MAIN = (ROOT / 'app/src/main.py').read_text(encoding='utf-8')
+ SIDEBAR = (ROOT / 'app/src/ability_sidebar.py').read_text(encoding='utf-8')
+ NDM = (ROOT / 'app/src/ndm_bridge.py').read_text(encoding='utf-8')
+ BRAIN = (ROOT / 'app/src/brain_qwen.py').read_text(encoding='utf-8')
+-MIGRATE = (ROOT / 'app/assets/storage_migrate.ps1').read_text(encoding='utf-8')
+ NATIVE = (ROOT / 'app/src/native_updater.py').read_text(encoding='utf-8')
+ REQ = (ROOT / 'app/requirements.txt').read_text(encoding='utf-8')
+ 
+ assert 'APP_VERSION = "0.10.0"' in MAIN
+-assert (ROOT / 'app/assets/VERSION.txt').read_text(encoding='ascii').strip() == '0.10.0'
+-for name in ('美丽锁定','美丽洞察','二成功力','五成功力','美丽之神'):
+-    assert name in SIDEBAR
+-assert 'class AbilitySidebar' in SIDEBAR
+-assert 'class AbilityAuraOverlay' in MAIN
+-assert 'self.ability_hover_timer' in MAIN
+-assert 'request_abilities' in MAIN
+-assert 'cosmetic only' in MAIN
++assert 'APP_UPDATE_VERSION = "0.10.0.1"' in MAIN
++assert '_version_tuple(version) > _version_tuple(APP_UPDATE_VERSION)' in MAIN
++assert (ROOT / 'app/assets/VERSION.txt').read_text(encoding='ascii').strip() == '0.10.0.1'
+ 
+-# Startup must not invoke NDM cleanup anymore.
++# Approved visual contract: exact five fixed rows and no old experimental header/code labels.
++for num, name in (("01","美丽锁定"),("02","美丽洞察"),("03","二成功力"),("04","五成功力"),("05","美丽之神")):
++    assert f'"{num}", "{name}"' in SIDEBAR
++for forbidden in ('BEAUTY LINK', 'QLabel("美丽能力")', '"LOCK"', '"INSIGHT"', '"MAX"'):
++    assert forbidden not in SIDEBAR, forbidden
++assert 'ability_panel_reference_v0100.png' in SIDEBAR
++assert 'xiaomeili_ability_form_v0100.png' in MAIN
++assert 'class AbilityNode' in SIDEBAR
++assert 'self.ability_hover_timer' not in MAIN
++assert 'QTimer(self)' not in SIDEBAR  # zero ability-specific idle polling timers
++
++# Dedicated future event interface, ON + OFF for all five abilities.
++for sig in (
++    'ability_lock_on','ability_lock_off','ability_insight_on','ability_insight_off',
++    'ability_power2_on','ability_power2_off','ability_power5_on','ability_power5_off',
++    'ability_god_on','ability_god_off'):
++    assert sig in SIDEBAR, sig
++
++# Interaction settings + voice command hooks exist.
++for text in ('启用美丽能力侧栏','启用能力语音反馈','允许语音打开 / 收起侧栏'):
++    assert text in MAIN
++for text in ('打开能力侧栏','收起能力侧栏','开挂'):
++    assert text in MAIN
++
++# Every launch resets cosmetic ability states to OFF.
++assert 'Every launch intentionally starts all five cosmetic abilities OFF.' in MAIN
++
++# Required program assets are bundled and genuinely transparent where needed.
++panel = ROOT / 'app/assets/ability_panel_reference_v0100.png'
++form = ROOT / 'app/assets/xiaomeili_ability_form_v0100.png'
++assert panel.is_file() and panel.stat().st_size > 10_000
++assert form.is_file() and form.stat().st_size > 20_000
++def png_info(path):
++    data = path.read_bytes()
++    assert data[:8] == b'\x89PNG\r\n\x1a\n'
++    width, height, bit_depth, color_type = struct.unpack('>IIBB', data[16:26])
++    return data, width, height, bit_depth, color_type
++
++pdata, pw, ph, _pbd, _pct = png_info(panel)
++fdata, fw, fh, _fbd, fct = png_info(form)
++assert pw >= 220 and ph >= 300
++assert fw >= 300 and fh >= 500
++assert fct in (3, 4, 6)
++if fct == 3:
++    assert b'tRNS' in fdata, 'indexed ability-form PNG lost transparency'
++
++# Startup must never invoke legacy NDM cleanup.
+ startup_tail = MAIN[MAIN.index('class AppController'):]
+ assert 'QTimer.singleShot(9000, lambda: self.brain_service.cleanup_ndm_leftovers' not in startup_tail
+ 
+-# cleanup_ndm_leftovers is a no-op and must contain no destructive filesystem call.
++# NDM cleanup remains disabled and adoption remains exact/copy-only.
+ m = re.search(r'def cleanup_ndm_leftovers\(self, download_root\):(.*?)(?=\n    def shutdown)', BRAIN, re.S)
+ assert m, 'cleanup_ndm_leftovers missing'
+ cleanup = m.group(1)
+ for bad in ('rglob(', '.unlink(', 'shutil.rmtree', 'os.remove(', 'Remove-Item'):
+     assert bad not in cleanup, f'destructive NDM cleanup token returned: {bad}'
+-
+-# NDM adoption must be exact, non-recursive and copy-only.
+ assert 'root.iterdir()' in NDM
+ assert 'root.rglob(' not in NDM
+ assert 'shutil.move(' not in NDM
+ assert 'src.unlink(' not in NDM
+-assert 'matching-extension' not in NDM
+ assert '_assert_controlled_destination' in NDM
+ assert 'shutil.copy2' in NDM
+ 
+-# Migration can only target the app-owned D-drive directory and refuses unknown populated targets.
+-assert "$expectedTarget = [System.IO.Path]::GetFullPath('D:\\XiaoMeiliData')" in MIGRATE
+-assert ".xiaomeili-storage.json" in MIGRATE
+-assert 'already contains files but has no XiaoMeili safety marker' in MIGRATE
+-assert 'Safety backup retained at' in MIGRATE
+-
+-# Native updater remains no-delete/versioned.
++# Native updater is strictly versioned/no-delete. The ability feature itself performs no filesystem deletion.
+ for token in ('never mirrors, purges, removes, unlinks, or recursively deletes files', 'versions', 'active.json'):
+     assert token in NATIVE
++for forbidden in ('unlink(', 'rmtree(', 'os.remove(', 'shutil.move(', 'Remove-Item'):
++    assert forbidden not in SIDEBAR
+ 
+ assert 'psutil>=' in REQ
+-print('V0100_CONTRACT_PASS')
++print('V0100_REFERENCE_FINAL_CONTRACT_PASS')
+--- a/app/assets/VERSION.txt
++++ b/app/assets/VERSION.txt
+@@ -1 +1 @@
+-0.10.0
++0.10.0.1

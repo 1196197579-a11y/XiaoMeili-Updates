@@ -279,6 +279,34 @@ jobs:
           if ($ndm -match 'root\.rglob\(' -or $ndm -match 'shutil\.move\(') { throw "V0.10.0 unsafe NDM fallback returned" }
           Write-Host "V0.10.0 ability sidebar + safety patch PASS"
 
+      - name: Apply approved-reference V0.10.0 final revision
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $patchPath = Join-Path $PWD "build\v0100_ref_final\v0100_reference_final.patch"
+          if (-not (Test-Path -LiteralPath $patchPath)) { throw "Approved-reference V0.10.0 patch missing: $patchPath" }
+          Push-Location $env:SOURCE_ROOT
+          try {
+            & git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn $patchPath
+            if ($LASTEXITCODE -ne 0) { throw "Approved-reference V0.10.0 patch application failed: $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v0100_ref_final\ability_panel_reference_v0100.png") -Destination (Join-Path $env:SOURCE_ROOT "app\assets\ability_panel_reference_v0100.png") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v0100_ref_final\xiaomeili_ability_form_v0100.png") -Destination (Join-Path $env:SOURCE_ROOT "app\assets\xiaomeili_ability_form_v0100.png") -Force
+          python "$env:SOURCE_ROOT\tests\test_v0100_contract.py"
+          if ($LASTEXITCODE -ne 0) { throw "Approved-reference V0.10.0 contract failed: $LASTEXITCODE" }
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\ability_sidebar.py"
+          if ($LASTEXITCODE -ne 0) { throw "Approved-reference V0.10.0 syntax compile failed: $LASTEXITCODE" }
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $sidebar = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\ability_sidebar.py" -Raw
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0"') { throw "Visible V0.10.0 identity changed" }
+          if ($main -notmatch 'APP_UPDATE_VERSION\s*=\s*"0\.10\.0\.1"') { throw "Internal repair revision missing" }
+          if ($sidebar -match 'BEAUTY LINK|LOCK|INSIGHT|MAX') { throw "Old simplified sidebar labels returned" }
+          if ($sidebar -match 'QTimer\(self\)') { throw "Ability sidebar regained an idle polling timer" }
+          if ($sidebar -match 'unlink\(|rmtree\(|os\.remove\(|shutil\.move\(|Remove-Item') { throw "Ability sidebar contains a destructive file operation" }
+          Write-Host "Approved-reference V0.10.0 final revision PASS"
+
       - name: Non-destructive updater safety gate
         shell: pwsh
         run: |
@@ -484,14 +512,14 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             gh release upload "v0.10.0" "$env:UPDATE_ZIP" "$env:SOURCE_BUNDLE" --clobber --repo "${{ github.repository }}"
             if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed: $LASTEXITCODE" }
-            gh release edit "v0.10.0" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0 | Beauty Ability Sidebar" --notes "V0.10.0 adds the Beauty Ability Sidebar and hardens file safety: no recursive Downloads cleanup, no fuzzy NDM adoption, copy-only imports, fixed app-owned D:\XiaoMeiliData migration, and the native no-delete updater."
+            gh release edit "v0.10.0" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0 | Approved Ability Sidebar" --notes "Rebuilt V0.10.0 against the approved reference: exact 01-05 glass sidebar visual base, real ability-form XiaoMeili asset, event-driven node/sidebar behavior, and the FullSafe no-delete update path."
             if ($LASTEXITCODE -ne 0) { throw "Release metadata update failed: $LASTEXITCODE" }
           } else {
             $ghargs = @(
               "release", "create", "v0.10.0", "$env:UPDATE_ZIP", "$env:SOURCE_BUNDLE",
               "--repo", "${{ github.repository }}",
-              "--title", "XiaoMeili V0.10.0 | Beauty Ability Sidebar",
-              "--notes", "V0.10.0 adds the Beauty Ability Sidebar plus stricter no-delete and app-owned-path safety."
+              "--title", "XiaoMeili V0.10.0 | Approved Ability Sidebar",
+              "--notes", "Rebuilt V0.10.0 against the approved reference with the real ability-form XiaoMeili and FullSafe no-delete update path."
             )
             & gh @ghargs
             if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -545,17 +573,17 @@ jobs:
           $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0/XiaoMeili_0.10.0_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.10.0"
+            version = "0.10.0.1"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             package_size = [int64]$env:UPDATE_SIZE
             notes = @(
-              'V0.10.0 新增「美丽能力」贴身侧栏：美丽锁定、美丽洞察、二成功力、五成功力、美丽之神；侧栏从小美丽左侧顺滑展开，并用青绿色能量引导线连接本体',
-              '能力侧栏仅改变小美丽自身视觉与语音表现，不读取 VALORANT 内存、不注入游戏、不控制键鼠；锁定/点击穿透状态下不会自动展开',
-              '彻底停用 NDM Downloads 递归残留清理；不再按同扩展名或最近文件猜测下载结果，也不再移动或删除下载源文件',
-              'NDM 只接受本次任务的精确文件名，并以 copy-only 方式导入小美丽受控目录；无法精确确认时直接失败，不猜测用户文件',
-              'D 盘迁移固定为 D:\XiaoMeiliData；已有陌生文件且无小美丽安全标记时立即停止。原 C 盘数据继续保留安全备份与回滚路径',
-              '继续使用 FullSafe 原生无删除更新器：新版本安装到独立 versions 目录，旧版本保留，latest.json 旧通道继续关闭'
+              'V0.10.0 参考图终修版：侧栏直接锁定为认可的青蓝玻璃样式，固定显示 01-05 与五个中文能力名称，不再出现 BEAUTY LINK、LOCK、INSIGHT、MAX 等旧结构',
+              '图中右侧小美丽已正式作为「能力形态小美丽」透明素材接入；打开侧栏切换能力形态，高优先级动作结束后可恢复',
+              '侧栏采用事件驱动贴身节点、260ms 展开、210ms 收起、170ms 开关滑动；引导线保持静态柔光，不流动、不脉冲',
+              '能力侧栏不读取 VALORANT 内存、不注入游戏、不控制键鼠；五个 ON/OFF 独立事件接口与语音打开/收起接口已预留',
+              '文件安全继续采用 FullSafe：更新安装只创建新的受控版本目录并切换 active.json，不递归清理 Downloads，不猜测、移动或删除用户下载文件',
+              '本次修订的内部更新识别号为 0.10.0.1，仅用于让已安装旧版 V0.10.0 收到修正版；程序界面版本仍显示 V0.10.0'
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest_safe.json" -Encoding utf8
