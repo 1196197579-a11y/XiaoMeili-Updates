@@ -1,0 +1,9 @@
+XiaoMeili V0.10.0.4
+
+- Sweep lights: use real elapsed time + PreciseTimer + true arc-length mapping to remove periodic stalls around rounded corners.
+- Remove the three decorative white dots from the panel header.
+- Remove visible 01-05 numbers; internal ability IDs remain unchanged.
+- Custom ability names remain hard-limited to 4 characters and are centered in the free area between the row border and toggle.
+- Compress the top panel boundary inward so top and bottom row margins are visually equal.
+- Preserve V0.10.0.3 live layout controls, animated ability character, custom TTS phrases, Maoken private font loading and FullSafe no-delete updater.
+- No user files are deleted, moved, mirrored, purged or recursively cleaned by this update.
