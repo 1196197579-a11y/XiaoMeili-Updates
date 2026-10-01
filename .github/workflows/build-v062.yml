@@ -251,6 +251,30 @@ jobs:
             if ($main -match $obsolete) { throw "V0.9.2.8 obsolete preview UI remains: $obsolete" }
           }
 
+      - name: PROBE final source structure
+        shell: pwsh
+        run: |
+          @'
+from pathlib import Path
+import re, os
+p=Path(os.environ["SOURCE_ROOT"])/"app/src/main.py"
+s=p.read_text(encoding="utf-8")
+print("=== CLASS DEFS ===")
+for m in re.finditer(r"(?m)^class\\s+([A-Za-z_][A-Za-z0-9_]*)[^:]*:", s): print(m.group(0))
+print("=== DEF MAIN TAIL ===")
+i=s.rfind("def main():")
+print(s[i:i+12000])
+for term in ["self.pet", "pet=", "pet =", "contextMenuEvent", "QSystemTrayIcon", "locked", "lock_action", "SettingsDialog", "class Pet", "show_settings", "open_settings"]:
+    print("\\n=== TERM",term,"===")
+    pos=0; n=0
+    while True:
+        j=s.find(term,pos)
+        if j<0 or n>=8: break
+        print(s[max(0,j-1800):j+5000])
+        pos=j+len(term); n+=1
+'@ | python -
+          throw "PROBE COMPLETE - intentional stop before packaging"
+
       - name: Non-destructive updater safety gate
         shell: pwsh
         run: |
