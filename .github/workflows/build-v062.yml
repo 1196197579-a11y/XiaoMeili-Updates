@@ -39,7 +39,7 @@ jobs:
           }
           "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Patch stable source to v0.10.0
+      - name: Patch stable source to v0.9.2.8
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -108,8 +108,6 @@ jobs:
           Run-PythonChecked "build\v0927\test_v0927_contract.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0928\patch_v0928.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0928\test_v0928_contract.py" "$env:SOURCE_ROOT"
-          Run-PythonChecked "build\v0100\patch_v0100.py" "$env:SOURCE_ROOT" "$PWD"
-          Run-PythonChecked "build\v0100\test_v0100_contract.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
@@ -145,117 +143,141 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $testSrc "brain\models\test.gguf"))) { throw "old compatibility path cannot read migrated file" }
           if (-not (Test-Path -LiteralPath (Join-Path $testDst "brain\models\test.gguf"))) { throw "D target missing migrated file" }
           $migrationBackups = @(Get-ChildItem -LiteralPath (Split-Path -Parent $testSrc) -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -like ((Split-Path -Leaf $testSrc) + '.__C_BACKUP__.*') })
-          if ($migrationBackups.Count -lt 1) { throw "V0.10.0 migration safety backup was not retained" }
-          if (-not (Test-Path -LiteralPath (Join-Path $migrationBackups[0].FullName "brain\models\test.gguf"))) { throw "V0.10.0 migration safety backup is incomplete" }
-          Write-Host "V0.10.0 migration helper non-destructive smoke test PASS"
+          if ($migrationBackups.Count -lt 1) { throw "V0.9.2.8 migration safety backup was not retained" }
+          if (-not (Test-Path -LiteralPath (Join-Path $migrationBackups[0].FullName "brain\models\test.gguf"))) { throw "V0.9.2.8 migration safety backup is incomplete" }
+          Write-Host "V0.9.2.8 migration helper non-destructive smoke test PASS"
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0"') { throw "Source version verification failed: expected 0.10.0" }
-          if ($main -notmatch 'def ensure_desktop_launcher\(\):') { throw "V0.10.0 stable desktop launcher helper missing" }
-          if ($main -notmatch 'class AbilitySidebarWindow\(QWidget\):') { throw "V0.10.0 ability sidebar class missing" }
-          if ($main -notmatch 'class AbilityFormOverlay\(QWidget\):') { throw "V0.10.0 ability form overlay missing" }
-          if ($main -notmatch '美丽能力侧栏') { throw "V0.10.0 ability sidebar UI missing" }
-          if ($main -notmatch 'MaokenAbilitySubset\.otf') { throw "V0.10.0 bundled Maoken font missing" }
-          if ($main -notmatch 'target = desktop_dir\(\) / "小美丽\.exe"') { throw "V0.10.0 desktop XiaoMeili.exe target missing" }
-          if ($main -notmatch 'target\.open\("xb"\)') { throw "V0.10.0 create-new-only desktop launcher policy missing" }
-          if ($main -match 'QAbstractItemView\.SelectionMode\.SingleSelection') { throw "V0.10.0 QAbstractItemView crash path remains" }
-          if ($main -notmatch 'def _v0927_save_highlight_ui_now\(self\):') { throw "V0.10.0 high-glow immediate save helper missing" }
-          if ($main -notmatch 'self\._v0927_highlight_save_timer') { throw "V0.10.0 high-glow debounce save timer missing" }
-          if ($main -notmatch 'cfg\[k\] = v') { throw "V0.10.0 forward-compatible config carry-through missing" }
-          if ($main -notmatch 'def _v0926_choose_and_test_asset\(self,state\):') { throw "V0.10.0 exact asset chooser missing" }
-          if ($main -notmatch 'def _v0926_highlight_text_box_for\(self,path\):') { throw "V0.10.0 per-video highlight layout helper missing" }
-          if ($main -notmatch 'video_text_boxes') { throw "V0.10.0 per-video highlight layout store missing" }
-          if ($main -match 'top\.addWidget\(info\); top\.addWidget\(HelpBadge\("每条素材显示首帧缩略图') { throw "V0.10.0 unused asset-manager help badge remains" }
-          if ($main -notmatch 'setter\("\?"\)') { throw "V0.10.0 true question-mark help UI missing" }
-          if ($main -notmatch 'from native_updater import install_update_package') { throw "V0.10.0 native updater import missing" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.9\.2\.8"') { throw "Source version verification failed: expected 0.9.2.8" }
+          if ($main -notmatch 'def ensure_desktop_launcher\(\):') { throw "V0.9.2.8 stable desktop launcher helper missing" }
+          if ($main -notmatch 'target = desktop_dir\(\) / "小美丽\.exe"') { throw "V0.9.2.8 desktop XiaoMeili.exe target missing" }
+          if ($main -notmatch 'target\.open\("xb"\)') { throw "V0.9.2.8 create-new-only desktop launcher policy missing" }
+          if ($main -match 'QAbstractItemView\.SelectionMode\.SingleSelection') { throw "V0.9.2.8 QAbstractItemView crash path remains" }
+          if ($main -notmatch 'def _v0927_save_highlight_ui_now\(self\):') { throw "V0.9.2.8 high-glow immediate save helper missing" }
+          if ($main -notmatch 'self\._v0927_highlight_save_timer') { throw "V0.9.2.8 high-glow debounce save timer missing" }
+          if ($main -notmatch 'cfg\[k\] = v') { throw "V0.9.2.8 forward-compatible config carry-through missing" }
+          if ($main -notmatch 'def _v0926_choose_and_test_asset\(self,state\):') { throw "V0.9.2.8 exact asset chooser missing" }
+          if ($main -notmatch 'def _v0926_highlight_text_box_for\(self,path\):') { throw "V0.9.2.8 per-video highlight layout helper missing" }
+          if ($main -notmatch 'video_text_boxes') { throw "V0.9.2.8 per-video highlight layout store missing" }
+          if ($main -match 'top\.addWidget\(info\); top\.addWidget\(HelpBadge\("每条素材显示首帧缩略图') { throw "V0.9.2.8 unused asset-manager help badge remains" }
+          if ($main -notmatch 'setter\("\?"\)') { throw "V0.9.2.8 true question-mark help UI missing" }
+          if ($main -notmatch 'from native_updater import install_update_package') { throw "V0.9.2.8 native updater import missing" }
           if ($main -notmatch 'def _v088_selected_exchange\(self\):') { throw "V0.8.8 feature verification failed: direct correction helper missing" }
           if ($main -notmatch 'warm_up_async') { throw "V0.8.8 feature verification failed: warmup missing" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
           if ($brain -notmatch 'def _fast_rule_candidates\(self, user_text, limit=6\):') { throw "V0.8.8 feature verification failed: fast rule retrieval missing" }
           if ($brain -notmatch '\[BRAIN_LATENCY\]') { throw "V0.8.8 feature verification failed: latency diagnostics missing" }
-          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.10.0 favorites navigation missing" }
-          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.10.0 favorites manager missing" }
-          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.10.0 duplicate 状态动作 action entrance remains" }
-          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.10.0 duplicate 视频素材 action entrance remains" }
+          if ($main -notmatch 'self\.v774_nav_names = \["常规", "常用", "大脑", "声音", "互动", "动作", "系统"\]') { throw "V0.9.2.8 favorites navigation missing" }
+          if ($main -notmatch 'def _v0882_manage_favorites\(self\):') { throw "V0.9.2.8 favorites manager missing" }
+          if ($main -match '"状态动作"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.9.2.8 duplicate 状态动作 action entrance remains" }
+          if ($main -match '"视频素材"[\s\S]{0,500}self\._v774_open_actions') { throw "V0.9.2.8 duplicate 视频素材 action entrance remains" }
           $brain = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\brain_qwen.py" -Raw
-          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.10.0 behavior-rule prompt missing" }
+          if ($brain -notmatch '这是行为策略，不是台词模板') { throw "V0.9.2.8 behavior-rule prompt missing" }
           $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
-          if ($speech -notmatch '小美丽 V0\.10\.0 语音诊断日志') { throw "V0.10.0 speech diagnostic label missing" }
-          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.10.0 vector favorite star class missing" }
-          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.10.0 voice dialogue favorite mapping missing" }
-          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.10.0 wake reply favorite mapping missing" }
-          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.10.0 phrase style favorite mapping missing" }
-          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.10.0 unified rule editor missing" }
-          if ($brain -notmatch 'feedback_aliases') { throw "V0.10.0 rule trigger alias protection missing" }
-          if ($main -notmatch 'QPushButton\("模仿"\)') { throw "V0.10.0 mimic mode switch missing" }
-          if ($main -notmatch 'QPushButton\("固定"\)') { throw "V0.10.0 fixed mode switch missing" }
-          if ($main -notmatch '⚡ 0 次模型思考') { throw "V0.10.0 zero-inference fixed pool UI missing" }
-          if ($main -notmatch 'fav_scroll\.viewport\(\)\.setStyleSheet\("background:transparent;"\)') { throw "V0.10.0 favorites dark-background fix missing" }
-          if ($brain -notmatch 'def _v089_trigger_normalize\(text\):') { throw "V0.10.0 trigger-only matcher missing" }
-          if ($brain -notmatch 'def _v089_fixed_reply\(self, rule\):') { throw "V0.10.0 fixed reply pool runtime missing" }
-          if ($brain -notmatch '唯一可能相关的模仿规则') { throw "V0.10.0 single-rule mimic prompt missing" }
-          if ($brain -notmatch '防复读重写1次') { throw "V0.10.0 anti-repeat retry missing" }
-          if ($main -notmatch 'def _v0891_favorites_file\(self\):') { throw "V0.10.0 durable Favorites file helper missing" }
-          if ($main -notmatch 'favorites_v2\.json') { throw "V0.10.0 dedicated Favorites state file missing" }
-          if ($main -notmatch 'if self\.v774_nav_names\[index\] == "常用"') { throw "V0.10.0 Favorites page-enter refresh missing" }
-          if ($main -notmatch 'ndm_download_and_import') { throw "V0.10.0 NDM update integration missing" }
-          if ($main -notmatch 'UPDATE_LOG_DIR = LOG_DIR / "update"') { throw "V0.10.0 internal update log routing missing" }
-          if ($main -match '小美丽更新错误日志_请上传给ChatGPT') { throw "V0.10.0 still contains automatic desktop updater log" }
-          if ($main -match 'desktop_dir\(\) / "小美丽错误日志_请上传给ChatGPT\.txt"') { throw "V0.10.0 still contains automatic desktop app error log" }
-          if ($speech -notmatch 'RECOVERABLE_SPEECH_EVENT') { throw "V0.10.0 recoverable speech event routing missing" }
-          if ($speech -notmatch 'diagnostics.*speech') { throw "V0.10.0 internal speech diagnostics missing" }
+          if ($speech -notmatch '小美丽 V0\.9\.2\.8 语音诊断日志') { throw "V0.9.2.8 speech diagnostic label missing" }
+          if ($main -notmatch 'class FavoriteStarButton\(QPushButton\):') { throw "V0.9.2.8 vector favorite star class missing" }
+          if ($main -notmatch '"语音对话": \("voice\.dialogue", "声音"\)') { throw "V0.9.2.8 voice dialogue favorite mapping missing" }
+          if ($main -notmatch '"唤醒回应": \("voice\.wake_replies", "声音"\)') { throw "V0.9.2.8 wake reply favorite mapping missing" }
+          if ($main -notmatch '"单句语气微调": \("voice\.phrase_style", "声音"\)') { throw "V0.9.2.8 phrase style favorite mapping missing" }
+          if ($main -notmatch 'def _v0883_open_rule_editor\(') { throw "V0.9.2.8 unified rule editor missing" }
+          if ($brain -notmatch 'feedback_aliases') { throw "V0.9.2.8 rule trigger alias protection missing" }
+          if ($main -notmatch 'QPushButton\("模仿"\)') { throw "V0.9.2.8 mimic mode switch missing" }
+          if ($main -notmatch 'QPushButton\("固定"\)') { throw "V0.9.2.8 fixed mode switch missing" }
+          if ($main -notmatch '⚡ 0 次模型思考') { throw "V0.9.2.8 zero-inference fixed pool UI missing" }
+          if ($main -notmatch 'fav_scroll\.viewport\(\)\.setStyleSheet\("background:transparent;"\)') { throw "V0.9.2.8 favorites dark-background fix missing" }
+          if ($brain -notmatch 'def _v089_trigger_normalize\(text\):') { throw "V0.9.2.8 trigger-only matcher missing" }
+          if ($brain -notmatch 'def _v089_fixed_reply\(self, rule\):') { throw "V0.9.2.8 fixed reply pool runtime missing" }
+          if ($brain -notmatch '唯一可能相关的模仿规则') { throw "V0.9.2.8 single-rule mimic prompt missing" }
+          if ($brain -notmatch '防复读重写1次') { throw "V0.9.2.8 anti-repeat retry missing" }
+          if ($main -notmatch 'def _v0891_favorites_file\(self\):') { throw "V0.9.2.8 durable Favorites file helper missing" }
+          if ($main -notmatch 'favorites_v2\.json') { throw "V0.9.2.8 dedicated Favorites state file missing" }
+          if ($main -notmatch 'if self\.v774_nav_names\[index\] == "常用"') { throw "V0.9.2.8 Favorites page-enter refresh missing" }
+          if ($main -notmatch 'ndm_download_and_import') { throw "V0.9.2.8 NDM update integration missing" }
+          if ($main -notmatch 'UPDATE_LOG_DIR = LOG_DIR / "update"') { throw "V0.9.2.8 internal update log routing missing" }
+          if ($main -match '小美丽更新错误日志_请上传给ChatGPT') { throw "V0.9.2.8 still contains automatic desktop updater log" }
+          if ($main -match 'desktop_dir\(\) / "小美丽错误日志_请上传给ChatGPT\.txt"') { throw "V0.9.2.8 still contains automatic desktop app error log" }
+          if ($speech -notmatch 'RECOVERABLE_SPEECH_EVENT') { throw "V0.9.2.8 recoverable speech event routing missing" }
+          if ($speech -notmatch 'diagnostics.*speech') { throw "V0.9.2.8 internal speech diagnostics missing" }
           $helperText = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
-          if ($helperText -notmatch '\[string\]\$LogPath') { throw "V0.10.0 update helper internal LogPath missing" }
-          if ($helperText -notmatch '\[string\]\$DiagnosticDir') { throw "V0.10.0 update helper DiagnosticDir missing" }
-          if ($helperText -match '\$DesktopLog') { throw "V0.10.0 update helper still writes DesktopLog" }
-          if ($main -notmatch 'def _scan_enemy_alive_v090\(') { throw "V0.10.0 enemy alive tracker missing" }
-          if ($main -notmatch 'def _ocr_own_kill_rows_v090\(') { throw "V0.10.0 nickname own-kill verifier missing" }
-          if ($main -notmatch 'self\.highlight_event_id') { throw "V0.10.0 highlight event state missing" }
-          if ($main -notmatch '高光回合 · P100 最高优先级') { throw "V0.10.0 highlight settings UI missing" }
-          if ($main -notmatch 'tag="highlight_cta"') { throw "V0.10.0 highlight TTS trigger missing" }
-          if ($main -notmatch 'def _v091_apply_settings_scale\(self, persist=False\):') { throw "V0.10.0 settings scale engine missing" }
-          if ($main -notmatch 'settingsMainScroll') { throw "V0.10.0 settings scroll safety missing" }
-          if ($main -notmatch '高光资格：已触发') { throw "V0.10.0 highlight qualification status missing" }
-          if ($main -notmatch 'shuffle-bag pick') { throw "V0.10.0 highlight shuffle bag missing" }
-          if ($main -notmatch 'class HighlightVideoOverlay\(QWidget\):') { throw "V0.10.0 highlight video overlay missing" }
-          if ($main -notmatch '导入白板视频') { throw "V0.10.0 highlight video import UI missing" }
-          if ($main -notmatch 'def _v0911_mute_copy_video\(') { throw "V0.10.0 mute import missing" }
-          if ($main -notmatch '文字与限制框') { throw "V0.10.0 highlight text-box editor missing" }
-          if ($main -notmatch 'board=str\(text or ""\)\.strip\(\)') { throw "V0.10.0 board/voice phrase sync missing" }
-          if ($main -notmatch 'reportSnapshotBar') { throw "V0.10.0 report snapshot status bar missing" }
+          if ($helperText -notmatch '\[string\]\$LogPath') { throw "V0.9.2.8 update helper internal LogPath missing" }
+          if ($helperText -notmatch '\[string\]\$DiagnosticDir') { throw "V0.9.2.8 update helper DiagnosticDir missing" }
+          if ($helperText -match '\$DesktopLog') { throw "V0.9.2.8 update helper still writes DesktopLog" }
+          if ($main -notmatch 'def _scan_enemy_alive_v090\(') { throw "V0.9.2.8 enemy alive tracker missing" }
+          if ($main -notmatch 'def _ocr_own_kill_rows_v090\(') { throw "V0.9.2.8 nickname own-kill verifier missing" }
+          if ($main -notmatch 'self\.highlight_event_id') { throw "V0.9.2.8 highlight event state missing" }
+          if ($main -notmatch '高光回合 · P100 最高优先级') { throw "V0.9.2.8 highlight settings UI missing" }
+          if ($main -notmatch 'tag="highlight_cta"') { throw "V0.9.2.8 highlight TTS trigger missing" }
+          if ($main -notmatch 'def _v091_apply_settings_scale\(self, persist=False\):') { throw "V0.9.2.8 settings scale engine missing" }
+          if ($main -notmatch 'settingsMainScroll') { throw "V0.9.2.8 settings scroll safety missing" }
+          if ($main -notmatch '高光资格：已触发') { throw "V0.9.2.8 highlight qualification status missing" }
+          if ($main -notmatch 'shuffle-bag pick') { throw "V0.9.2.8 highlight shuffle bag missing" }
+          if ($main -notmatch 'class HighlightVideoOverlay\(QWidget\):') { throw "V0.9.2.8 highlight video overlay missing" }
+          if ($main -notmatch '导入白板视频') { throw "V0.9.2.8 highlight video import UI missing" }
+          if ($main -notmatch 'def _v0911_mute_copy_video\(') { throw "V0.9.2.8 mute import missing" }
+          if ($main -notmatch '文字与限制框') { throw "V0.9.2.8 highlight text-box editor missing" }
+          if ($main -notmatch 'board=str\(text or ""\)\.strip\(\)') { throw "V0.9.2.8 board/voice phrase sync missing" }
+          if ($main -notmatch 'reportSnapshotBar') { throw "V0.9.2.8 report snapshot status bar missing" }
           $helperText = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
-          if ($helperText -notmatch 'XIAOMEILI_INSTALL_ROOT_MARKER') { throw "V0.10.0 safe install marker validation missing" }
-          if ($helperText -notmatch 'PROTECTED_USER_PATHS') { throw "V0.10.0 protected-path validation missing" }
-          if ($helperText -match '(?i)/MIR|/PURGE|robocopy\.exe|Remove-Item') { throw "V0.10.0 updater contains forbidden destructive operation" }
-          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.10.0" -Encoding ascii
-          if ($main -notmatch 'def normalized_highlight_text_layout\(') { throw "V0.10.0 highlight shared typography layout missing" }
-          if ($main -notmatch 'def _v0922_export_source_project\(self\):') { throw "V0.10.0 source project export UI missing" }
-          if ($main -notmatch 'self\.pet\.hide\(\)') { throw "V0.10.0 highlight base-pet isolation missing" }
-          if ($main -notmatch 'remove only from the configured pool') { throw "V0.10.0 non-destructive highlight remove policy missing" }
+          if ($helperText -notmatch 'XIAOMEILI_INSTALL_ROOT_MARKER') { throw "V0.9.2.8 safe install marker validation missing" }
+          if ($helperText -notmatch 'PROTECTED_USER_PATHS') { throw "V0.9.2.8 protected-path validation missing" }
+          if ($helperText -match '(?i)/MIR|/PURGE|robocopy\.exe|Remove-Item') { throw "V0.9.2.8 updater contains forbidden destructive operation" }
+          Set-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\VERSION.txt" -Value "0.9.2.8" -Encoding ascii
+          if ($main -notmatch 'def normalized_highlight_text_layout\(') { throw "V0.9.2.8 highlight shared typography layout missing" }
+          if ($main -notmatch 'def _v0922_export_source_project\(self\):') { throw "V0.9.2.8 source project export UI missing" }
+          if ($main -notmatch 'self\.pet\.hide\(\)') { throw "V0.9.2.8 highlight base-pet isolation missing" }
+          if ($main -notmatch 'remove only from the configured pool') { throw "V0.9.2.8 non-destructive highlight remove policy missing" }
           $migrationText = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\storage_migrate.ps1" -Raw
-          if ($migrationText -match 'Removing the old C: copy') { throw "V0.10.0 migration still deletes the original C copy" }
-          if ($migrationText -notmatch 'Safety backup retained at') { throw "V0.10.0 migration backup-retention policy missing" }
-          if ($main -notmatch 'hashlib, uuid') { throw "V0.10.0 uuid import missing" }
-          if ($main -notmatch 'QFrame, QScrollArea, QSizePolicy') { throw "V0.10.0 QSizePolicy import missing" }
-          if ($main -match '只有校验通过才删除 C 盘旧副本') { throw "V0.10.0 migration UI still promises destructive cleanup" }
-          if ($main -notmatch '程序不会自动删除它') { throw "V0.10.0 migration UI safety wording missing" }
-          if ($helperText -match 'GetRelativePath') { throw "V0.10.0 updater still depends on PowerShell/.NET GetRelativePath" }
-          if ($helperText -notmatch 'Substring\(\$actualRoot\.Length\)') { throw "V0.10.0 PowerShell 5.1 relative-path fallback missing" }
-          if ($main -notmatch '自动存储清理已禁用：V0\.10\.0') { throw "V0.10.0 no-auto-delete cleanup guard missing" }
-          if ($main -match 'def cleanup_obsolete_storage\(\):[\s\S]{0,1800}(unlink|rmtree)') { throw "V0.10.0 cleanup still contains deletion calls" }
-          if ($main -notmatch 'self\.highlight_preview_btn=QPushButton\("预览"\)') { throw "V0.10.0 single Preview button missing" }
-          if ($main -notmatch 'def _v0924_preview_highlight\(self\):') { throw "V0.10.0 unified preview handler missing" }
-          if ($main -notmatch 'def _v0924_preview_pick_phrase\(self\):') { throw "V0.10.0 randomized phrase picker missing" }
-          if ($main -notmatch 'tag="highlight_preview"') { throw "V0.10.0 synced highlight preview tag missing" }
-          if ($main -notmatch 'def _v0925_highlight_preview_started\(self, text, duration_ms, tag\):') { throw "V0.10.0 playback-start sync handler missing" }
-          if ($main -notmatch 'def _v0925_highlight_preview_finished\(self, ok, message, tag\):') { throw "V0.10.0 3-second preview tail handler missing" }
-          if ($main -notmatch 'hold_ms=3000') { throw "V0.10.0 high-glow 3-second hold missing" }
-          if ($main -notmatch 'QCheckBox::indicator:checked') { throw "V0.10.0 global green toggle selector missing" }
-          if ($main -notmatch 'image: url\("\{toggle_on\}"\)') { throw "V0.10.0 green toggle checked image missing" }
-          if ($main -notmatch 'assets/v0925/toggle_on\.svg') { throw "V0.10.0 green toggle asset path missing" }
-          if ($main -match 'hf\.addRow\("触发条件",conditions\)') { throw "V0.10.0 visible trigger-condition row remains" }
+          if ($migrationText -match 'Removing the old C: copy') { throw "V0.9.2.8 migration still deletes the original C copy" }
+          if ($migrationText -notmatch 'Safety backup retained at') { throw "V0.9.2.8 migration backup-retention policy missing" }
+          if ($main -notmatch 'hashlib, uuid') { throw "V0.9.2.8 uuid import missing" }
+          if ($main -notmatch 'QFrame, QScrollArea, QSizePolicy') { throw "V0.9.2.8 QSizePolicy import missing" }
+          if ($main -match '只有校验通过才删除 C 盘旧副本') { throw "V0.9.2.8 migration UI still promises destructive cleanup" }
+          if ($main -notmatch '程序不会自动删除它') { throw "V0.9.2.8 migration UI safety wording missing" }
+          if ($helperText -match 'GetRelativePath') { throw "V0.9.2.8 updater still depends on PowerShell/.NET GetRelativePath" }
+          if ($helperText -notmatch 'Substring\(\$actualRoot\.Length\)') { throw "V0.9.2.8 PowerShell 5.1 relative-path fallback missing" }
+          if ($main -notmatch '自动存储清理已禁用：V0\.9\.2\.8') { throw "V0.9.2.8 no-auto-delete cleanup guard missing" }
+          if ($main -match 'def cleanup_obsolete_storage\(\):[\s\S]{0,1800}(unlink|rmtree)') { throw "V0.9.2.8 cleanup still contains deletion calls" }
+          if ($main -notmatch 'self\.highlight_preview_btn=QPushButton\("预览"\)') { throw "V0.9.2.8 single Preview button missing" }
+          if ($main -notmatch 'def _v0924_preview_highlight\(self\):') { throw "V0.9.2.8 unified preview handler missing" }
+          if ($main -notmatch 'def _v0924_preview_pick_phrase\(self\):') { throw "V0.9.2.8 randomized phrase picker missing" }
+          if ($main -notmatch 'tag="highlight_preview"') { throw "V0.9.2.8 synced highlight preview tag missing" }
+          if ($main -notmatch 'def _v0925_highlight_preview_started\(self, text, duration_ms, tag\):') { throw "V0.9.2.8 playback-start sync handler missing" }
+          if ($main -notmatch 'def _v0925_highlight_preview_finished\(self, ok, message, tag\):') { throw "V0.9.2.8 3-second preview tail handler missing" }
+          if ($main -notmatch 'hold_ms=3000') { throw "V0.9.2.8 high-glow 3-second hold missing" }
+          if ($main -notmatch 'QCheckBox::indicator:checked') { throw "V0.9.2.8 global green toggle selector missing" }
+          if ($main -notmatch 'image: url\("\{toggle_on\}"\)') { throw "V0.9.2.8 green toggle checked image missing" }
+          if ($main -notmatch 'assets/v0925/toggle_on\.svg') { throw "V0.9.2.8 green toggle asset path missing" }
+          if ($main -match 'hf\.addRow\("触发条件",conditions\)') { throw "V0.9.2.8 visible trigger-condition row remains" }
           foreach ($obsolete in @('QPushButton\("预览选中"\)','QPushButton\("▶ 随机预览高光"\)','QPushButton\("逐句试听下一句"\)','QPushButton\("仅预览白板"\)','hf\.addRow\("仅预览白板文字"')) {
-            if ($main -match $obsolete) { throw "V0.10.0 obsolete preview UI remains: $obsolete" }
+            if ($main -match $obsolete) { throw "V0.9.2.8 obsolete preview UI remains: $obsolete" }
           }
+
+      - name: Apply V0.10.0 ability sidebar and safety patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $patchPath = Join-Path $PWD "build\v0100\v0100.patch"
+          if (-not (Test-Path -LiteralPath $patchPath)) { throw "V0.10.0 patch missing: $patchPath" }
+          Push-Location $env:SOURCE_ROOT
+          try {
+            & git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn $patchPath
+            if ($LASTEXITCODE -ne 0) { throw "V0.10.0 patch application failed: $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+          python "$env:SOURCE_ROOT\tests\test_v0100_contract.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0 contract failed: $LASTEXITCODE" }
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\ability_sidebar.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0 syntax compile failed: $LASTEXITCODE" }
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$env:SOURCE_ROOT\app\assets\storage_migrate.ps1", [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) { throw "V0.10.0 storage helper parse failed: $($parseErrors | Out-String)" }
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0"') { throw "V0.10.0 version gate failed" }
+          if ($main -match 'QTimer\.singleShot\(9000, lambda: self\.brain_service\.cleanup_ndm_leftovers') { throw "V0.10.0 forbidden NDM auto-cleanup returned" }
+          $ndm = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\ndm_bridge.py" -Raw
+          if ($ndm -match 'root\.rglob\(' -or $ndm -match 'shutil\.move\(') { throw "V0.10.0 unsafe NDM fallback returned" }
+          Write-Host "V0.10.0 ability sidebar + safety patch PASS"
 
       - name: Non-destructive updater safety gate
         shell: pwsh
@@ -452,29 +474,7 @@ jobs:
           "UPDATE_SIZE=$size" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Build full safe installer EXE
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $installerOut = Join-Path $PWD "installer-out"
-          $addUpdate = "$env:UPDATE_ZIP;payload"
-          $addLauncher = "$env:LAUNCHER_EXE;payload"
-          $installerSource = Get-Content -LiteralPath "build\v0921\installer.py" -Raw
-          $installerSource = $installerSource.Replace("0.9.2.1","0.10.0")
-          $installerScript = Join-Path $env:RUNNER_TEMP "installer_v0100.py"
-          Set-Content -LiteralPath $installerScript -Value $installerSource -Encoding UTF8
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name XiaoMeili_Setup_0.10.0 --icon "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico" --distpath $installerOut --workpath "$PWD\installer-work" --specpath "$PWD\installer-spec" --add-data $addUpdate --add-data $addLauncher $installerScript
-          if ($LASTEXITCODE -ne 0) { throw "Installer PyInstaller failed: $LASTEXITCODE" }
-          $installer = Join-Path $installerOut "XiaoMeili_Setup_0.10.0.exe"
-          if (-not (Test-Path $installer)) { throw "Full installer missing." }
-          & $installer --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Full installer self-test failed: $LASTEXITCODE" }
-          $installerSha = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-          "INSTALLER_EXE=$installer" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "INSTALLER_SHA256=$installerSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "INSTALLER_SIZE=$((Get-Item -LiteralPath $installer).Length)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Publish or replace v0.10.0 full-safe assets
+      - name: Publish or replace v0.10.0 safe assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -482,16 +482,16 @@ jobs:
           $ErrorActionPreference = "Stop"
           gh release view "v0.10.0" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "v0.10.0" "$env:UPDATE_ZIP" "$env:INSTALLER_EXE" "$env:SOURCE_BUNDLE" --clobber --repo "${{ github.repository }}"
+            gh release upload "v0.10.0" "$env:UPDATE_ZIP" "$env:SOURCE_BUNDLE" --clobber --repo "${{ github.repository }}"
             if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed: $LASTEXITCODE" }
-            gh release edit "v0.10.0" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0 FullSafe" --notes "V0.10.0 adds the Beauty Ability Sidebar: a compact glowing side panel attached to XiaoMeili, smooth open/close animation, five visual-only ability toggles, and the new ability-form character while preserving the FullSafe no-delete updater and stable desktop launcher."
+            gh release edit "v0.10.0" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0 | Beauty Ability Sidebar" --notes "V0.10.0 adds the Beauty Ability Sidebar and hardens file safety: no recursive Downloads cleanup, no fuzzy NDM adoption, copy-only imports, fixed app-owned D:\XiaoMeiliData migration, and the native no-delete updater."
             if ($LASTEXITCODE -ne 0) { throw "Release metadata update failed: $LASTEXITCODE" }
           } else {
             $ghargs = @(
-              "release", "create", "v0.10.0", "$env:UPDATE_ZIP", "$env:INSTALLER_EXE", "$env:SOURCE_BUNDLE",
+              "release", "create", "v0.10.0", "$env:UPDATE_ZIP", "$env:SOURCE_BUNDLE",
               "--repo", "${{ github.repository }}",
-              "--title", "XiaoMeili V0.10.0 FullSafe",
-              "--notes", "V0.10.0 adds the Beauty Ability Sidebar with smooth attached expansion, glowing switches and the new ability-form character, while preserving the native no-delete updater and stable desktop launcher."
+              "--title", "XiaoMeili V0.10.0 | Beauty Ability Sidebar",
+              "--notes", "V0.10.0 adds the Beauty Ability Sidebar plus stricter no-delete and app-owned-path safety."
             )
             & gh @ghargs
             if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -521,16 +521,6 @@ jobs:
             $archive.Dispose()
           }
           Write-Host "Public release verified: $url"
-          $installerUrl = "https://github.com/${{ github.repository }}/releases/download/v0.10.0/XiaoMeili_Setup_0.10.0.exe"
-          $installerVerify = Join-Path $env:RUNNER_TEMP "XiaoMeili_Setup_0.10.0_verify.exe"
-          Invoke-WebRequest -Uri $installerUrl -OutFile $installerVerify -UseBasicParsing
-          $installerRemoteHash = (Get-FileHash -LiteralPath $installerVerify -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($installerRemoteHash -ne $env:INSTALLER_SHA256) {
-            throw "Installer release verification failed. local=$env:INSTALLER_SHA256 remote=$installerRemoteHash"
-          }
-          $selfTest = Start-Process -FilePath $installerVerify -ArgumentList "--self-test" -Wait -PassThru
-          if ($selfTest.ExitCode -ne 0) { throw "Public installer self-test failed: $($selfTest.ExitCode)" }
-          Write-Host "Public full installer verified: $installerUrl"
           $sourceUrl = "https://github.com/${{ github.repository }}/releases/download/v0.10.0/XiaoMeili_V0.10.0_SourceProject.zip"
           $sourceVerify = Join-Path $env:RUNNER_TEMP "XiaoMeili_V0.10.0_SourceProject_verify.zip"
           Invoke-WebRequest -Uri $sourceUrl -OutFile $sourceVerify -UseBasicParsing
@@ -560,11 +550,12 @@ jobs:
             sha256 = $env:UPDATE_SHA256
             package_size = [int64]$env:UPDATE_SIZE
             notes = @(
-              'V0.10.0 新增固定桌面入口：首次启动后自动创建小美丽.exe，它是轻量启动器，不是某个旧版本安装包；以后双击它会读取 active.json 并启动当前已激活的最新版',
-              '真正的程序完整包继续保存在 %LOCALAPPDATA%\\XiaoMeiliApp\\versions\\v版本号_时间_随机码 中；每次安全更新都会创建新的独立版本目录，不覆盖旧版本',
-              '桌面启动器采用 create-new-only 策略：仅在桌面不存在小美丽.exe时创建，不覆盖、不改名、不移动、不删除任何现有桌面文件',
-              'V0.10.0 更新包内同时携带带小美丽图标的 XiaoMeiliLauncher.exe，因此从本版开始即使只在设置里更新，也能自动恢复稳定桌面入口',
-              '继续使用 FullSafe 原生无删除更新器；旧版 latest.json 通道保持关闭，只通过 latest_safe.json 发布'
+              'V0.10.0 新增「美丽能力」贴身侧栏：美丽锁定、美丽洞察、二成功力、五成功力、美丽之神；侧栏从小美丽左侧顺滑展开，并用青绿色能量引导线连接本体',
+              '能力侧栏仅改变小美丽自身视觉与语音表现，不读取 VALORANT 内存、不注入游戏、不控制键鼠；锁定/点击穿透状态下不会自动展开',
+              '彻底停用 NDM Downloads 递归残留清理；不再按同扩展名或最近文件猜测下载结果，也不再移动或删除下载源文件',
+              'NDM 只接受本次任务的精确文件名，并以 copy-only 方式导入小美丽受控目录；无法精确确认时直接失败，不猜测用户文件',
+              'D 盘迁移固定为 D:\XiaoMeiliData；已有陌生文件且无小美丽安全标记时立即停止。原 C 盘数据继续保留安全备份与回滚路径',
+              '继续使用 FullSafe 原生无删除更新器：新版本安装到独立 versions 目录，旧版本保留，latest.json 旧通道继续关闭'
             )
           }
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest_safe.json" -Encoding utf8
