@@ -376,7 +376,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "V0.10.0.4 syntax compile failed: $LASTEXITCODE" }
           $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
           $sidebar = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\ability_sidebar.py" -Raw
-          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0\.3"') { throw "V0.10.0.4 version gate failed" }
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0\.4"') { throw "V0.10.0.4 version gate failed" }
           if ($sidebar -notmatch 'self\._sweep_timer\.setInterval\(16\)') { throw "60fps ability sweep timer missing" }
           if ($sidebar -notmatch 'QElapsedTimer') { throw "Elapsed-time sweep clock missing" }
           if ($sidebar -notmatch 'Qt\.TimerType\.PreciseTimer') { throw "PreciseTimer sweep mode missing" }
