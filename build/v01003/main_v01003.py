@@ -1897,7 +1897,9 @@ class PetWindow(QWidget):
         self._ability_form_movie.setCacheMode(QMovie.CacheMode.CacheNone)
         self._ability_form_movie.finished.connect(self._restart_ability_form_movie)
         self.ability_form_label.setMovie(self._ability_form_movie)
-        self.stack.addWidget(self.ability_form_label)
+        # V0.10.0.3: keep ability-form character outside QStackedLayout so its
+        # scale/X/Y controls are real geometry controls rather than being reset
+        # by the layout manager.
         self.ability_form_label.hide()
 
         self.mouse_layer = MouseInteractionLayer(self.cfg, self)
