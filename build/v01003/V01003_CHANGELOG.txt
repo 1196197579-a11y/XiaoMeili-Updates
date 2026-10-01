@@ -1,0 +1,10 @@
+XiaoMeili V0.10.0.3
+======================
+- Ability display names are editable and limited to 4 characters.
+- Ability sidebar layout can be tuned live: sidebar size, ability-form size, spacing, sidebar Y, character X/Y.
+- Removed the old character ellipse/scan aura completely.
+- MaokenAssortedSans-Lite is privately loaded from XiaoMeiliData/fonts; local user copies named MaokenAssortedSans-Lite*.otf are auto-adopted by COPY only.
+- Five ON phrases are editable and use XiaoMeili's currently fixed voice; phrases are warmed into the existing TTS cache for near-synchronous click playback.
+- Button/right-edge breathing room fixed; sidebar glow, ON toggle glow, connector line and connector node strengthened toward the approved reference.
+- Dual border sweep runs at about 60 fps only while the sidebar is visible.
+- FullSafe remains no-delete: no recursive Downloads cleanup, no moving/deleting user files, versioned install + active.json switching only.
