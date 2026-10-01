@@ -1,0 +1,1 @@
+Final V0.10.0.3 r2: authoritative character geometry + true live preview + 4-char names + cached TTS + FullSafe no-delete.
