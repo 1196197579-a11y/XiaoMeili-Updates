@@ -870,37 +870,6 @@
      $self = Start-Process -FilePath $ExePath -ArgumentList @('--runtime-self-test') -Wait -PassThru
      if ($self.ExitCode -ne 0) {
          throw "Frozen runtime self-test failed with exit code $($self.ExitCode). The EXE will not be accepted."
---- a/DEVELOPMENT.md
-+++ b/DEVELOPMENT.md
-@@ -1,4 +1,13 @@
--# XiaoMeili V0.9.2.8 development
--Windows 10/11 x64 + Python 3.12 x64
--Run: python app\src\main.py
--The complete release pipeline is in release_pipeline.
-+# XiaoMeili V0.10.0 development
-+
-+Baseline: V0.9.2.8 complete source project.
-+
-+## V0.10.0
-+- Adds the cosmetic “美丽能力” sidebar: 美丽锁定 / 美丽洞察 / 二成功力 / 五成功力 / 美丽之神.
-+- Sidebar is hidden by default and slides out from XiaoMeili's left side when the cursor approaches that side.
-+- No five left-side feature icons; minimal border, emerald guide line, smooth switches and local XiaoMeili-only aura feedback.
-+- Ability switches do not read game memory, inject into VALORANT, control mouse/keyboard, or reveal hidden game state.
-+- NDM safety: no recursive user-folder scan, no extension guessing, no moving/deleting NDM source files.
-+- Automatic NDM leftover cleanup is permanently disabled.
-+- D-drive migration is limited to D:\XiaoMeiliData and refuses unrelated existing folders without the XiaoMeili safety marker.
-+- Existing native updater remains versioned/no-delete.
---- a/SOURCE_PROVENANCE.txt
-+++ b/SOURCE_PROVENANCE.txt
-@@ -1,4 +1,4 @@
--XiaoMeili V0.9.2.8 complete editable source project
--Generated from the verified release pipeline at commit 73a4fbaa3064fed1f509b1a403e88b15de523804.
--Contains final application source/assets plus the release patch pipeline.
--Excludes user data, downloaded model weights, personal memories/logs and user-imported media.
-+XiaoMeili V0.10.0 complete editable source project
-+Derived directly from the user-provided XiaoMeili V0.9.2.8 complete original source project.
-+V0.10.0 adds the Beauty Ability Sidebar and hardens file-safety boundaries.
-+The original uploaded V0.9.2.8 archive was not modified.
 --- /dev/null
 +++ b/app/src/ability_sidebar.py
 @@ -0,0 +1,344 @@
