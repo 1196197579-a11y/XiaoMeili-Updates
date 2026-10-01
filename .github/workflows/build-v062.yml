@@ -332,6 +332,15 @@ jobs:
           New-Item -ItemType Directory -Force -Path (Join-Path $env:SOURCE_ROOT "tests") | Out-Null
           Copy-Item -LiteralPath (Join-Path $PWD "build\v01002\test_v01002_contract.py") -Destination (Join-Path $env:SOURCE_ROOT "tests\test_v01002_contract.py") -Force
           Copy-Item -LiteralPath (Join-Path $PWD "build\v01002\V01002_CHANGELOG.txt") -Destination (Join-Path $env:SOURCE_ROOT "V01002_CHANGELOG.txt") -Force
+          # Normalize the release identity explicitly after the layered historical patches.
+          $mainPath = Join-Path $env:SOURCE_ROOT "app\src\main.py"
+          $mainText = Get-Content -LiteralPath $mainPath -Raw
+          $mainText = [regex]::Replace($mainText, 'APP_NAME\s*=\s*"[^"]*"', 'APP_NAME = "小美丽 V0.10.0.2｜Beauty Ability Sidebar"', 1)
+          $mainText = [regex]::Replace($mainText, 'APP_VERSION\s*=\s*"[^"]*"', 'APP_VERSION = "0.10.0.2"', 1)
+          $mainText = [regex]::Replace($mainText, 'APP_UPDATE_VERSION\s*=\s*"[^"]*"', 'APP_UPDATE_VERSION = "0.10.0.2"', 1)
+          [System.IO.File]::WriteAllText($mainPath, $mainText, [System.Text.UTF8Encoding]::new($false))
+          Set-Content -LiteralPath (Join-Path $env:SOURCE_ROOT "app\assets\VERSION.txt") -Value "0.10.0.2" -Encoding ascii
+          Select-String -LiteralPath $mainPath -Pattern '^APP_(NAME|VERSION|UPDATE_VERSION)' | ForEach-Object { Write-Host $_.Line }
           python "$env:SOURCE_ROOT\tests\test_v01002_contract.py"
           if ($LASTEXITCODE -ne 0) { throw "V0.10.0.2 contract failed: $LASTEXITCODE" }
           python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\ability_sidebar.py"
