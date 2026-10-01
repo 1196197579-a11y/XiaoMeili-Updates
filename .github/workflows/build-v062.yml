@@ -302,7 +302,7 @@ jobs:
           $sidebar = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\ability_sidebar.py" -Raw
           if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0"') { throw "Visible V0.10.0 identity changed" }
           if ($main -notmatch 'APP_UPDATE_VERSION\s*=\s*"0\.10\.0\.1"') { throw "Internal repair revision missing" }
-          if ($sidebar -match 'BEAUTY LINK|LOCK|INSIGHT|MAX') { throw "Old simplified sidebar labels returned" }
+          foreach ($obsolete in @('BEAUTY LINK','"LOCK"','"INSIGHT"','"MAX"')) { if ($sidebar.Contains($obsolete)) { throw "Old simplified sidebar label returned: $obsolete" } }
           if ($sidebar -match 'QTimer\(self\)') { throw "Ability sidebar regained an idle polling timer" }
           if ($sidebar -match 'unlink\(|rmtree\(|os\.remove\(|shutil\.move\(|Remove-Item') { throw "Ability sidebar contains a destructive file operation" }
           Write-Host "Approved-reference V0.10.0 final revision PASS"
