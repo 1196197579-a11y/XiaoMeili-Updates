@@ -20,6 +20,8 @@ for token in ('sidebar_scale','form_scale','gap_px','sidebar_y','form_x','form_y
     assert token in SIDEBAR or token in ('form_scale','form_x','form_y')
 assert '恢复参考图默认布局' in MAIN
 assert '实时预览' in MAIN
+assert 'ability_editor_active = Signal(bool)' in MAIN
+assert 'def _set_ability_editor_active' in MAIN
 
 # User-supplied Maoken font is privately loaded, never installed system-wide.
 assert 'MaokenAssortedSans-Lite(1).otf' in MAIN
@@ -47,6 +49,7 @@ assert '(self._sweep_phase + 0.5)' in SIDEBAR
 # Reference polish: brighter outer glow, ON glow and connector node.
 assert 'QColor(225, 255, 255, 248)' in SIDEBAR
 assert 'QColor(240, 255, 255, 255)' in SIDEBAR
+assert 'row_right = panel.right() - 30.0' in SIDEBAR
 
 # Ability sidebar must not contain destructive file operations.
 for bad in ('unlink(', 'rmtree(', 'os.remove(', 'shutil.move(', 'Remove-Item'):
