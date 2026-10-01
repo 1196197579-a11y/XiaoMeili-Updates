@@ -20,18 +20,33 @@ if 'APP_VERSION = "0.9.2.8"' not in s:
 
 # Bundle only the two small, self-contained V0.10.0 visual resources.
 # They are build assets, never written into user-data directories.
-for encoded_name, out_name in [
-    ("ability_form.png.b64", "ability_form.png"),
-    ("MaokenAbilitySubset.otf.b64", "MaokenAbilitySubset.otf"),
-]:
-    src=repo/"build/v0100/assets"/encoded_name
-    if not src.is_file():
-        raise RuntimeError(f"V0.10.0 asset source missing: {src}")
-    raw=base64.b64decode(src.read_text(encoding="ascii").strip())
-    out=assets/out_name
-    out.write_bytes(raw)
-    if out.stat().st_size < 1000:
-        raise RuntimeError(f"V0.10.0 decoded asset unexpectedly small: {out}")
+# The ability-form PNG uses a verified hex payload so a malformed Base64 file
+# can never silently reach the release package.
+ability_hex=repo/"build/v0100/assets/ability_form.png.hex"
+if not ability_hex.is_file():
+    raise RuntimeError(f"V0.10.0 ability-form asset source missing: {ability_hex}")
+hex_text="".join(ability_hex.read_text(encoding="ascii").split())
+if len(hex_text) % 2:
+    raise RuntimeError("V0.10.0 ability-form hex payload has odd length")
+try:
+    ability_raw=bytes.fromhex(hex_text)
+except ValueError as exc:
+    raise RuntimeError(f"V0.10.0 ability-form hex payload invalid: {exc}") from exc
+if not ability_raw.startswith(b"\\x89PNG\\r\\n\\x1a\\n") or len(ability_raw) < 2000:
+    raise RuntimeError("V0.10.0 ability-form PNG payload failed signature/size validation")
+(assets/"ability_form.png").write_bytes(ability_raw)
+
+font_src=repo/"build/v0100/assets/MaokenAbilitySubset.otf.b64"
+if not font_src.is_file():
+    raise RuntimeError(f"V0.10.0 font source missing: {font_src}")
+font_text="".join(font_src.read_text(encoding="ascii").split())
+try:
+    font_raw=base64.b64decode(font_text, validate=True)
+except Exception as exc:
+    raise RuntimeError(f"V0.10.0 font Base64 payload invalid: {exc}") from exc
+if len(font_raw) < 4000 or not font_raw.startswith(b"OTTO"):
+    raise RuntimeError("V0.10.0 font payload failed signature/size validation")
+(assets/"MaokenAbilitySubset.otf").write_bytes(font_raw)
 
 # Version.
 s=s.replace('APP_VERSION = "0.9.2.8"','APP_VERSION = "0.10.0"',1)
