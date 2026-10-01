@@ -1,0 +1,1 @@
+Retry revised XiaoMeili V0.10.0 after release-seed documentation patch exclusion.
