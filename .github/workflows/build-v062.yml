@@ -108,7 +108,13 @@ jobs:
           Run-PythonChecked "build\v0927\test_v0927_contract.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0928\patch_v0928.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0928\test_v0928_contract.py" "$env:SOURCE_ROOT"
-          Run-PythonChecked "build\v0100\probe_v0100.py" "$env:SOURCE_ROOT" "$PWD"\n          git config user.name "XiaoMeili Probe Bot"\n          git config user.email "actions@users.noreply.github.com"\n          git add build/v0100/probe_output.txt\n          git commit -m "Capture V0.10.0 final source probe"\n          git push\n          throw "V0.10.0 probe captured; stop before packaging"
+          Run-PythonChecked "build\v0100\probe_v0100.py" "$env:SOURCE_ROOT" "$PWD"
+          git config user.name "XiaoMeili Probe Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add build/v0100/probe_output.txt
+          git commit -m "Capture V0.10.0 final source probe"
+          git push
+          throw "V0.10.0 probe captured; stop before packaging"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
