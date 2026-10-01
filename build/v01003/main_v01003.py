@@ -1914,7 +1914,7 @@ class PetWindow(QWidget):
 
         self.ability_aura = AbilityAuraOverlay(self)
         self.ability_aura.setGeometry(0, 0, self.width(), self.height())
-        self.ability_aura.set_states(self.cfg.get("ability_sidebar", {}).get("states", {}))
+        self.ability_aura.hide()
 
         self.report_overlay = ReportTextOverlay(self.cfg, self)
         self.report_active = False
