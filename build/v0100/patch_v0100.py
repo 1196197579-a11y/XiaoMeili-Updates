@@ -32,7 +32,7 @@ try:
     ability_raw=bytes.fromhex(hex_text)
 except ValueError as exc:
     raise RuntimeError(f"V0.10.0 ability-form hex payload invalid: {exc}") from exc
-if not ability_raw.startswith(b"\\x89PNG\\r\\n\\x1a\\n") or len(ability_raw) < 2000:
+if not ability_raw.startswith(bytes.fromhex("89504e470d0a1a0a")) or len(ability_raw) < 2000:
     raise RuntimeError("V0.10.0 ability-form PNG payload failed signature/size validation")
 (assets/"ability_form.png").write_bytes(ability_raw)
 
