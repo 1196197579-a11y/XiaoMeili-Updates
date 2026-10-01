@@ -256,7 +256,8 @@ jobs:
         run: |
           @'
           from pathlib import Path
-          import re, os
+          import re, os, sys
+          sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
           p=Path(os.environ["SOURCE_ROOT"])/"app/src/main.py"
           s=p.read_text(encoding="utf-8")
           print("=== CLASS DEFS ===")
