@@ -108,6 +108,7 @@ jobs:
           Run-PythonChecked "build\v0927\test_v0927_contract.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0928\patch_v0928.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "build\v0928\test_v0928_contract.py" "$env:SOURCE_ROOT"
+          Run-PythonChecked "build\v0100\probe_v0100.py" "$env:SOURCE_ROOT"
           Run-PythonChecked "-m" "py_compile" "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\voice_qwen.py" "$env:SOURCE_ROOT\app\src\brain_qwen.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
           $tokens = $null
           $parseErrors = $null
