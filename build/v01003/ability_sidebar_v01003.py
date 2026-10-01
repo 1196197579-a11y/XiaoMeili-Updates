@@ -106,34 +106,38 @@ class AnimatedToggle(QAbstractButton):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         t = max(0.0, min(1.0, float(self._progress)))
-        rect = QRectF(2.5, 2.5, self.width() - 5.0, self.height() - 5.0)
+        h = float(max(1, self.height()))
+        pad = max(1.5, h * 0.083)
+        rect = QRectF(pad, pad, self.width() - pad * 2.0, self.height() - pad * 2.0)
+        radius = max(8.0, rect.height() * 0.50)
 
         if t > 0.01:
-            for width, alpha in ((9, int(24 * t)), (6, int(42 * t)), (3, int(86 * t))):
-                p.setPen(QPen(QColor(34, 247, 249, alpha), width))
+            for width_factor, alpha in ((0.32, int(24*t)), (0.21, int(48*t)), (0.11, int(105*t))):
+                p.setPen(QPen(QColor(34,247,249,alpha), max(1.0,h*width_factor)))
                 p.setBrush(Qt.BrushStyle.NoBrush)
-                p.drawRoundedRect(rect, 14, 14)
+                p.drawRoundedRect(rect, radius, radius)
 
-        off = QColor(21, 53, 70, 236)
-        on = QColor(11, 181, 187, 245)
+        off = QColor(21,53,70,236); on = QColor(8,194,199,250)
         track = QColor(
-            int(off.red() * (1.0 - t) + on.red() * t),
-            int(off.green() * (1.0 - t) + on.green() * t),
-            int(off.blue() * (1.0 - t) + on.blue() * t),
-            245,
-        )
-        p.setPen(QPen(QColor(200, 248, 255, int(120 + 100 * t)), 1.2))
-        p.setBrush(track)
-        p.drawRoundedRect(rect, 14, 14)
+            int(off.red()*(1.0-t)+on.red()*t),
+            int(off.green()*(1.0-t)+on.green()*t),
+            int(off.blue()*(1.0-t)+on.blue()*t), 248)
+        p.setPen(QPen(QColor(226,255,255,int(155+95*t)), max(1.0,h*0.045)))
+        p.setBrush(track); p.drawRoundedRect(rect, radius, radius)
 
-        x0 = 5.0
-        x1 = float(self.width() - 26)
-        x = x0 + (x1 - x0) * t
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(255, 255, 255, 255))
-        p.drawEllipse(QRectF(x, 5.0, 20.0, 20.0))
-        p.setBrush(QColor(220, 228, 232, 135))
-        p.drawEllipse(QRectF(x + 2.0, 7.0, 16.0, 16.0))
+        knob = max(10.0, h * 0.66)
+        y = (self.height() - knob) / 2.0
+        x0 = pad + h*0.08
+        x1 = float(self.width()) - pad - knob - h*0.08
+        x = x0 + (x1-x0)*t
+        if t > 0.01:
+            for r, a in ((knob*0.72,30),(knob*0.58,62)):
+                p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(72,255,255,int(a*t)))
+                p.drawEllipse(QPointF(x+knob/2.0,y+knob/2.0),r,r)
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(255,255,255,255))
+        p.drawEllipse(QRectF(x,y,knob,knob))
+        p.setBrush(QColor(226,235,239,112))
+        inset=max(1.0,knob*0.11); p.drawEllipse(QRectF(x+inset,y+inset,knob-inset*2,knob-inset*2))
         p.end()
 
 
