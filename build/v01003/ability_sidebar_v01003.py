@@ -300,7 +300,7 @@ class AbilitySidebar(QWidget):
         for idx, (key, _num, _name) in enumerate(FEATURES):
             sw = self._buttons[key]
             sw.setFixedSize(max(36, int(round(toggle_w * scale))), max(20, int(round(toggle_h * scale))))
-            row_right = panel.right() - 18.0
+            row_right = panel.right() - 30.0
             x = row_right - toggle_w
             y = panel.y() + self.ROW_TOP + idx * self.ROW_STEP + (self.ROW_H - toggle_h) / 2.0
             sw.move(int(round(x * scale)), int(round(y * scale)))
@@ -375,7 +375,7 @@ class AbilitySidebar(QWidget):
             return
         self._closing = True
         self._slide.stop(); self._fade.stop()
-        start = self.geometry(); shift = self.PANEL_W - 26
+        start = self.geometry(); shift = int(round((self.PANEL_W - 26) * self._visual_scale))
         end = start.translated(shift if self._side == "left" else -shift, 0)
         self._slide.setDuration(210); self._slide.setEasingCurve(QEasingCurve.Type.InCubic)
         self._slide.setStartValue(start); self._slide.setEndValue(end)
@@ -403,7 +403,7 @@ class AbilitySidebar(QWidget):
         self.hover_left.emit(); super().leaveEvent(event)
 
     def _advance_sweep(self):
-        # One lap in about 4.0 seconds at 30 fps.
+        # One lap in about 4.0 seconds at ~60 fps; timer stops when hidden.
         self._sweep_phase = (self._sweep_phase + 0.00415) % 1.0
         self.update()
 
@@ -515,7 +515,7 @@ class AbilitySidebar(QWidget):
         for idx, (key, num, default_name) in enumerate(FEATURES):
             name = self._display_names.get(key, default_name)
             top = panel.top() + self.ROW_TOP + idx * self.ROW_STEP
-            row = QRectF(panel.left() + 14, top, panel.width() - 28, self.ROW_H)
+            row = QRectF(panel.left() + 18, top, panel.width() - 36, self.ROW_H)
             on = bool(self._states.get(key, False))
             if on:
                 for width, alpha in ((13, 24), (8, 46), (4, 92)):
