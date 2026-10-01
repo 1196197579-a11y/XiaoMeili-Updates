@@ -1,0 +1,10 @@
+XiaoMeili V0.10.0.2
+
+- Beauty Ability sidebar is now true transparent/vector glass UI. No screenshot panel is used at runtime.
+- Outer rounded cyan border has two identical sweep lights. The 33 ms timer runs only while the panel is visible.
+- Connector node/ring and curved guide line are redrawn as vector elements to match the approved reference.
+- Leaving the combined pet/node/sidebar hover region automatically retracts the panel and restores the normal pet state.
+- The uploaded 10.125 s green-screen ability-form video is pre-keyed at 18 fps / 480 px, despilled, and given the same subtle white rim/glow as imported action clips.
+- The animated ability form is the only normal visual while the ability sidebar is open. Higher-priority report/dialogue/game reactions may temporarily override it, then it resumes if the panel is still open.
+- Ability changes do not read VALORANT memory, inject into the game, or control keyboard/mouse.
+- No new ability feature deletes, moves, or cleans user files. FullSafe updater remains separate-version/no-delete.
