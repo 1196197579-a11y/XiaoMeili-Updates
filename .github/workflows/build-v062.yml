@@ -320,6 +320,8 @@ jobs:
           } finally {
             Pop-Location
           }
+          # Use the canonical V0.10.0.2 vector sidebar after layered historical patches.
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01002\ability_sidebar_v01002.py") -Destination (Join-Path $env:SOURCE_ROOT "app\src\ability_sidebar.py") -Force
           $chunkDir = Join-Path $PWD "build\v01002\webp_b64"
           $chunks = @(Get-ChildItem -LiteralPath $chunkDir -Filter "chunk_*.txt" -File | Sort-Object Name)
           if ($chunks.Count -ne 29) { throw "V0.10.0.2 ability animation chunks incomplete: $($chunks.Count)/29" }
