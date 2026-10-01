@@ -6240,6 +6240,7 @@ class SettingsDialog(QDialog):
     hotkeys_changed = Signal()
     config_changed = Signal()
     storage_migration_requested = Signal(str)
+    ability_editor_active = Signal(bool)
 
     def __init__(self, cfg, pet: PetWindow, vision: VisionWorker, voice_service, brain_service, update_service, speech_service=None, parent=None):
         super().__init__(parent)
@@ -8365,7 +8366,11 @@ class SettingsDialog(QDialog):
                 LOGGER.warning("能力语音预缓存失败，将在首次点击时正常生成", exc_info=True)
             self._v0100_refresh_ability_summary(); self.config_changed.emit(); dlg.accept()
         ok.clicked.connect(save_ability)
-        dlg.exec()
+        self.ability_editor_active.emit(True)
+        try:
+            dlg.exec()
+        finally:
+            self.ability_editor_active.emit(False)
 
     def _v774_refresh_action_summary(self):
         if not hasattr(self, "v774_action_value"):
@@ -11816,6 +11821,7 @@ class AppController(QObject):
         self.ability_sidebar.apply_config(self.cfg.get("ability_sidebar", {}))
         self.ability_sidebar.set_states(self.cfg.get("ability_sidebar", {}).get("states", {}))
         self._ability_hover_token=0
+        self._ability_editor_mode=False
         self.hotkeys=HotkeyManager(self.bridge)
         self.vision=VisionWorker(cfg)
         self.voice_service=VoiceService()
@@ -11928,6 +11934,10 @@ class AppController(QObject):
     def _schedule_close_ability_ui(self, delay_ms=520):
         # Event-driven only: no ability-specific hover polling timer. Moving
         # between pet/node/panel keeps the UI alive; leaving all three closes it.
+        # While the settings layout editor is open, keep the real sidebar visible
+        # so scale/spacing/position edits are genuinely live-previewed.
+        if getattr(self, "_ability_editor_mode", False):
+            return
         self._ability_hover_token += 1
         token = int(self._ability_hover_token)
         def later():
@@ -11985,6 +11995,21 @@ class AppController(QObject):
             self.ability_sidebar.set_states(cfg.get("states", {}))
             self._warm_ability_voice_cache()
             self.ability_sidebar.show_animated(anchor)
+
+    def _set_ability_editor_active(self, active):
+        self._ability_editor_mode = bool(active)
+        if self._ability_editor_mode:
+            self._cancel_ability_auto_close()
+            if self._ability_available():
+                cfg = self.cfg.setdefault("ability_sidebar", {})
+                self.ability_sidebar.apply_config(cfg)
+                self.ability_sidebar.set_states(cfg.get("states", {}))
+                if not self.ability_sidebar.isVisible():
+                    self.ability_sidebar.show_animated(self._ability_anchor_rect())
+                self.pet.set_ability_form_requested(True)
+                self._sync_ability_ui()
+        else:
+            self._schedule_close_ability_ui(320)
 
     def _warm_ability_voice_cache(self, retry=0):
         try:
@@ -12515,6 +12540,7 @@ class AppController(QObject):
         self.settings=SettingsDialog(self.cfg,self.pet,self.vision,self.voice_service,self.brain_service,self.update_service,self.speech_service)
         self.settings.hotkeys_changed.connect(lambda:self.hotkeys.register(self.cfg))
         self.settings.config_changed.connect(self._on_settings_changed)
+        self.settings.ability_editor_active.connect(self._set_ability_editor_active)
         self.settings.storage_migration_requested.connect(self.start_storage_migration)
         if self.vision.last_snapshot:
             self.settings.update_vision_snapshot(self.vision.last_snapshot)
