@@ -1,0 +1,1 @@
+Build and publish XiaoMeili V0.10.0.5 final: fully unattended deep resource diagnostic for idle/whiteboard/Qwen3-8B/Qwen3-TTS/FSMN-VAD+Fun-ASR-Nano-2512/combined load; fixed internal test audio; Desktop ZIP; FullSafe no-delete.
