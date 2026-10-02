@@ -1,0 +1,14 @@
+XiaoMeili V0.10.0.5 | One-click Deep Resource Diagnostic
+
+- System > Resource Usage adds “Start One-click Deep Resource Test”.
+- Fully unattended. The user clicks once and waits; no microphone speaking or manual interaction is required.
+- Isolated stages: idle baseline, whiteboard-only, Qwen3-8B brain, Qwen3-TTS, FSMN-VAD + Fun-ASR-Nano-2512, component cooldowns, and a 3-cycle combined load test.
+- Brain diagnostic uses fixed internal prompts through the local inference endpoint and does not write chat history, long-term memory, semantic rules, or training samples.
+- Speech-input diagnostic feeds an internally generated PCM WAV directly to FSMN-VAD + Fun-ASR-Nano-2512. It does not capture the microphone.
+- The current speech-input implementation is explicitly measured on CPU (device=cpu).
+- Samples whole-system CPU/RAM/GPU/VRAM plus XiaoMeili and child-process CPU/RAM every 500 ms; records NVIDIA compute-process VRAM when the driver exposes it.
+- Whiteboard animation is measured separately so its cost is not falsely attributed to an AI component.
+- Creates one new Desktop ZIP containing CSV samples, JSON events/summary and a human-readable report ready to upload to ChatGPT.
+- The diagnostic does not read/inject/hook VALORANT or access game memory.
+- The diagnostic creates new files only. It never deletes, moves, overwrites, mirrors, purges or cleans user files.
+- Existing V0.10.0.4 Beauty Ability Sidebar behavior is unchanged.
