@@ -1,4 +1,4 @@
-name: Build and publish XiaoMeili v0.10.0.4
+name: Build and publish XiaoMeili v0.10.0.5
 
 on:
   push:
@@ -391,6 +391,36 @@ jobs:
           }
           Write-Host "V0.10.0.4 configurable ability polish PASS"
 
+      - name: Apply V0.10.0.5 unattended deep resource diagnostic
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01005\main_v01005.py") -Destination (Join-Path $env:SOURCE_ROOT "app\src\main.py") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01005\resource_diagnostic_v01005.py") -Destination (Join-Path $env:SOURCE_ROOT "app\src\resource_diagnostic_v01005.py") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01005\test_v01005_contract.py") -Destination (Join-Path $env:SOURCE_ROOT "tests\test_v01005_contract.py") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD "build\v01005\V01005_CHANGELOG.txt") -Destination (Join-Path $env:SOURCE_ROOT "V01005_CHANGELOG.txt") -Force
+          python "build\v01005\patch_speech_v01005.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.5 speech diagnostic patch failed: $LASTEXITCODE" }
+          Set-Content -LiteralPath (Join-Path $env:SOURCE_ROOT "app\assets\VERSION.txt") -Value "0.10.0.5" -Encoding ascii
+          python "$env:SOURCE_ROOT\tests\test_v01005_contract.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.5 contract failed: $LASTEXITCODE" }
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\resource_diagnostic_v01005.py" "$env:SOURCE_ROOT\app\src\speech_input.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.5 syntax compile failed: $LASTEXITCODE" }
+
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $diag = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\resource_diagnostic_v01005.py" -Raw
+          $speech = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\speech_input.py" -Raw
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0\.5"') { throw "V0.10.0.5 version gate failed" }
+          if ($main -notmatch '开始一键深度资源测试') { throw "Deep resource diagnostic UI missing" }
+          if ($diag -notmatch 'DIAGNOSTIC_COMBINED_RUNS\s*=\s*3') { throw "Three combined diagnostic rounds missing" }
+          if ($diag -notmatch 'SAMPLE_INTERVAL_SECONDS\s*=\s*0\.50') { throw "500ms diagnostic sampling missing" }
+          if ($speech -notmatch 'diagnostic_process_v01005') { throw "Speech offline diagnostic bridge missing" }
+          if ($speech -notmatch 'device="cpu"') { throw "Speech CPU diagnostic invariant missing" }
+          foreach ($bad in @('unlink\(','rmtree\(','os\.remove\(','shutil\.move\(','Remove-Item','/MIR','/PURGE')) {
+            if ($diag -match $bad) { throw "V0.10.0.5 diagnostic contains destructive operation: $bad" }
+          }
+          Write-Host "V0.10.0.5 unattended deep resource diagnostic PASS"
+
       - name: Non-destructive updater safety gate
         shell: pwsh
         run: |
@@ -449,20 +479,20 @@ jobs:
           $payload = Join-Path $env:RUNNER_TEMP "xm-safe-payload"
           New-Item -ItemType Directory -Force -Path (Join-Path $payload "_internal\assets") | Out-Null
           Copy-Item -LiteralPath "$env:WINDIR\System32\whoami.exe" -Destination (Join-Path $payload "XiaoMeili.exe") -Force
-          "0.10.0.4" | Set-Content -LiteralPath (Join-Path $payload "_internal\assets\VERSION.txt") -Encoding ASCII
+          "0.10.0.5" | Set-Content -LiteralPath (Join-Path $payload "_internal\assets\VERSION.txt") -Encoding ASCII
           $package = Join-Path $env:RUNNER_TEMP "xm-safe-update.zip"
           Compress-Archive -Path (Join-Path $payload "*") -DestinationPath $package -CompressionLevel NoCompression
           $sha = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
           $log = Join-Path $env:RUNNER_TEMP "positive-updater.log"
           $diag = Join-Path $env:RUNNER_TEMP "positive-updater-diag"
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Package $package -InstallRoot $root -ExpectedVersion "0.10.0.4" -ExpectedSha256 $sha -ParentPid 999999 -LogPath $log -DiagnosticDir $diag
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Package $package -InstallRoot $root -ExpectedVersion "0.10.0.5" -ExpectedSha256 $sha -ParentPid 999999 -LogPath $log -DiagnosticDir $diag
           if ($LASTEXITCODE -ne 0) {
             if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log | Write-Host }
             if (Test-Path -LiteralPath $diag) { Get-ChildItem -LiteralPath $diag | ForEach-Object { Get-Content -LiteralPath $_.FullName | Write-Host } }
             throw "Positive safe updater smoke test failed: exit=$LASTEXITCODE"
           }
           $active = Get-Content -LiteralPath (Join-Path $root "active.json") -Raw | ConvertFrom-Json
-          if ([string]$active.version -ne "0.10.0.4") { throw "Positive updater did not activate expected version" }
+          if ([string]$active.version -ne "0.10.0.5") { throw "Positive updater did not activate expected version" }
           Write-Host "Positive safe-updater helper smoke test PASS"
 
       - name: Native no-delete updater integration test
@@ -478,26 +508,26 @@ jobs:
           if ($native -notmatch 'native-no-delete-v1') { throw "Native updater safety marker missing" }
           Write-Host "Native no-delete updater integration test PASS"
 
-      - name: Create embedded V0.10.0.4 complete source project
+      - name: Create embedded V0.10.0.5 complete source project
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $sourceProject = Join-Path $env:RUNNER_TEMP "XiaoMeili_V0.10.0.4_SourceProject"
+          $sourceProject = Join-Path $env:RUNNER_TEMP "XiaoMeili_V0.10.0.5_SourceProject"
           if (Test-Path -LiteralPath $sourceProject) { Remove-Item -LiteralPath $sourceProject -Recurse -Force }
           New-Item -ItemType Directory -Path $sourceProject -Force | Out-Null
           Copy-Item -Path (Join-Path $env:SOURCE_ROOT "*") -Destination $sourceProject -Recurse -Force
           $pipelineDir = Join-Path $sourceProject "release_pipeline"
           New-Item -ItemType Directory -Path $pipelineDir -Force | Out-Null
           Copy-Item -LiteralPath (Join-Path $PWD "build") -Destination (Join-Path $pipelineDir "build") -Recurse -Force
-          Copy-Item -LiteralPath (Join-Path $PWD ".github\workflows\build-v062.yml") -Destination (Join-Path $pipelineDir "build-v01004.yml") -Force
+          Copy-Item -LiteralPath (Join-Path $PWD ".github\workflows\build-v062.yml") -Destination (Join-Path $pipelineDir "build-v01005.yml") -Force
           @(
-            "XiaoMeili V0.10.0.4 complete editable source project",
+            "XiaoMeili V0.10.0.5 complete editable source project",
             "Generated from the verified release pipeline at commit $env:GITHUB_SHA.",
             "Contains final application source/assets plus the release patch pipeline.",
             "Excludes user data, downloaded model weights, personal memories/logs and user-imported media."
           ) | Set-Content -LiteralPath (Join-Path $sourceProject "SOURCE_PROVENANCE.txt") -Encoding UTF8
           @(
-            "# XiaoMeili V0.10.0.4 development",
+            "# XiaoMeili V0.10.0.5 development",
             "Windows 10/11 x64 + Python 3.12 x64",
             "Run: python app\src\main.py",
             "The complete release pipeline is in release_pipeline."
@@ -511,10 +541,10 @@ jobs:
             "  py -3.12 app\src\main.py",
             ")"
           ) | Set-Content -LiteralPath (Join-Path $sourceProject "RUN_DEV.cmd") -Encoding ASCII
-          $sourceBundle = "$env:SOURCE_ROOT\app\assets\XiaoMeili_V0.10.0.4_SourceProject.zip"
+          $sourceBundle = "$env:SOURCE_ROOT\app\assets\XiaoMeili_V0.10.0.5_SourceProject.zip"
           if (Test-Path -LiteralPath $sourceBundle) { Remove-Item -LiteralPath $sourceBundle -Force }
           Compress-Archive -Path $sourceProject -DestinationPath $sourceBundle -CompressionLevel Optimal
-          if (-not (Test-Path -LiteralPath $sourceBundle)) { throw "V0.10.0.4 embedded source bundle missing" }
+          if (-not (Test-Path -LiteralPath $sourceBundle)) { throw "V0.10.0.5 embedded source bundle missing" }
           $sourceHash = (Get-FileHash -LiteralPath $sourceBundle -Algorithm SHA256).Hash.ToLowerInvariant()
           "SOURCE_BUNDLE=$sourceBundle" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SOURCE_SHA256=$sourceHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -575,7 +605,7 @@ jobs:
           Copy-Item -LiteralPath $env:LAUNCHER_EXE -Destination "$PWD\out\XiaoMeili\XiaoMeiliLauncher.exe" -Force
           $releaseDir = Join-Path $PWD "release"
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          $zip = Join-Path $releaseDir "XiaoMeili_0.10.0.4_update.zip"
+          $zip = Join-Path $releaseDir "XiaoMeili_0.10.0.5_update.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -586,24 +616,24 @@ jobs:
           "UPDATE_SIZE=$size" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Built SHA256=$hash"
 
-      - name: Publish V0.10.0.4 safe assets
+      - name: Publish V0.10.0.5 safe assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.10.0.4" --repo "${{ github.repository }}" *> $null
+          gh release view "v0.10.0.5" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "v0.10.0.4" "$env:UPDATE_ZIP" "$env:SOURCE_BUNDLE" --clobber --repo "${{ github.repository }}"
+            gh release upload "v0.10.0.5" "$env:UPDATE_ZIP" "$env:SOURCE_BUNDLE" --clobber --repo "${{ github.repository }}"
             if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed: $LASTEXITCODE" }
-            gh release edit "v0.10.0.4" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.4 | Smooth Ability Sidebar" --notes "V0.10.0.4 removes the panel dots and visible 01-05 numbers, centers four-character names in the free row space, equalizes top/bottom margins, and fixes periodic sweep-light stalls with elapsed-time + arc-length motion while preserving FullSafe no-delete."
+            gh release edit "v0.10.0.5" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.5 | Deep Resource Diagnostic" --notes "V0.10.0.5 adds a fully unattended one-click deep resource diagnostic for whiteboard, Qwen3-8B, Qwen3-TTS, FSMN-VAD + Fun-ASR-Nano-2512 and their combined load, with a Desktop ZIP report and FullSafe no-delete behavior."
             if ($LASTEXITCODE -ne 0) { throw "Release metadata update failed: $LASTEXITCODE" }
           } else {
             $ghargs = @(
-              "release", "create", "v0.10.0.4", "$env:UPDATE_ZIP", "$env:SOURCE_BUNDLE",
+              "release", "create", "v0.10.0.5", "$env:UPDATE_ZIP", "$env:SOURCE_BUNDLE",
               "--repo", "${{ github.repository }}",
-              "--title", "XiaoMeili V0.10.0.4 | Smooth Ability Sidebar",
-              "--notes", "V0.10.0.4 smooth vector sidebar: no header dots, no visible 01-05 numbers, centered names, equalized vertical margins, elapsed-time arc-length dual sweep lights, FullSafe no-delete."
+              "--title", "XiaoMeili V0.10.0.5 | Deep Resource Diagnostic",
+              "--notes", "V0.10.0.5 unattended deep resource diagnostic: isolated AI component stages, 3-cycle combined pressure test, 500ms sampling, microphone-free speech-input test, Desktop report ZIP, FullSafe no-delete."
             )
             & gh @ghargs
             if ($LASTEXITCODE -ne 0) { throw "GitHub release publish failed: $LASTEXITCODE" }
@@ -614,8 +644,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.4/XiaoMeili_0.10.0.4_update.zip"
-          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.10.0.4_verify.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.5/XiaoMeili_0.10.0.5_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.10.0.5_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($remoteHash -ne $env:UPDATE_SHA256) {
@@ -633,8 +663,8 @@ jobs:
             $archive.Dispose()
           }
           Write-Host "Public release verified: $url"
-          $sourceUrl = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.4/XiaoMeili_V0.10.0.4_SourceProject.zip"
-          $sourceVerify = Join-Path $env:RUNNER_TEMP "XiaoMeili_V0.10.0.4_SourceProject_verify.zip"
+          $sourceUrl = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.5/XiaoMeili_V0.10.0.5_SourceProject.zip"
+          $sourceVerify = Join-Path $env:RUNNER_TEMP "XiaoMeili_V0.10.0.5_SourceProject_verify.zip"
           Invoke-WebRequest -Uri $sourceUrl -OutFile $sourceVerify -UseBasicParsing
           $sourceRemoteHash = (Get-FileHash -LiteralPath $sourceVerify -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($sourceRemoteHash -ne $env:SOURCE_SHA256) { throw "Source-project release verification failed. local=$env:SOURCE_SHA256 remote=$sourceRemoteHash" }
@@ -654,20 +684,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.4/XiaoMeili_0.10.0.4_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.5/XiaoMeili_0.10.0.5_update.zip"
           $manifest = [ordered]@{
             protocol = 1
-            version = "0.10.0.4"
+            version = "0.10.0.5"
             package_url = $url
             sha256 = $env:UPDATE_SHA256
             package_size = [int64]$env:UPDATE_SIZE
             notes = @(
-              'V0.10.0.4：修复双光点周期性卡顿，改为真实经过时间驱动 + Windows PreciseTimer + 圆角路径真实弧长匀速映射，不再用固定步长累加',
-              '删除侧栏顶部三个白点，删除01-05可见数字；内部能力ID与事件逻辑保持不变',
-              '能力名称继续固定最多四个字，并改为在左侧行框与开关之间的真实可用区域水平居中，避免四字名称与按钮重叠',
-              '顶部边界向内收紧，第一行到上边框与第五行到下边框留白对齐；连接圆点保持原有纵向位置',
-              '完整保留V0.10.0.3的实时布局调节、能力形态动态视频、自定义语音、猫啃字体私有加载和60fps视觉刷新',
-              '继续遵守 FullSafe：更新只创建新的受控版本目录并切换 active.json，不递归清理 Downloads，不移动、不覆盖、不删除用户文件'
+              'V0.10.0.5：系统→资源占用新增“一键深度资源诊断”，点击一次后全程无人值守，不需要用户说话或手动参与',
+              '诊断按纯待机、白板动画、Qwen3-8B大脑、Qwen3-TTS声音、FSMN-VAD + Fun-ASR-Nano-2512、3轮完整组合压力、冷却回落分阶段测量',
+              '大脑诊断使用固定内部提示词直连本地推理端点，不写入聊天历史、长期记忆、养成库或语义规则；语音输入使用内置PCM测试音频，不采集麦克风',
+              '当前语音输入诊断明确按CPU加载FSMN-VAD与Fun-ASR-Nano-2512，并记录其CPU/RAM成本，避免继续猜测是否占用GPU显存',
+              '每500ms记录整机CPU/RAM/GPU/显存以及小美丽进程组CPU/RAM；驱动可提供时同时记录NVIDIA计算进程显存，并以隔离阶段相对待机增量进行组件归因',
+              '结束后桌面新建“小美丽_深度资源诊断_时间.zip”，可直接上传给ChatGPT；不读取、不注入、不Hook VALORANT，也不访问游戏内存',
+              '继续遵守 FullSafe：诊断与更新均不删除、不移动、不覆盖、不镜像清理用户现有文件'
             )
           }
           git config user.name "XiaoMeili Update Bot"
@@ -675,5 +706,5 @@ jobs:
           git pull --rebase origin main
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "latest_safe.json" -Encoding utf8
           git add latest_safe.json
-          git commit -m "Publish XiaoMeili v0.10.0.4 safe manifest"
+          git commit -m "Publish XiaoMeili v0.10.0.5 safe manifest"
           git push
