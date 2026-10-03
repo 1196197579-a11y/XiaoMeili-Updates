@@ -1,0 +1,1 @@
+Snapshot patched V0.10.0.8 source for contract inspection.
