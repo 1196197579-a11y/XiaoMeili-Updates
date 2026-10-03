@@ -1,0 +1,43 @@
+name: Snapshot XiaoMeili v0.10.0.8 NDM bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/inspect-trigger-v01009/**"
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download V0.10.0.8 source and snapshot updater files
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          gh release download "v0.10.0.8" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.8_SourceProject.zip" --dir "$PWD"
+          Expand-Archive -LiteralPath "$PWD\XiaoMeili_V0.10.0.8_SourceProject.zip" -DestinationPath "$PWD\src" -Force
+          $main = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.Directory.Name -eq "src" -and $_.Directory.Parent.Name -eq "app" } | Select-Object -First 1
+          if (-not $main) { throw "main.py not found" }
+          $srcRoot=$main.Directory.FullName
+          $snap=Join-Path $PWD "snapshot\v01008_updater"
+          New-Item -ItemType Directory -Force -Path $snap | Out-Null
+          foreach($name in @("main.py","ndm_bridge.py","native_updater.py","resource_diagnostic_v01008.py")){
+            $p=Join-Path $srcRoot $name
+            if(Test-Path $p){ Copy-Item -LiteralPath $p -Destination (Join-Path $snap $name) -Force }
+          }
+          git config user.name "XiaoMeili Inspect Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add snapshot/v01008_updater
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Snapshot V0.10.0.8 updater files"
+            git push origin main
+          } else {
+            Write-Host "Snapshot already current"
+          }
