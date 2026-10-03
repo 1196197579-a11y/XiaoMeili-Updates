@@ -29,11 +29,11 @@ jobs:
       - name: Download verified V0.10.0.8 source baseline
         shell: pwsh
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force -Path "$PWD\base-download" | Out-Null
-          gh release download "v0.10.0.8" --repo "\${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.8_SourceProject.zip" --dir "$PWD\base-download"
+          gh release download "v0.10.0.8" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.8_SourceProject.zip" --dir "$PWD\base-download"
           if ($LASTEXITCODE -ne 0) { throw "Cannot download V0.10.0.8 source baseline" }
           $zip = Join-Path $PWD "base-download\XiaoMeili_V0.10.0.8_SourceProject.zip"
           $stage = Join-Path $env:RUNNER_TEMP "xm-v01009-source"
@@ -161,12 +161,12 @@ jobs:
       - name: Reuse verified stable safe launcher from V0.10.0.8
         shell: pwsh
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
           $d = Join-Path $env:RUNNER_TEMP "xm-old-update"
           New-Item -ItemType Directory -Force -Path $d | Out-Null
-          gh release download "v0.10.0.8" --repo "\${{ github.repository }}" --pattern "XiaoMeili_0.10.0.8_update.zip" --dir $d
+          gh release download "v0.10.0.8" --repo "${{ github.repository }}" --pattern "XiaoMeili_0.10.0.8_update.zip" --dir $d
           if ($LASTEXITCODE -ne 0) { throw "Cannot download stable launcher package" }
           $x = Join-Path $env:RUNNER_TEMP "xm-old-update-expanded"
           Expand-Archive -LiteralPath (Join-Path $d "XiaoMeili_0.10.0.8_update.zip") -DestinationPath $x -Force
@@ -195,16 +195,16 @@ jobs:
       - name: Publish V0.10.0.9 release assets
         shell: pwsh
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          gh release view "v0.10.0.9" --repo "\${{ github.repository }}" *> $null
+          gh release view "v0.10.0.9" --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "v0.10.0.9" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --clobber --repo "\${{ github.repository }}"
+            gh release upload "v0.10.0.9" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --clobber --repo "${{ github.repository }}"
             if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed" }
-            gh release edit "v0.10.0.9" --repo "\${{ github.repository }}" --title "XiaoMeili V0.10.0.9 | Real Match Diagnostic + NDM Preferred" --notes "Adds one-click real-match resource collection: click once, play one normal VALORANT match, then XiaoMeili automatically runs the remaining module tests and exports a redacted ZIP. Adds VRAM-jump correlation and WDDM per-process GPU-memory fallback. Restores NDM as the preferred updater for GitHub Release packages with live connection preflight, SHA-256/ZIP verification, and built-in downloader fallback. FullSafe no-delete update."
+            gh release edit "v0.10.0.9" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.9 | Real Match Diagnostic + NDM Preferred" --notes "Adds one-click real-match resource collection: click once, play one normal VALORANT match, then XiaoMeili automatically runs the remaining module tests and exports a redacted ZIP. Adds VRAM-jump correlation and WDDM per-process GPU-memory fallback. Restores NDM as the preferred updater for GitHub Release packages with live connection preflight, SHA-256/ZIP verification, and built-in downloader fallback. FullSafe no-delete update."
           } else {
-            gh release create "v0.10.0.9" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "\${{ github.repository }}" --title "XiaoMeili V0.10.0.9 | Real Match Diagnostic + NDM Preferred" --notes "Real-match resource collection + automatic post-match module tests + VRAM jump tracing + NDM-preferred updating with fallback. FullSafe no-delete."
+            gh release create "v0.10.0.9" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.9 | Real Match Diagnostic + NDM Preferred" --notes "Real-match resource collection + automatic post-match module tests + VRAM jump tracing + NDM-preferred updating with fallback. FullSafe no-delete."
           }
           if ($LASTEXITCODE -ne 0) { throw "V0.10.0.9 release publish failed" }
 
@@ -213,7 +213,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $url = "https://github.com/\${{ github.repository }}/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip"
           $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.10.0.9_verify.zip"
           Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
           $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -230,10 +230,10 @@ jobs:
       - name: Switch latest_safe.json to V0.10.0.9
         shell: pwsh
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/\${{ github.repository }}/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip"
           $manifest = [ordered]@{
             protocol = 1
             version = "0.10.0.9"
