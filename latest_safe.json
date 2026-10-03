@@ -1,16 +1,15 @@
 {
   "protocol": 1,
-  "version": "0.10.0.7",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.7/XiaoMeili_0.10.0.7_update.zip",
-  "sha256": "ad6c803505b6d5e255374060ebd4f99e6bc4006110b97a030c0cd78f50907188",
-  "package_size": 226901916,
+  "version": "0.10.0.8",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.8/XiaoMeili_0.10.0.8_update.zip",
+  "sha256": "6e6a27182348447d7c99beb39b8909df94028e86255135e18949b3f36f3b5375",
+  "package_size": 226905180,
   "notes": [
-    "V0.10.0.7：云端TTS切换为 Qwen-Audio-3.1-TTS-Flash，并使用已确认的小美丽复刻音色",
-    "Qwen3-8B云端大脑保持不变；Fun-ASR、画面识别、白板、高光等本地链路保持不变",
-    "继续保留本地Qwen3-8B与本地Qwen3-TTS回退，不删除现有模型和用户数据",
-    "系统资源页新增本场直播和本月累计云端用量/预估费用，不启用预算保护",
-    "沿用现有北京区专属地址和本机加密API Key，无需重新填写",
-    "启动时不自动发送付费大脑测试，也不发送假文字预热TTS",
-    "继续遵守FullSafe：版本目录更新、保留回滚，不删除、不移动、不镜像清理用户文件"
+    "V0.10.0.8：一键深度资源诊断升级为全模块诊断，250ms采样并自动导出脱敏ZIP",
+    "新增进程树、逐进程GPU显存/RAM/CPU、语音输入、云端大脑/TTS、白板与全部当前画面识别阶段",
+    "记录当前实际屏幕采集拓扑与识别模块，先测量、不强行改识别架构",
+    "新增“闭嘴/别说话/别说了/安静/停一下”等模糊打断：立即停语音、取消当前回答、关闭白板/指示灯并回到等待“美丽美丽”",
+    "保持V0.10.0.7已确认的复刻音色、Qwen3-8B云端大脑与现有Fun-ASR配置",
+    "FullSafe：只创建全新的versions版本目录并切换active.json；不删除、不移动、不镜像清理任何用户文件，旧版本保留回滚"
   ]
 }
