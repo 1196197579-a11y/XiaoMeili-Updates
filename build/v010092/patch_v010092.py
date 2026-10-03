@@ -30,7 +30,50 @@ s = rep(s,
     'APP_NAME = "小美丽 V0.10.0.9.2｜Long Chat Stability + Hard Silence + NDM Fast Fallback"',
     'app name')
 s = rep(s, 'APP_VERSION = "0.10.0.9.1"', 'APP_VERSION = "0.10.0.9.2"', 'app version')
-s = rep(s, 'APP_UPDATE_VERSION = "0.10.0.9.1"', 'APP_UPDATE_VERSION = "0.10.0.9.2"', 'update version')
+s = rep(s, 'APP_UPDATE_VERSION = \"0.10.0.9.1\"', 'APP_UPDATE_VERSION = \"0.10.0.9.2\"', 'update version')
+
+# Updater version parsing hotfix: XiaoMeili uses five-part versions such as
+# 0.10.0.9.1 -> 0.10.0.9.2. The old parser kept only four numeric
+# components, so both versions collapsed to (0, 10, 0, 9) and the update
+# button stayed disabled even though the new manifest was fetched correctly.
+s = rep(s,
+'''def _version_tuple(value):
+    nums = re.findall(r"\\d+", str(value or ""))[:4]
+    return tuple(int(x) for x in nums) if nums else (0,)
+''',
+'''def _version_tuple(value):
+    nums = re.findall(r"\\d+", str(value or ""))[:8]
+    return tuple(int(x) for x in nums) if nums else (0,)
+''',
+'five-part update version parser')
+
+# Avoid stale GitHub Raw/CDN responses during manual update checks.
+s = rep(s,
+'''                req = urllib.request.Request(url, headers={"User-Agent": f"XiaoMeili/{APP_VERSION}"})
+''',
+'''                req = urllib.request.Request(url, headers={
+                    "User-Agent": f"XiaoMeili/{APP_VERSION}",
+                    "Cache-Control": "no-cache, no-store, max-age=0",
+                    "Pragma": "no-cache",
+                })
+''',
+'update no-cache headers')
+
+# If a manifest was fetched but is older/different, do not falsely label that
+# manifest as the running "current version".
+s = rep(s,
+'''            else:
+                self.update_status.setText(f"当前已是最新版本 V{APP_VERSION}。")
+                title = f"V{version or APP_VERSION}（当前版本）"
+''',
+'''            else:
+                self.update_status.setText(f"当前已是最新版本 V{APP_VERSION}。")
+                if version and _version_tuple(version) != _version_tuple(APP_UPDATE_VERSION):
+                    title = f"更新源版本 V{version}"
+                else:
+                    title = f"V{APP_VERSION}（当前版本）"
+''',
+'update notes current-version label')
 
 # Config schema bump without changing user settings.
 s = s.replace('cfg["config_version"] = max(30, int(cfg.get("config_version", 0) or 0))',
