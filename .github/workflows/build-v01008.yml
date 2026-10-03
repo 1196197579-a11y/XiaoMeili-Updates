@@ -76,14 +76,14 @@ jobs:
           if ($brain -notmatch 'def abort_current') { throw "Cloud brain abort missing" }
           if ($voice -notmatch 'def abort_playback') { throw "TTS playback abort missing" }
 
-          foreach ($required in @('summary.txt','timeline.csv','process_gpu.csv','process_tree.csv','recognition_modules.csv','capture_topology.json')) {
+          foreach ($required in @('summary.json','timeline_250ms.csv','process_gpu.csv','process_tree.csv','vision_timeline.csv','recognition_modules.csv','capture_topology.json','请上传给ChatGPT_全模块资源诊断摘要.txt')) {
             if ($diag -notmatch [regex]::Escape($required)) { throw "Diagnostic output missing: $required" }
           }
           if ($diag -notmatch '0\.25') { throw "250ms sampling contract missing" }
           if ($diag -notmatch 'nvidia-smi') { throw "Per-process GPU diagnostic path missing" }
           if ($diag -notmatch 'Fun-ASR' -or $diag -notmatch 'FSMN') { throw "Speech input diagnostic phase missing" }
           if ($diag -notmatch 'vision' -or $diag -notmatch 'recognition') { throw "Vision recognition diagnostic phase missing" }
-          if ($diag -notmatch 'redact|脱敏|sanitize') { throw "Diagnostic redaction contract missing" }
+          if ($diag -notmatch '不含 API Key' -or $diag -notmatch '不保存用户聊天' -or $diag -notmatch '麦克风录音') { throw "Diagnostic privacy/redaction contract missing" }
           Write-Host "V0.10.0.8 feature contract PASS"
 
       - name: FullSafe no-delete updater gate
