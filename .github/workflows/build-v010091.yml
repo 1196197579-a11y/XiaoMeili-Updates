@@ -1,0 +1,214 @@
+name: Build and publish XiaoMeili v0.10.0.9.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/release-trigger-v010091/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xiaomeili-v010091-safe-release
+  cancel-in-progress: true
+
+jobs:
+  build-publish:
+    runs-on: windows-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download V0.10.0.9 source baseline
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          New-Item -ItemType Directory -Force -Path "$PWD\base" | Out-Null
+          gh release download "v0.10.0.9" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.9_SourceProject.zip" --dir "$PWD\base"
+          if ($LASTEXITCODE -ne 0) { throw "Cannot download V0.10.0.9 source" }
+          $stage=Join-Path $env:RUNNER_TEMP "xm-v010091-source"
+          Expand-Archive -LiteralPath "$PWD\base\XiaoMeili_V0.10.0.9_SourceProject.zip" -DestinationPath $stage -Force
+          $main=Get-ChildItem $stage -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py$' } | Select-Object -First 1
+          if (-not $main) { throw "main.py not found" }
+          $source=Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $main.FullName))
+          if (-not (Test-Path (Join-Path $source "app\src\native_updater.py"))) { throw "native updater missing" }
+          if (-not (Test-Path (Join-Path $source "app\src\ndm_bridge.py"))) { throw "NDM bridge missing" }
+          "SOURCE_ROOT=$source" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Apply V0.10.0.9.1 patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          python "build\v010091\patch_v010091.py" "$env:SOURCE_ROOT" "$PWD"
+          if ($LASTEXITCODE -ne 0) { throw "patch failed" }
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\interaction_diagnostic_v010091.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
+
+      - name: Passive diagnostic contract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $main=Get-Content "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $diag=Get-Content "$env:SOURCE_ROOT\app\src\interaction_diagnostic_v010091.py" -Raw
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0\.9\.1"') { throw "version missing" }
+          foreach($x in @('InteractionDiagnosticRunner','结束并生成报告','interaction_diag_note\("turn_start"\)','conversation_turns.csv','vram_jump_events.csv')) {
+            if (($main+$diag) -notmatch $x) { throw "contract missing: $x" }
+          }
+          if ($diag -notmatch 'SAMPLE_INTERVAL_SECONDS\s*=\s*0\.25') { throw "250ms missing" }
+          if ($diag -notmatch 'VRAM_JUMP_WARN_MB\s*=\s*256\.0') { throw "256MB threshold missing" }
+          if ($diag -notmatch 'VRAM_JUMP_MAJOR_MB\s*=\s*512\.0') { throw "512MB threshold missing" }
+          foreach($bad in @('self\.speech\.stop\(','self\.brain\.shutdown\(','self\.voice\.shutdown\(')) {
+            if ($diag -match $bad) { throw "Passive diagnostic must not alter components: $bad" }
+          }
+          if ($diag -notmatch '不记录聊天原文' -or $diag -notmatch '麦克风录音') { throw "privacy contract missing" }
+          Write-Host "PASSIVE_DIAGNOSTIC_CONTRACT_PASS"
+
+      - name: NDM integration test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $main=Get-Content "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          if ($main -match 'GitHub 更新包自动使用小美丽内置下载器') { throw "old GitHub NDM bypass remains" }
+          if ($main -notmatch 'NDM is the preferred downloader for every update URL') { throw "NDM preferred marker missing" }
+          python -m pip install --disable-pip-version-check "websocket-client>=1.8,<2" "websockets==12.0"
+          python "build\v01009\test_ndm_bridge_mock.py" "$env:SOURCE_ROOT"
+          if ($LASTEXITCODE -ne 0) { throw "NDM integration failed" }
+
+      - name: FullSafe no-delete gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $native=Get-Content "$env:SOURCE_ROOT\app\src\native_updater.py" -Raw
+          $helper=Get-Content "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
+          $ndm=Get-Content "$env:SOURCE_ROOT\app\src\ndm_bridge.py" -Raw
+          if ($helper -match 'Remove-Item|/MIR|/PURGE|robocopy.exe') { throw "unsafe updater helper" }
+          foreach($bad in @('unlink\(','rmtree\(','os\.remove','shutil\.rmtree')) {
+            if ($native -match $bad) { throw "unsafe native updater: $bad" }
+          }
+          if ($native -notmatch 'NO_AUTOMATIC_FILE_DELETION') { throw "no-delete marker missing" }
+          if ($native -notmatch 'versions') { throw "versions install missing" }
+          if ($ndm -match 'shutil\.move|os\.remove|unlink\(|rmtree\(') { throw "NDM may delete/move source" }
+          if ($ndm -notmatch 'shutil\.copy2') { throw "NDM copy import missing" }
+          Write-Host "FULLSAFE_NO_DELETE_PASS"
+
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check -r "$env:SOURCE_ROOT\app\requirements.txt"
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.10,<7" "dxcam>=0.0.5" "psutil>=6.0,<8"
+
+      - name: Build Windows app and self-test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $pyi=@(
+            "--noconfirm","--clean","--windowed","--name","XiaoMeili",
+            "--icon","$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico",
+            "--distpath","$PWD\out","--workpath","$PWD\pyi-work","--specpath","$PWD\pyi-spec",
+            "--collect-all","rapidocr","--collect-all","onnxruntime","--collect-all","soundfile",
+            "--collect-all","sounddevice","--collect-all","dxcam","--collect-all","dashscope",
+            "--collect-all","websocket","--add-data","$env:SOURCE_ROOT\app\assets;assets",
+            "$env:SOURCE_ROOT\app\src\main.py"
+          )
+          python -m PyInstaller @pyi
+          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+          $exe="$PWD\out\XiaoMeili\XiaoMeili.exe"
+          & $exe --runtime-self-test
+          if ($LASTEXITCODE -ne 0) { throw "runtime self-test failed" }
+          & $exe --settings-ui-self-test
+          if ($LASTEXITCODE -ne 0) { throw "settings self-test failed" }
+
+      - name: Reuse verified stable launcher
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          $d=Join-Path $env:RUNNER_TEMP "launcher-base"
+          New-Item -ItemType Directory -Force -Path $d | Out-Null
+          gh release download "v0.10.0.9" --repo "${{ github.repository }}" --pattern "XiaoMeili_0.10.0.9_update.zip" --dir $d
+          $x=Join-Path $env:RUNNER_TEMP "launcher-expanded"
+          Expand-Archive -LiteralPath (Join-Path $d "XiaoMeili_0.10.0.9_update.zip") -DestinationPath $x -Force
+          $launcher=Get-ChildItem $x -Recurse -File -Filter XiaoMeiliLauncher.exe | Select-Object -First 1
+          if (-not $launcher) { throw "launcher missing" }
+          Copy-Item $launcher.FullName "$PWD\out\XiaoMeili\XiaoMeiliLauncher.exe" -Force
+
+      - name: Create release bundles
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          New-Item -ItemType Directory -Force -Path "$PWD\release" | Out-Null
+          $zip="$PWD\release\XiaoMeili_0.10.0.9.1_update.zip"
+          Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
+          $hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $size=(Get-Item $zip).Length
+          "UPDATE_ZIP=$zip" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SHA256=$hash" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SIZE=$size" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          $sourceZip="$PWD\release\XiaoMeili_V0.10.0.9.1_SourceProject.zip"
+          Compress-Archive -Path "$env:SOURCE_ROOT\*" -DestinationPath $sourceZip -CompressionLevel Optimal
+          "SOURCE_ZIP=$sourceZip" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          gh release create "v0.10.0.9.1" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.9.1 | Long Interaction Diagnostic + NDM Preferred" --notes "Passive long-duration real conversation resource tracing. Start once, chat normally, stop when desired, then upload the redacted ZIP. Tracks per-turn VRAM retention, >=256MB/512MB jumps, process GPU/RAM/CPU, ASR/brain/TTS/whiteboard/thread/queue state. Preserves NDM-preferred updating with verified fallback. FullSafe no-delete."
+          if ($LASTEXITCODE -ne 0) { throw "release publish failed" }
+
+      - name: Verify public update package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $url="https://github.com/${{ github.repository }}/releases/download/v0.10.0.9.1/XiaoMeili_0.10.0.9.1_update.zip"
+          $verify=Join-Path $env:RUNNER_TEMP "verify.zip"
+          Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
+          $hash=(Get-FileHash $verify -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne $env:UPDATE_SHA256) { throw "public hash mismatch" }
+          $a=[System.IO.Compression.ZipFile]::OpenRead($verify)
+          try {
+            if (-not ($a.Entries | Where-Object { $_.FullName -ieq "XiaoMeili.exe" } | Select-Object -First 1)) { throw "exe missing" }
+            if (-not ($a.Entries | Where-Object { $_.FullName -ieq "XiaoMeiliLauncher.exe" } | Select-Object -First 1)) { throw "launcher missing" }
+          } finally { $a.Dispose() }
+
+      - name: Switch latest safe manifest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          $m=[ordered]@{
+            protocol=1
+            version="0.10.0.9.1"
+            package_url="https://github.com/${{ github.repository }}/releases/download/v0.10.0.9.1/XiaoMeili_0.10.0.9.1_update.zip"
+            sha256=$env:UPDATE_SHA256
+            package_size=[int64]$env:UPDATE_SIZE
+            notes=@(
+              'V0.10.0.9.1：深度资源诊断改为长时间真实聊天追踪，点击开始后正常和小美丽聊天，想结束时再次点击生成报告',
+              '诊断全程只旁观，不主动启停语音/大脑/TTS/白板，不发送模拟请求，不修改设置',
+              '每250ms记录 CPU/RAM/GPU/显存、相关进程、ASR/大脑/TTS/白板状态、线程和TTS队列',
+              '新增逐轮资源账本，可看到每轮对话前显存、峰值、结束显存和未回收增量',
+              '新增 >=256MB 与 >=512MB 显存跳变时间点，并记录跳变时的进程GPU与组件状态',
+              '报告不保存聊天原文、麦克风录音、API Key、长期记忆、养成库、昵称或截图',
+              '继续使用 NDM 作为更新首选下载器；真实连接检测和任务提交通过集成测试，失败自动回退内置下载器',
+              'NDM下载后仍校验文件大小、SHA-256和ZIP完整性；NDM源文件只复制，不移动或删除',
+              'FullSafe：只在受控 versions 目录创建新版本并切换 active.json；不删除、不移动、不递归清理任何用户文件，旧版本继续保留回滚'
+            )
+          }
+          git config user.name "XiaoMeili Update Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin main
+          $m | ConvertTo-Json -Depth 5 | Set-Content latest_safe.json -Encoding utf8
+          git add latest_safe.json
+          git commit -m "Publish XiaoMeili v0.10.0.9.1 safe manifest"
+          git push origin main
