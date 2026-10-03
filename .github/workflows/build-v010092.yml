@@ -186,7 +186,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference="Stop"
-          gh release create "v0.10.0.9.2" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.9.2 | Long Chat Stability + Hard Silence + NDM Fast Fallback" --notes "Long-chat stability fixes: QMovie/Qt transition resource retirement, thinking-state de-duplication, cloud TTS context release and self-feedback guard. Hard local P0 silence command intercepts phrases such as 闭嘴 / 你给我闭嘴 / 你别说话了 before the brain, stops brain/TTS/whiteboard without replying, then returns to wake-word standby. NDM remains preferred for updates but now falls back quickly if no file appears or progress stalls. FullSafe updater remains append-only and passes functional sentinel tests. Exact V0.10.0.9.2 source snapshot is embedded in the app and published as a release asset."
+          if (gh release view "v0.10.0.9.2" --repo "${{ github.repository }}" *> $null) {
+            gh release upload "v0.10.0.9.2" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "${{ github.repository }}" --clobber
+          } else {
+            gh release create "v0.10.0.9.2" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.9.2 | Long Chat Stability + Hard Silence + NDM Fast Fallback" --notes "Long-chat stability fixes: QMovie/Qt transition resource retirement, thinking-state de-duplication, cloud TTS context release and self-feedback guard. Hard local P0 silence command intercepts phrases such as 闭嘴 / 你给我闭嘴 / 你别说话了 before the brain, stops brain/TTS/whiteboard without replying, then returns to wake-word standby. NDM remains preferred for updates but now falls back quickly if no file appears or progress stalls. FullSafe updater remains append-only and passes functional sentinel tests. Exact V0.10.0.9.2 source snapshot is embedded in the app and published as a release asset. Hotfix also repairs five-part version comparison and update-cache handling."
+          }
           if ($LASTEXITCODE -ne 0) { throw "release publish failed" }
 
       - name: Verify public release files
@@ -230,4 +234,32 @@ jobs:
           $m | ConvertTo-Json -Depth 5 | Set-Content latest_safe.json -Encoding utf8
           git add latest_safe.json
           git commit -m "Publish XiaoMeili v0.10.0.9.2 safe manifest"
+          git push origin main
+
+      - name: Publish V0.10.0.9.1 bootstrap manifest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          # V0.10.0.9.1 has a legacy four-component comparator, so a normal
+          # 0.10.0.9.2 manifest collapses to the same tuple. This temporary
+          # manifest uses a fourth-component bump only to bootstrap the fixed
+          # V0.10.0.9.2 package. On restart, XiaoMeili loads latest_safe.json.
+          $b=[ordered]@{
+            protocol=1
+            version="0.10.0.10"
+            package_url="https://github.com/${{ github.repository }}/releases/download/v0.10.0.9.2/XiaoMeili_0.10.0.9.2_update.zip"
+            sha256=$env:UPDATE_SHA256
+            package_size=[int64]$env:UPDATE_SIZE
+            notes=@(
+              '兼容引导：V0.10.0.9.1 的旧更新器只比较前4段版本号，本清单仅用于触发 V0.10.0.9.2 安装',
+              '安装后的实际应用版本仍为 V0.10.0.9.2，并已修复五段版本号比较与缓存问题',
+              'V0.10.0.9.2 同时包含长聊资源释放、闭嘴P0硬打断、NDM快速回退与FullSafe不删文件保护'
+            )
+          }
+          git pull --rebase origin main
+          $b | ConvertTo-Json -Depth 5 | Set-Content latest_v010092.json -Encoding utf8
+          git add latest_v010092.json
+          git commit -m "Refresh XiaoMeili v0.10.0.9.2 bootstrap manifest"
           git push origin main
