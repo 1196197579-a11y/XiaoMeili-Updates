@@ -26,28 +26,24 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference="Stop"
-          $root = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py$' } | Select-Object -First 1
-          if (-not $root) { throw "main.py not found" }
-          $srcRoot = Split-Path -Parent $root.FullName
-          Write-Host "SRCROOT=$srcRoot"
-          Write-Host "=== FILE LIST ==="
-          Get-ChildItem $srcRoot -File -Filter *.py | ForEach-Object { Write-Host $_.Name }
-          Write-Host "=== KEYWORD HITS ==="
-          $terms=@("一键深度资源诊断","资源诊断","SpeechInputService","美丽美丽","闭嘴","别说话","screen","capture","recogn","highlight","kill","ocr")
+          $main = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py } | Select-Object -First 1
+          if (-not $main) { throw "main.py not found" }
+          $srcRoot = Split-Path -Parent $main.FullName
+          Write-Host "=== RESOURCE DIAGNOSTIC FULL ==="
+          $rd=Join-Path $srcRoot "resource_diagnostic_v01005.py"
+          $n=0; Get-Content $rd | ForEach-Object { $n++; Write-Host ("{0:D5}: {1}" -f $n,$_) }
+          Write-Host "=== SPEECH WORKER 1-560 ==="
+          $sp=Join-Path $srcRoot "speech_input.py"; $lines=Get-Content $sp
+          for($i=0;$i -lt [Math]::Min(560,$lines.Count);$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$lines[$i]) }
+          Write-Host "=== MAIN SPEECH 12150-13050 ==="
+          $ml=Get-Content $main.FullName
+          for($i=12149;$i -lt [Math]::Min(13050,$ml.Count);$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$ml[$i]) }
+          Write-Host "=== MAIN DIAG 8680-8860 ==="
+          for($i=8679;$i -lt [Math]::Min(8860,$ml.Count);$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$ml[$i]) }
+          Write-Host "=== VISION CLASSES AND CONTROLLERS ==="
+          $terms=@("class ScreenGrabber","class Valorant","def _capture","grabber=","ScreenGrabber(","def tick","def _tick","def scan","def _scan","ocr","highlight","kill")
           foreach($t in $terms){
-            Write-Host "--- TERM: $t ---"
-            Get-ChildItem $srcRoot -File -Filter *.py | Select-String -Pattern $t -SimpleMatch | Select-Object -First 80 | ForEach-Object {
-              Write-Host ("{0}:{1}: {2}" -f $_.Path,$_.LineNumber,$_.Line.Trim())
+            Get-Content $main.FullName | Select-String -Pattern $t -SimpleMatch | Select-Object -First 40 | ForEach-Object {
+              Write-Host ("HIT {0}:{1}" -f $_.LineNumber,$_.Line.Trim())
             }
           }
-          Write-Host "=== MAIN AROUND DEEP DIAGNOSTIC ==="
-          $lines=Get-Content $root.FullName
-          $hits=Select-String -Path $root.FullName -Pattern "一键深度资源诊断|资源诊断" 
-          foreach($h in $hits){
-            $a=[Math]::Max(0,$h.LineNumber-80); $b=[Math]::Min($lines.Count-1,$h.LineNumber+180)
-            Write-Host ("--- main.py lines {0}-{1} ---" -f ($a+1),($b+1))
-            for($i=$a;$i -le $b;$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$lines[$i]) }
-          }
-          Write-Host "=== SPEECH INPUT FULL ==="
-          $sp=Join-Path $srcRoot "speech_input.py"
-          if(Test-Path $sp){ $n=0; Get-Content $sp | ForEach-Object { $n++; Write-Host ("{0:D5}: {1}" -f $n,$_) } }
