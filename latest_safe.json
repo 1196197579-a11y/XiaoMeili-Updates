@@ -1,17 +1,18 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip",
-  "sha256": "f9dc55536e1a1ec188e29be3497bfee774b64f54dd829a917a5c827d8953fef9",
-  "package_size": 227359974,
+  "version": "0.10.0.9.1",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.1/XiaoMeili_0.10.0.9.1_update.zip",
+  "sha256": "de9bdda4a5941b811dff571fc84569a2bf252afa111f8b4775099bd1d36d7fab",
+  "package_size": 227348294,
   "notes": [
-    "V0.10.0.9：一键深度资源诊断新增真实对局实战采集阶段，点击后切回 VALORANT 正常打一局即可",
-    "检测到真实对局HUD后自动记录整局 CPU/RAM/GPU/显存、进程树、屏幕采集与识别事件，赛后再自动完成其余模块测试",
-    "新增真实识别覆盖表，未在本局发生的事件明确标记“未观察到”，不再把登记模块当成已测试",
-    "新增显存突增事件追踪，以及 Windows/WDDM 逐进程显存计数器回退",
-    "恢复 NDM 为更新首选下载器，GitHub Release 不再强制绕过 NDM；先真实检测 NDM 连接，再发送下载任务",
-    "NDM 下载完成后继续执行文件大小、SHA-256 与 ZIP 完整性校验；NDM 不可用或失败时自动回退内置下载器",
-    "保持现有复刻音色、Qwen3-8B云端大脑、Fun-ASR和“闭嘴”即时打断逻辑",
-    "FullSafe：只创建全新的 versions 版本目录并切换 active.json；不删除、不移动、不镜像清理任何用户文件，旧版本继续保留回滚"
+    "V0.10.0.9.1：深度资源诊断改为长时间真实聊天追踪，点击开始后正常和小美丽聊天，想结束时再次点击生成报告",
+    "诊断全程只旁观，不主动启停语音/大脑/TTS/白板，不发送模拟请求，不修改设置",
+    "每250ms记录 CPU/RAM/GPU/显存、相关进程、ASR/大脑/TTS/白板状态、线程和TTS队列",
+    "新增逐轮资源账本，可看到每轮对话前显存、峰值、结束显存和未回收增量",
+    "新增 >=256MB 与 >=512MB 显存跳变时间点，并记录跳变时的进程GPU与组件状态",
+    "报告不保存聊天原文、麦克风录音、API Key、长期记忆、养成库、昵称或截图",
+    "继续使用 NDM 作为更新首选下载器；真实连接检测和任务提交通过集成测试，失败自动回退内置下载器",
+    "NDM下载后仍校验文件大小、SHA-256和ZIP完整性；NDM源文件只复制，不移动或删除",
+    "FullSafe：只在受控 versions 目录创建新版本并切换 active.json；不删除、不移动、不递归清理任何用户文件，旧版本继续保留回滚"
   ]
 }
