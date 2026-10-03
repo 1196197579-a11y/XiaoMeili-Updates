@@ -1,0 +1,53 @@
+name: Inspect XiaoMeili v0.10.0.7 source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/inspect-trigger-v01007/**"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download source
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          gh release download "v0.10.0.7" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.7_SourceProject.zip" --dir "$PWD"
+          Expand-Archive -LiteralPath "$PWD\XiaoMeili_V0.10.0.7_SourceProject.zip" -DestinationPath "$PWD\src" -Force
+      - name: Inspect relevant source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $root = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py$' } | Select-Object -First 1
+          if (-not $root) { throw "main.py not found" }
+          $srcRoot = Split-Path -Parent $root.FullName
+          Write-Host "SRCROOT=$srcRoot"
+          Write-Host "=== FILE LIST ==="
+          Get-ChildItem $srcRoot -File -Filter *.py | ForEach-Object { Write-Host $_.Name }
+          Write-Host "=== KEYWORD HITS ==="
+          $terms=@("一键深度资源诊断","资源诊断","SpeechInputService","美丽美丽","闭嘴","别说话","screen","capture","recogn","highlight","kill","ocr")
+          foreach($t in $terms){
+            Write-Host "--- TERM: $t ---"
+            Get-ChildItem $srcRoot -File -Filter *.py | Select-String -Pattern $t -SimpleMatch | Select-Object -First 80 | ForEach-Object {
+              Write-Host ("{0}:{1}: {2}" -f $_.Path,$_.LineNumber,$_.Line.Trim())
+            }
+          }
+          Write-Host "=== MAIN AROUND DEEP DIAGNOSTIC ==="
+          $lines=Get-Content $root.FullName
+          $hits=Select-String -Path $root.FullName -Pattern "一键深度资源诊断|资源诊断" 
+          foreach($h in $hits){
+            $a=[Math]::Max(0,$h.LineNumber-80); $b=[Math]::Min($lines.Count-1,$h.LineNumber+180)
+            Write-Host ("--- main.py lines {0}-{1} ---" -f ($a+1),($b+1))
+            for($i=$a;$i -le $b;$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$lines[$i]) }
+          }
+          Write-Host "=== SPEECH INPUT FULL ==="
+          $sp=Join-Path $srcRoot "speech_input.py"
+          if(Test-Path $sp){ $n=0; Get-Content $sp | ForEach-Object { $n++; Write-Host ("{0:D5}: {1}" -f $n,$_) } }
