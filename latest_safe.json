@@ -1,15 +1,17 @@
 {
   "protocol": 1,
-  "version": "0.10.0.8",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.8/XiaoMeili_0.10.0.8_update.zip",
-  "sha256": "6e6a27182348447d7c99beb39b8909df94028e86255135e18949b3f36f3b5375",
-  "package_size": 226905180,
+  "version": "0.10.0.9",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip",
+  "sha256": "f9dc55536e1a1ec188e29be3497bfee774b64f54dd829a917a5c827d8953fef9",
+  "package_size": 227359974,
   "notes": [
-    "V0.10.0.8：一键深度资源诊断升级为全模块诊断，250ms采样并自动导出脱敏ZIP",
-    "新增进程树、逐进程GPU显存/RAM/CPU、语音输入、云端大脑/TTS、白板与全部当前画面识别阶段",
-    "记录当前实际屏幕采集拓扑与识别模块，先测量、不强行改识别架构",
-    "新增“闭嘴/别说话/别说了/安静/停一下”等模糊打断：立即停语音、取消当前回答、关闭白板/指示灯并回到等待“美丽美丽”",
-    "保持V0.10.0.7已确认的复刻音色、Qwen3-8B云端大脑与现有Fun-ASR配置",
-    "FullSafe：只创建全新的versions版本目录并切换active.json；不删除、不移动、不镜像清理任何用户文件，旧版本保留回滚"
+    "V0.10.0.9：一键深度资源诊断新增真实对局实战采集阶段，点击后切回 VALORANT 正常打一局即可",
+    "检测到真实对局HUD后自动记录整局 CPU/RAM/GPU/显存、进程树、屏幕采集与识别事件，赛后再自动完成其余模块测试",
+    "新增真实识别覆盖表，未在本局发生的事件明确标记“未观察到”，不再把登记模块当成已测试",
+    "新增显存突增事件追踪，以及 Windows/WDDM 逐进程显存计数器回退",
+    "恢复 NDM 为更新首选下载器，GitHub Release 不再强制绕过 NDM；先真实检测 NDM 连接，再发送下载任务",
+    "NDM 下载完成后继续执行文件大小、SHA-256 与 ZIP 完整性校验；NDM 不可用或失败时自动回退内置下载器",
+    "保持现有复刻音色、Qwen3-8B云端大脑、Fun-ASR和“闭嘴”即时打断逻辑",
+    "FullSafe：只创建全新的 versions 版本目录并切换 active.json；不删除、不移动、不镜像清理任何用户文件，旧版本继续保留回滚"
   ]
 }
