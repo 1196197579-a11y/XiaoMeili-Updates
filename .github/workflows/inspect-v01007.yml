@@ -1,4 +1,4 @@
-name: Inspect XiaoMeili v0.10.0.7 source
+name: Snapshot XiaoMeili v0.10.0.7 source
 
 on:
   push:
@@ -7,14 +7,14 @@ on:
       - "build/inspect-trigger-v01007/**"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download source
+      - name: Download source and snapshot selected files
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -22,28 +22,23 @@ jobs:
           $ErrorActionPreference="Stop"
           gh release download "v0.10.0.7" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.7_SourceProject.zip" --dir "$PWD"
           Expand-Archive -LiteralPath "$PWD\XiaoMeili_V0.10.0.7_SourceProject.zip" -DestinationPath "$PWD\src" -Force
-      - name: Inspect relevant source
-        shell: pwsh
-        run: |
-          $ErrorActionPreference="Stop"
-          $main = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py } | Select-Object -First 1
+          $main = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.Directory.Name -eq "src" -and $_.Directory.Parent.Name -eq "app" } | Select-Object -First 1
           if (-not $main) { throw "main.py not found" }
-          $srcRoot = Split-Path -Parent $main.FullName
-          Write-Host "=== RESOURCE DIAGNOSTIC FULL ==="
-          $rd=Join-Path $srcRoot "resource_diagnostic_v01005.py"
-          $n=0; Get-Content $rd | ForEach-Object { $n++; Write-Host ("{0:D5}: {1}" -f $n,$_) }
-          Write-Host "=== SPEECH WORKER 1-560 ==="
-          $sp=Join-Path $srcRoot "speech_input.py"; $lines=Get-Content $sp
-          for($i=0;$i -lt [Math]::Min(560,$lines.Count);$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$lines[$i]) }
-          Write-Host "=== MAIN SPEECH 12150-13050 ==="
-          $ml=Get-Content $main.FullName
-          for($i=12149;$i -lt [Math]::Min(13050,$ml.Count);$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$ml[$i]) }
-          Write-Host "=== MAIN DIAG 8680-8860 ==="
-          for($i=8679;$i -lt [Math]::Min(8860,$ml.Count);$i++){ Write-Host ("{0:D5}: {1}" -f ($i+1),$ml[$i]) }
-          Write-Host "=== VISION CLASSES AND CONTROLLERS ==="
-          $terms=@("class ScreenGrabber","class Valorant","def _capture","grabber=","ScreenGrabber(","def tick","def _tick","def scan","def _scan","ocr","highlight","kill")
-          foreach($t in $terms){
-            Get-Content $main.FullName | Select-String -Pattern $t -SimpleMatch | Select-Object -First 40 | ForEach-Object {
-              Write-Host ("HIT {0}:{1}" -f $_.LineNumber,$_.Line.Trim())
-            }
+          $srcRoot=$main.Directory.FullName
+          $snap=Join-Path $PWD "snapshot\v01007"
+          New-Item -ItemType Directory -Force -Path $snap | Out-Null
+          Copy-Item -LiteralPath $main.FullName -Destination (Join-Path $snap "main.py") -Force
+          foreach($name in @("speech_input.py","resource_diagnostic_v01005.py","brain_dual.py","voice_dual.py","cloud_support.py","cloud_usage.py","native_updater.py")){
+            $p=Join-Path $srcRoot $name
+            if(Test-Path $p){ Copy-Item -LiteralPath $p -Destination (Join-Path $snap $name) -Force }
+          }
+          git config user.name "XiaoMeili Inspect Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add snapshot/v01007
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Snapshot selected V0.10.0.7 source files"
+            git push origin main
+          } else {
+            Write-Host "Snapshot already current"
           }
