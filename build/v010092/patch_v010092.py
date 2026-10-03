@@ -213,6 +213,79 @@ wr(speech, s)
 
 # ---------------- ndm_bridge.py ----------------
 s = rd(ndm)
+
+# Real NDM may ignore the requested filename field and save the URL basename
+# instead. Accept only two exact task-owned names: the unique requested name and
+# the exact URL basename, and still require creation/modification after this task
+# started. This keeps the no-guess/no-recursion safety rule while making the real
+# NDM bridge usable.
+s = rep(s,
+'''def _candidate_files(root: Path, filename: str, started_at: float | None = None):
+    """Return only exact task-owned filenames in the selected NDM directory.
+
+    V0.10.0 deliberately does NOT recurse and does NOT guess by extension. If NDM
+    ignores the requested filename, XiaoMeili falls back to its built-in downloader
+    rather than risking adoption of an unrelated user file.
+    """
+    wanted = Path(filename).name
+    wanted_lower = wanted.lower()
+    allowed = {wanted_lower}
+    for suffix in _TEMP_SUFFIXES:
+        allowed.add((wanted + suffix).lower())
+''',
+'''def _candidate_files(root: Path, filename: str, started_at: float | None = None, aliases=()):
+    """Return only exact task-owned filenames in the selected NDM directory.
+
+    V0.10.0.9.2 accepts the unique requested name plus the exact URL basename,
+    because real NDM can ignore field 4 and keep the URL filename. It still does
+    not recurse, does not guess by extension, and requires task-time ownership.
+    """
+    names = [Path(filename).name]
+    for alias in tuple(aliases or ()):
+        alias_name = Path(str(alias or "")).name
+        if alias_name and alias_name.lower() not in {x.lower() for x in names}:
+            names.append(alias_name)
+    allowed = set()
+    for wanted in names:
+        allowed.add(wanted.lower())
+        for suffix in _TEMP_SUFFIXES:
+            allowed.add((wanted + suffix).lower())
+''',
+'NDM exact URL basename candidates')
+
+s = rep(s,
+'''def _snapshot(root: Path, filename: str):
+    snap = {}
+    for p in _candidate_files(root, filename):
+''',
+'''def _snapshot(root: Path, filename: str, aliases=()):
+    snap = {}
+    for p in _candidate_files(root, filename, aliases=aliases):
+''',
+'NDM snapshot aliases')
+
+s = rep(s,
+'''    # Snapshot exact task names before sending. Pre-existing files are never adopted
+    # merely because their name/extension happens to match.
+    baseline = _snapshot(root, filename)
+''',
+'''    # Snapshot exact task names before sending. Pre-existing files are never adopted
+    # merely because their name/extension happens to match.
+    remote_name = Path(urlparse(str(url or "")).path).name
+    aliases = tuple(
+        x for x in (remote_name,)
+        if x and x.lower() != Path(filename).name.lower()
+    )
+    baseline = _snapshot(root, filename, aliases=aliases)
+''',
+'NDM derive URL basename alias')
+
+s = rep(s,
+'''            _candidate_files(root, filename, started_at=started),
+''',
+'''            _candidate_files(root, filename, started_at=started, aliases=aliases),
+''',
+'NDM scan URL basename alias')
 s = rep(s,
 '''    progress_cb=None,\n    timeout_seconds=21600,\n):\n''',
 '''    progress_cb=None,\n    timeout_seconds=21600,\n    appearance_timeout_seconds=None,\n    stall_timeout_seconds=None,\n):\n''',
