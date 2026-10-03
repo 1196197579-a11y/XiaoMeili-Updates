@@ -1,0 +1,49 @@
+name: Snapshot XiaoMeili v0.10.0.8 patched source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/inspect-trigger-v01008/**"
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download V0.10.0.7 source, apply V0.10.0.8 patch, snapshot selected files
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          gh release download "v0.10.0.7" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.7_SourceProject.zip" --dir "$PWD"
+          Expand-Archive -LiteralPath "$PWD\XiaoMeili_V0.10.0.7_SourceProject.zip" -DestinationPath "$PWD\src" -Force
+          $main = Get-ChildItem "$PWD\src" -Recurse -File -Filter main.py | Where-Object { $_.Directory.Name -eq "src" -and $_.Directory.Parent.Name -eq "app" } | Select-Object -First 1
+          if (-not $main) { throw "main.py not found" }
+          $source = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $main.FullName))
+          python "build\v01008\patch_v01008.py" "$source" "$PWD"
+          if ($LASTEXITCODE -ne 0) { throw "patch failed" }
+          $srcRoot=Join-Path $source "app\src"
+          $snap=Join-Path $PWD "snapshot\v01008"
+          New-Item -ItemType Directory -Force -Path $snap | Out-Null
+          foreach($name in @("main.py","speech_input.py","resource_diagnostic_v01008.py","brain_dual.py","voice_dual.py","native_updater.py")){
+            $p=Join-Path $srcRoot $name
+            if(Test-Path $p){ Copy-Item -LiteralPath $p -Destination (Join-Path $snap $name) -Force }
+          }
+          git config user.name "XiaoMeili Inspect Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add snapshot/v01008
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Snapshot selected V0.10.0.8 patched source files"
+            git push origin main
+          } else {
+            Write-Host "Snapshot already current"
+          }
