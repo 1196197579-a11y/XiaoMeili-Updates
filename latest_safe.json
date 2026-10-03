@@ -1,18 +1,17 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.1",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.1/XiaoMeili_0.10.0.9.1_update.zip",
-  "sha256": "de9bdda4a5941b811dff571fc84569a2bf252afa111f8b4775099bd1d36d7fab",
-  "package_size": 227348294,
+  "version": "0.10.0.9.2",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.2/XiaoMeili_0.10.0.9.2_update.zip",
+  "sha256": "3e7105179c974f91d93e897e1c32e4d52be9b91e9042dede447efceb0ca3bfc4",
+  "package_size": 266066444,
   "notes": [
-    "V0.10.0.9.1：深度资源诊断改为长时间真实聊天追踪，点击开始后正常和小美丽聊天，想结束时再次点击生成报告",
-    "诊断全程只旁观，不主动启停语音/大脑/TTS/白板，不发送模拟请求，不修改设置",
-    "每250ms记录 CPU/RAM/GPU/显存、相关进程、ASR/大脑/TTS/白板状态、线程和TTS队列",
-    "新增逐轮资源账本，可看到每轮对话前显存、峰值、结束显存和未回收增量",
-    "新增 >=256MB 与 >=512MB 显存跳变时间点，并记录跳变时的进程GPU与组件状态",
-    "报告不保存聊天原文、麦克风录音、API Key、长期记忆、养成库、昵称或截图",
-    "继续使用 NDM 作为更新首选下载器；真实连接检测和任务提交通过集成测试，失败自动回退内置下载器",
-    "NDM下载后仍校验文件大小、SHA-256和ZIP完整性；NDM源文件只复制，不移动或删除",
-    "FullSafe：只在受控 versions 目录创建新版本并切换 active.json；不删除、不移动、不递归清理任何用户文件，旧版本继续保留回滚"
+    "V0.10.0.9.2：修复长时间聊天时动画与Qt过渡对象堆积，QMovie不再长期缓存整支动画并在替换时显式释放",
+    "修复thinking状态自反馈：去重状态恢复，禁止state_changed反复向Qt事件队列追加thinking事件",
+    "云端TTS完成或打断后及时释放stream/tts/queue等会话资源，并增加播报尾音回声保护，降低小美丽听到自己声音的概率",
+    "“闭嘴 / 你给我闭嘴 / 你别说话了 / 别说了 / 安静点”等在ASR后、大脑前本地P0拦截；立即停止大脑、TTS、白板/字幕且不回答",
+    "NDM仍是更新首选下载器；25秒未出现本次文件或连续75秒无写入进度时立即回退内置HTTPS，正常持续下载不受短超时影响",
+    "NDM源文件仍只复制到小美丽受控目录，不移动、不删除；下载后继续校验文件大小、SHA-256与ZIP完整性",
+    "FullSafe：更新只创建新的受控versions目录并切换active.json；功能测试确认桌面、下载、文档、D盘、旧版本等哨兵文件均不被删除或修改",
+    "修复“打包完整原始源码工程”：当前版本精确SourceProject.zip已嵌入程序并同时发布到Release，同名文件不会被覆盖"
   ]
 }
