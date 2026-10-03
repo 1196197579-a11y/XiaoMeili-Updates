@@ -1,0 +1,218 @@
+name: Build and publish XiaoMeili v0.10.0.7
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/release-trigger-v01007/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xiaomeili-v01007-safe-release
+  cancel-in-progress: true
+
+jobs:
+  build-publish:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout update repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download verified V0.10.0.5 source baseline
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path "$PWD\base-download" | Out-Null
+          gh release download "v0.10.0.5" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.5_SourceProject.zip" --dir "$PWD\base-download"
+          if ($LASTEXITCODE -ne 0) { throw "Cannot download V0.10.0.5 source baseline" }
+          $zip = Join-Path $PWD "base-download\XiaoMeili_V0.10.0.5_SourceProject.zip"
+          $stage = Join-Path $env:RUNNER_TEMP "xm-v01007-source"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          Expand-Archive -LiteralPath $zip -DestinationPath $stage -Force
+          $main = Get-ChildItem -LiteralPath $stage -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py$' } | Select-Object -First 1
+          if (-not $main) { throw "V0.10.0.5 source main.py not found" }
+          $source = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $main.FullName))
+          if (-not (Test-Path (Join-Path $source "app\assets\update_helper.ps1"))) { throw "Safe updater helper missing in baseline" }
+          "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "SOURCE_ROOT=$source"
+
+      - name: Apply V0.10.0.7 cloned-voice overlay
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python "build\v01007\patch_v01007.py" "$env:SOURCE_ROOT"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.7 overlay failed" }
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\brain_dual.py" "$env:SOURCE_ROOT\app\src\cloud_support.py" "$env:SOURCE_ROOT\app\src\cloud_usage.py" "$env:SOURCE_ROOT\app\src\voice_dual.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.7 Python compile check failed" }
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $voice = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\voice_dual.py" -Raw
+          $usage = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\cloud_usage.py" -Raw
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0\.7"') { throw "Version verification failed" }
+          if ($main -notmatch 'qwen-audio-3\.1-tts-flash-bailian-6d3dea9f00b74622854b4394fa6119f1') { throw "Approved cloned Voice ID missing" }
+          if ($voice -notmatch 'qwen-audio-3\.1-tts-flash') { throw "Qwen-Audio TTS runtime missing" }
+          if ($voice -notmatch 'SpeechSynthesizer') { throw "Qwen-Audio streaming TTS SDK path missing" }
+          if ($usage -notmatch '本场' -or $usage -notmatch '本月') { throw "Cloud usage session/month display missing" }
+          if ($main -match '本场预算保护|硬上限') { throw "Budget protection must not be enabled" }
+          Write-Host "V0.10.0.7 cloned voice + cloud usage contract PASS"
+
+      - name: FullSafe updater gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $helper = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
+          foreach ($bad in @('/MIR','/PURGE','Remove-Item','robocopy.exe','Stop-Process')) {
+            if ($helper -match [regex]::Escape($bad)) { throw "SAFETY BLOCK: updater helper contains $bad" }
+          }
+          if ($main -notmatch 'latest_safe\.json') { throw "SAFETY BLOCK: safe update channel missing" }
+          if ($main -match 'target\s*=\s*Path\(sys\.executable\)\.parent') { throw "SAFETY BLOCK: unsafe install-root derivation" }
+          if ($helper -notmatch 'XIAOMEILI_INSTALL_ROOT_MARKER' -or $helper -notmatch 'PROTECTED_USER_PATHS') { throw "SAFETY BLOCK: install-root protections missing" }
+          if ($helper -notmatch 'LOCALAPPDATA' -or $helper -notmatch 'XiaoMeiliApp') { throw "SAFETY BLOCK: managed install root missing" }
+          Write-Host "V0.10.0.7 FullSafe no-delete updater gate PASS"
+
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check -r "$env:SOURCE_ROOT\app\requirements.txt"
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.10,<7" "dxcam>=0.0.5" "psutil>=6.0,<8"
+
+      - name: Build Windows XiaoMeili.exe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dist = Join-Path $PWD "out"
+          $pyi = @(
+            "--noconfirm", "--clean", "--windowed",
+            "--name", "XiaoMeili",
+            "--icon", "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico",
+            "--distpath", $dist,
+            "--workpath", "$PWD\pyi-work",
+            "--specpath", "$PWD\pyi-spec",
+            "--collect-all", "rapidocr",
+            "--collect-all", "onnxruntime",
+            "--collect-all", "soundfile",
+            "--collect-all", "sounddevice",
+            "--collect-all", "dxcam",
+            "--collect-all", "dashscope",
+            "--add-data", "$env:SOURCE_ROOT\app\assets;assets",
+            "$env:SOURCE_ROOT\app\src\main.py"
+          )
+          python -m PyInstaller @pyi
+          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+          $exe = Join-Path $dist "XiaoMeili\XiaoMeili.exe"
+          if (-not (Test-Path $exe)) { throw "XiaoMeili.exe missing" }
+          & $exe --runtime-self-test
+          if ($LASTEXITCODE -ne 0) { throw "Frozen runtime self-test failed" }
+          & $exe --settings-ui-self-test
+          if ($LASTEXITCODE -ne 0) { throw "Frozen settings UI self-test failed" }
+
+      - name: Reuse verified stable safe launcher from V0.10.0.5
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $d = Join-Path $env:RUNNER_TEMP "xm-old-update"
+          New-Item -ItemType Directory -Force -Path $d | Out-Null
+          gh release download "v0.10.0.5" --repo "${{ github.repository }}" --pattern "XiaoMeili_0.10.0.5_update.zip" --dir $d
+          if ($LASTEXITCODE -ne 0) { throw "Cannot download stable launcher source package" }
+          $x = Join-Path $env:RUNNER_TEMP "xm-old-update-expanded"
+          Expand-Archive -LiteralPath (Join-Path $d "XiaoMeili_0.10.0.5_update.zip") -DestinationPath $x -Force
+          $launcher = Get-ChildItem -LiteralPath $x -Recurse -File -Filter XiaoMeiliLauncher.exe | Select-Object -First 1
+          if (-not $launcher) { throw "Stable XiaoMeiliLauncher.exe missing" }
+          Copy-Item -LiteralPath $launcher.FullName -Destination "$PWD\out\XiaoMeili\XiaoMeiliLauncher.exe" -Force
+
+      - name: Create update ZIP and editable source bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $release = Join-Path $PWD "release"
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          $zip = Join-Path $release "XiaoMeili_0.10.0.7_update.zip"
+          Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $size = (Get-Item -LiteralPath $zip).Length
+          "UPDATE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SIZE=$size" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $sourceZip = Join-Path $release "XiaoMeili_V0.10.0.7_SourceProject.zip"
+          Compress-Archive -Path "$env:SOURCE_ROOT\*" -DestinationPath $sourceZip -CompressionLevel Optimal
+          "SOURCE_ZIP=$sourceZip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "V0.10.0.7 SHA256=$hash size=$size"
+
+      - name: Publish V0.10.0.7 release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          gh release view "v0.10.0.7" --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "v0.10.0.7" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --clobber --repo "${{ github.repository }}"
+            if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed" }
+            gh release edit "v0.10.0.7" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.7 | Cloned Voice + Cloud Usage" --notes "Cloud TTS switches to Qwen-Audio-3.1-TTS-Flash with the approved XiaoMeili cloned voice. Adds session/month cloud usage estimates, keeps Qwen3-8B cloud brain and all local fallbacks, and preserves FullSafe no-delete updating."
+          } else {
+            gh release create "v0.10.0.7" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "${{ github.repository }}" --title "XiaoMeili V0.10.0.7 | Cloned Voice + Cloud Usage" --notes "Qwen-Audio cloned voice, session/month cloud usage estimates, unchanged Qwen3-8B cloud brain, retained local fallbacks, FullSafe no-delete update."
+          }
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.7 release publish failed" }
+
+      - name: Verify public update asset before switching manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.7/XiaoMeili_0.10.0.7_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.10.0.7_verify.zip"
+          Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
+          $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($remoteHash -ne $env:UPDATE_SHA256) { throw "Public release hash mismatch" }
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($verify)
+          try {
+            if (-not ($archive.Entries | Where-Object { $_.FullName -ieq "XiaoMeili.exe" } | Select-Object -First 1)) { throw "XiaoMeili.exe missing in update ZIP" }
+            if (-not ($archive.Entries | Where-Object { $_.FullName -ieq "XiaoMeiliLauncher.exe" } | Select-Object -First 1)) { throw "XiaoMeiliLauncher.exe missing in update ZIP" }
+            $ver = $archive.Entries | Where-Object { $_.FullName -ieq "_internal/assets/VERSION.txt" -or $_.FullName -ieq "assets/VERSION.txt" } | Select-Object -First 1
+            if (-not $ver) { throw "VERSION.txt missing in update ZIP" }
+          } finally { $archive.Dispose() }
+          Write-Host "Public V0.10.0.7 update asset verified"
+
+      - name: Switch latest_safe.json to V0.10.0.7
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v0.10.0.7/XiaoMeili_0.10.0.7_update.zip"
+          $manifest = [ordered]@{
+            protocol = 1
+            version = "0.10.0.7"
+            package_url = $url
+            sha256 = $env:UPDATE_SHA256
+            package_size = [int64]$env:UPDATE_SIZE
+            notes = @(
+              'V0.10.0.7：云端TTS切换为 Qwen-Audio-3.1-TTS-Flash，并使用已确认的小美丽复刻音色',
+              'Qwen3-8B云端大脑保持不变；Fun-ASR、画面识别、白板、高光等本地链路保持不变',
+              '继续保留本地Qwen3-8B与本地Qwen3-TTS回退，不删除现有模型和用户数据',
+              '系统资源页新增本场直播和本月累计云端用量/预估费用，不启用预算保护',
+              '沿用现有北京区专属地址和本机加密API Key，无需重新填写',
+              '启动时不自动发送付费大脑测试，也不发送假文字预热TTS',
+              '继续遵守FullSafe：版本目录更新、保留回滚，不删除、不移动、不镜像清理用户文件'
+            )
+          }
+          git config user.name "XiaoMeili Update Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin main
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "latest_safe.json" -Encoding utf8
+          git add latest_safe.json
+          git commit -m "Publish XiaoMeili v0.10.0.7 safe manifest"
+          git push origin main
