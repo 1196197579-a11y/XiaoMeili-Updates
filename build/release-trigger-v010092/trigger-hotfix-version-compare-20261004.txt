@@ -1,0 +1,1 @@
+Rebuild XiaoMeili V0.10.0.9.2 with five-part version comparator, no-cache update checks, corrected update-note labeling, and legacy V0.10.0.9.1 bootstrap manifest.
