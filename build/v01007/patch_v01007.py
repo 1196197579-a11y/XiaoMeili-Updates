@@ -58,7 +58,7 @@ def main():
     if not mainp.is_file(): raise SystemExit(f'unexpected SOURCE_ROOT: {root}')
     if 'APP_VERSION = "0.10.0.5"' not in mainp.read_text(encoding='utf-8-sig'):
         raise SystemExit('baseline must be V0.10.0.5')
-    patch=payload('main_patch.zlib.b64').decode('utf-8')
+    patch=zlib.decompress(base64.b64decode(''.join((HERE/f'main_patch.part{i}').read_text(encoding='ascii').strip() for i in range(1,5)))).decode('utf-8')
     mainp.write_text(apply_unified(mainp.read_text(encoding='utf-8-sig'), patch), encoding='utf-8', newline='\n')
     for rel,name in PAYLOADS.items():
         target=(root/rel).resolve(); target.relative_to(root)
