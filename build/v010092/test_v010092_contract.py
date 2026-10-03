@@ -17,6 +17,7 @@ def main():
         combined += '\n' + text
     required = [
         'APP_VERSION = "0.10.0.9.2"',
+        'str(value or ""))[:8]', 'Cache-Control', '更新源版本 V{version}',
         'QMovie.CacheMode.CacheNone', '_release_movie_slot', 'deleteLater()',
         '_speech_thinking_restore_pending', '_is_hard_silence_command', '_hard_silence_now',
         '你给我闭嘴', '你别说话了', '先别说话',
