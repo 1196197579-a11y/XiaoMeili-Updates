@@ -1,0 +1,260 @@
+name: Build and publish XiaoMeili v0.10.0.9
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/release-trigger-v01009/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xiaomeili-v01009-safe-release
+  cancel-in-progress: true
+
+jobs:
+  build-publish:
+    runs-on: windows-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout update repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download verified V0.10.0.8 source baseline
+        shell: pwsh
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path "$PWD\base-download" | Out-Null
+          gh release download "v0.10.0.8" --repo "\${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.8_SourceProject.zip" --dir "$PWD\base-download"
+          if ($LASTEXITCODE -ne 0) { throw "Cannot download V0.10.0.8 source baseline" }
+          $zip = Join-Path $PWD "base-download\XiaoMeili_V0.10.0.8_SourceProject.zip"
+          $stage = Join-Path $env:RUNNER_TEMP "xm-v01009-source"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          Expand-Archive -LiteralPath $zip -DestinationPath $stage -Force
+          $main = Get-ChildItem -LiteralPath $stage -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py$' } | Select-Object -First 1
+          if (-not $main) { throw "V0.10.0.8 source main.py not found" }
+          $source = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $main.FullName))
+          if (-not (Test-Path (Join-Path $source "app\src\native_updater.py"))) { throw "Native safe updater missing in baseline" }
+          if (-not (Test-Path (Join-Path $source "app\src\ndm_bridge.py"))) { throw "NDM bridge missing in baseline" }
+          if (-not (Test-Path (Join-Path $source "app\assets\update_helper.ps1"))) { throw "Safe updater helper missing in baseline" }
+          "SOURCE_ROOT=$source" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "SOURCE_ROOT=$source"
+
+      - name: Apply V0.10.0.9 patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python "build\v01009\patch_v01009.py" "$env:SOURCE_ROOT" "$PWD"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.9 patch failed" }
+          python -m py_compile "$env:SOURCE_ROOT\app\src\main.py" "$env:SOURCE_ROOT\app\src\resource_diagnostic_v01009.py" "$env:SOURCE_ROOT\app\src\ndm_bridge.py"
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.9 Python compile check failed" }
+
+      - name: V0.10.0.9 feature contract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $diag = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\resource_diagnostic_v01009.py" -Raw
+          $ndm = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\ndm_bridge.py" -Raw
+
+          if ($main -notmatch 'APP_VERSION\s*=\s*"0\.10\.0\.9"') { throw "Version verification failed" }
+          if ($main -notmatch 'resource_diagnostic_v01009') { throw "V0.10.0.9 diagnostic module not wired" }
+          if ($main -match 'GitHub 更新包自动使用小美丽内置下载器') { throw "Old GitHub NDM bypass still present" }
+          if ($main -notmatch 'NDM is the preferred downloader for every update URL') { throw "NDM preferred rule missing" }
+          if ($main -notmatch 'ndm_test_connection') { throw "NDM runtime connection test missing" }
+          if ($main -notmatch 'ndm_download_and_import') { throw "NDM download call missing" }
+
+          foreach ($required in @(
+            'waiting_real_match','real_match','real_match_coverage.csv','vram_jump_events.csv',
+            'process_gpu.csv','vision_timeline.csv','windows-gpu-counter',
+            'REAL_MATCH_WAIT_SECONDS','REAL_MATCH_MAX_SECONDS'
+          )) {
+            if ($diag -notmatch [regex]::Escape($required)) { throw "Diagnostic contract missing: $required" }
+          }
+          if ($diag -notmatch '0\.25') { throw "250ms timeline sampling contract missing" }
+          if ($diag -notmatch '不保存用户聊天' -or $diag -notmatch '游戏截图' -or $diag -notmatch '麦克风录音') {
+            throw "Diagnostic privacy contract missing"
+          }
+          if ($ndm -notmatch 'ws://127\.0\.0\.1:10007/download') { throw "NDM endpoint contract missing" }
+          if ($ndm -notmatch 'neatextension\.v1') { throw "NDM protocol contract missing" }
+          if ($ndm -notmatch 'shutil\.copy2') { throw "NDM safe copy import missing" }
+          Write-Host "V0.10.0.9 feature contract PASS"
+
+      - name: NDM bridge integration test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m pip install --disable-pip-version-check "websocket-client>=1.8,<2" "websockets==12.0"
+          python "build\v01009\test_ndm_bridge_mock.py" "$env:SOURCE_ROOT"
+          if ($LASTEXITCODE -ne 0) { throw "NDM integration test failed" }
+
+      - name: FullSafe no-delete updater gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $main = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\main.py" -Raw
+          $native = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\native_updater.py" -Raw
+          $helper = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\assets\update_helper.ps1" -Raw
+          $ndm = Get-Content -LiteralPath "$env:SOURCE_ROOT\app\src\ndm_bridge.py" -Raw
+
+          foreach ($bad in @('/MIR','/PURGE','robocopy.exe','Stop-Process')) {
+            if ($helper -match [regex]::Escape($bad)) { throw "SAFETY BLOCK: updater helper contains $bad" }
+          }
+          if ($helper -match 'Remove-Item') { throw "SAFETY BLOCK: updater helper may delete files" }
+          foreach ($bad in @('unlink\(','rmtree\(','os\.remove','shutil\.rmtree')) {
+            if ($native -match $bad) { throw "SAFETY BLOCK: native updater contains deletion primitive $bad" }
+          }
+          if ($native -notmatch 'NO_AUTOMATIC_FILE_DELETION') { throw "SAFETY BLOCK: no-delete policy missing" }
+          if ($native -notmatch 'versions') { throw "SAFETY BLOCK: version-directory install missing" }
+          if ($main -notmatch 'latest_safe\.json') { throw "SAFETY BLOCK: safe update channel missing" }
+          if ($main -match 'target\s*=\s*Path\(sys\.executable\)\.parent') { throw "SAFETY BLOCK: unsafe install-root derivation" }
+          if ($ndm -notmatch 'user-owned NDM source is never moved or deleted') { throw "SAFETY BLOCK: NDM source retention contract missing" }
+          if ($ndm -match 'shutil\.move|os\.remove|unlink\(|rmtree\(') { throw "SAFETY BLOCK: NDM bridge contains file deletion/move primitive" }
+          Write-Host "V0.10.0.9 FullSafe no-delete updater gate PASS"
+
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check -r "$env:SOURCE_ROOT\app\requirements.txt"
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.10,<7" "dxcam>=0.0.5" "psutil>=6.0,<8"
+
+      - name: Build Windows XiaoMeili.exe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dist = Join-Path $PWD "out"
+          $pyi = @(
+            "--noconfirm", "--clean", "--windowed",
+            "--name", "XiaoMeili",
+            "--icon", "$env:SOURCE_ROOT\app\assets\xiaomeili_icon.ico",
+            "--distpath", $dist,
+            "--workpath", "$PWD\pyi-work",
+            "--specpath", "$PWD\pyi-spec",
+            "--collect-all", "rapidocr",
+            "--collect-all", "onnxruntime",
+            "--collect-all", "soundfile",
+            "--collect-all", "sounddevice",
+            "--collect-all", "dxcam",
+            "--collect-all", "dashscope",
+            "--collect-all", "websocket",
+            "--add-data", "$env:SOURCE_ROOT\app\assets;assets",
+            "$env:SOURCE_ROOT\app\src\main.py"
+          )
+          python -m PyInstaller @pyi
+          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+          $exe = Join-Path $dist "XiaoMeili\XiaoMeili.exe"
+          if (-not (Test-Path $exe)) { throw "XiaoMeili.exe missing" }
+          & $exe --runtime-self-test
+          if ($LASTEXITCODE -ne 0) { throw "Frozen runtime self-test failed" }
+          & $exe --settings-ui-self-test
+          if ($LASTEXITCODE -ne 0) { throw "Frozen settings UI self-test failed" }
+
+      - name: Reuse verified stable safe launcher from V0.10.0.8
+        shell: pwsh
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $d = Join-Path $env:RUNNER_TEMP "xm-old-update"
+          New-Item -ItemType Directory -Force -Path $d | Out-Null
+          gh release download "v0.10.0.8" --repo "\${{ github.repository }}" --pattern "XiaoMeili_0.10.0.8_update.zip" --dir $d
+          if ($LASTEXITCODE -ne 0) { throw "Cannot download stable launcher package" }
+          $x = Join-Path $env:RUNNER_TEMP "xm-old-update-expanded"
+          Expand-Archive -LiteralPath (Join-Path $d "XiaoMeili_0.10.0.8_update.zip") -DestinationPath $x -Force
+          $launcher = Get-ChildItem -LiteralPath $x -Recurse -File -Filter XiaoMeiliLauncher.exe | Select-Object -First 1
+          if (-not $launcher) { throw "Stable XiaoMeiliLauncher.exe missing" }
+          Copy-Item -LiteralPath $launcher.FullName -Destination "$PWD\out\XiaoMeili\XiaoMeiliLauncher.exe" -Force
+
+      - name: Create update ZIP and editable source bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $release = Join-Path $PWD "release"
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          $zip = Join-Path $release "XiaoMeili_0.10.0.9_update.zip"
+          Compress-Archive -Path "$PWD\out\XiaoMeili\*" -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $size = (Get-Item -LiteralPath $zip).Length
+          "UPDATE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "UPDATE_SIZE=$size" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $sourceZip = Join-Path $release "XiaoMeili_V0.10.0.9_SourceProject.zip"
+          Compress-Archive -Path "$env:SOURCE_ROOT\*" -DestinationPath $sourceZip -CompressionLevel Optimal
+          "SOURCE_ZIP=$sourceZip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "V0.10.0.9 SHA256=$hash size=$size"
+
+      - name: Publish V0.10.0.9 release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          gh release view "v0.10.0.9" --repo "\${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "v0.10.0.9" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --clobber --repo "\${{ github.repository }}"
+            if ($LASTEXITCODE -ne 0) { throw "Release asset replacement failed" }
+            gh release edit "v0.10.0.9" --repo "\${{ github.repository }}" --title "XiaoMeili V0.10.0.9 | Real Match Diagnostic + NDM Preferred" --notes "Adds one-click real-match resource collection: click once, play one normal VALORANT match, then XiaoMeili automatically runs the remaining module tests and exports a redacted ZIP. Adds VRAM-jump correlation and WDDM per-process GPU-memory fallback. Restores NDM as the preferred updater for GitHub Release packages with live connection preflight, SHA-256/ZIP verification, and built-in downloader fallback. FullSafe no-delete update."
+          } else {
+            gh release create "v0.10.0.9" "$env:UPDATE_ZIP" "$env:SOURCE_ZIP" --repo "\${{ github.repository }}" --title "XiaoMeili V0.10.0.9 | Real Match Diagnostic + NDM Preferred" --notes "Real-match resource collection + automatic post-match module tests + VRAM jump tracing + NDM-preferred updating with fallback. FullSafe no-delete."
+          }
+          if ($LASTEXITCODE -ne 0) { throw "V0.10.0.9 release publish failed" }
+
+      - name: Verify public update asset before switching manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $url = "https://github.com/\${{ github.repository }}/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip"
+          $verify = Join-Path $env:RUNNER_TEMP "XiaoMeili_0.10.0.9_verify.zip"
+          Invoke-WebRequest -Uri $url -OutFile $verify -UseBasicParsing
+          $remoteHash = (Get-FileHash -LiteralPath $verify -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($remoteHash -ne $env:UPDATE_SHA256) { throw "Public release hash mismatch" }
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($verify)
+          try {
+            if (-not ($archive.Entries | Where-Object { $_.FullName -ieq "XiaoMeili.exe" } | Select-Object -First 1)) { throw "XiaoMeili.exe missing in update ZIP" }
+            if (-not ($archive.Entries | Where-Object { $_.FullName -ieq "XiaoMeiliLauncher.exe" } | Select-Object -First 1)) { throw "XiaoMeiliLauncher.exe missing in update ZIP" }
+            $ver = $archive.Entries | Where-Object { $_.FullName -ieq "_internal/assets/VERSION.txt" -or $_.FullName -ieq "assets/VERSION.txt" } | Select-Object -First 1
+            if (-not $ver) { throw "VERSION.txt missing in update ZIP" }
+          } finally { $archive.Dispose() }
+          Write-Host "Public V0.10.0.9 update asset verified"
+
+      - name: Switch latest_safe.json to V0.10.0.9
+        shell: pwsh
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://github.com/\${{ github.repository }}/releases/download/v0.10.0.9/XiaoMeili_0.10.0.9_update.zip"
+          $manifest = [ordered]@{
+            protocol = 1
+            version = "0.10.0.9"
+            package_url = $url
+            sha256 = $env:UPDATE_SHA256
+            package_size = [int64]$env:UPDATE_SIZE
+            notes = @(
+              'V0.10.0.9：一键深度资源诊断新增真实对局实战采集阶段，点击后切回 VALORANT 正常打一局即可',
+              '检测到真实对局HUD后自动记录整局 CPU/RAM/GPU/显存、进程树、屏幕采集与识别事件，赛后再自动完成其余模块测试',
+              '新增真实识别覆盖表，未在本局发生的事件明确标记“未观察到”，不再把登记模块当成已测试',
+              '新增显存突增事件追踪，以及 Windows/WDDM 逐进程显存计数器回退',
+              '恢复 NDM 为更新首选下载器，GitHub Release 不再强制绕过 NDM；先真实检测 NDM 连接，再发送下载任务',
+              'NDM 下载完成后继续执行文件大小、SHA-256 与 ZIP 完整性校验；NDM 不可用或失败时自动回退内置下载器',
+              '保持现有复刻音色、Qwen3-8B云端大脑、Fun-ASR和“闭嘴”即时打断逻辑',
+              'FullSafe：只创建全新的 versions 版本目录并切换 active.json；不删除、不移动、不镜像清理任何用户文件，旧版本继续保留回滚'
+            )
+          }
+          git config user.name "XiaoMeili Update Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin main
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "latest_safe.json" -Encoding utf8
+          git add latest_safe.json
+          git commit -m "Publish XiaoMeili v0.10.0.9 safe manifest"
+          git push origin main
