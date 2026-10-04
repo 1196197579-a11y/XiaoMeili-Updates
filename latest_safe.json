@@ -2,8 +2,8 @@
   "protocol": 1,
   "version": "0.10.0.9.2",
   "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.2/XiaoMeili_0.10.0.9.2_update.zip",
-  "sha256": "3e7105179c974f91d93e897e1c32e4d52be9b91e9042dede447efceb0ca3bfc4",
-  "package_size": 266066444,
+  "sha256": "4b325f0d7dcf5eb8eefe92567f0d0af16dd9c8437d7be1e5b5274eda60279c87",
+  "package_size": 266068409,
   "notes": [
     "V0.10.0.9.2：修复长时间聊天时动画与Qt过渡对象堆积，QMovie不再长期缓存整支动画并在替换时显式释放",
     "修复thinking状态自反馈：去重状态恢复，禁止state_changed反复向Qt事件队列追加thinking事件",
