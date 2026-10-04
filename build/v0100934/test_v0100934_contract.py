@@ -176,7 +176,7 @@ def main():
       creationflags=flags,close_fds=True)
     parent.wait(timeout=10)
     wd_out,wd_err=wd.communicate(timeout=35)
-    zips=sorted(desk.glob("小美丽_资源测试_独立看门狗崩溃报告_*.zip"))
+    zips=sorted(desk.glob("XiaoMeili_ResourceDiagnostic_Watchdog_CrashReport_*.zip"))
     if not zips:
         dbg=wd_session/"watchdog_debug.jsonl"
         detail=dbg.read_text(encoding="utf-8",errors="replace")[-4000:] if dbg.is_file() else "<no watchdog debug>"
