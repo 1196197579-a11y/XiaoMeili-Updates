@@ -12,6 +12,7 @@ def wait_for(path, timeout=8.0):
 
 def main():
     root=Path(sys.argv[1]).resolve()
+    monitor_exe=Path(sys.argv[2]).resolve() if len(sys.argv)>2 else None
     src=root/"app"/"src"
     main_p=src/"main.py"
     diag_p=src/"resource_diagnostic_v0100934.py"
@@ -58,8 +59,8 @@ def main():
     # ----- normal stop path -----
     session=tmp/"session-normal"; session.mkdir()
     host=subprocess.Popen([sys.executable,"-c","import time; time.sleep(12)"])
-    mon=subprocess.Popen([
-        sys.executable,str(mon_p),
+    mon_cmd=([str(monitor_exe)] if monitor_exe else [sys.executable,str(mon_p)])
+    mon=subprocess.Popen(mon_cmd+[
         "--pid",str(host.pid),"--session",str(session),"--desktop",str(desktop),
         "--app-version","0.10.0.9.4.0"
     ],env=env)
@@ -97,8 +98,7 @@ def main():
     # ----- host crash path -----
     session2=tmp/"session-crash"; session2.mkdir()
     host2=subprocess.Popen([sys.executable,"-c","import time; time.sleep(1.5)"])
-    mon2=subprocess.Popen([
-        sys.executable,str(mon_p),
+    mon2=subprocess.Popen(mon_cmd+[
         "--pid",str(host2.pid),"--session",str(session2),"--desktop",str(desktop),
         "--app-version","0.10.0.9.4.0"
     ],env=env)
