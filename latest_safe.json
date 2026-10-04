@@ -1,12 +1,12 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.3.5",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3.5/XiaoMeili_0.10.0.9.3.5_update.zip",
-  "sha256": "fb01d2bfd2bc16a1af3f0ac63d1bfc0518a764e0617c4c9686fdb1a634dd798a",
-  "package_size": 266452342,
+  "version": "0.10.0.9.3.6",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3.6/XiaoMeili_0.10.0.9.3.6_update.zip",
+  "sha256": "9115949b80400bbb566bf2082ac830bbe4cc92899b137bc5c9116bbde53cfb92",
+  "package_size": 266454711,
   "notes": [
-    "V0.10.0.9.3.5：Crash-Safe Diagnostic 3.0 预检修复：修正 hard_silence 主线程动作路由到错误对象的问题",
-    "闭嘴预检现在从Qt主线程通过SpeechInputService.utterance_ready注入识别结果，走真实AppController P0硬打断链路",
+    "V0.10.0.9.3.6：Stable Resource Diagnostic 3.1：资源测试不再伪造“闭嘴”ASR口令，避免在speech_state=stopped的非法测试状态触发原生闪退",
+    "第8阶段和启动前预检改为安全TTS/白板中止回收，仍测试资源释放，但不再强制改变SpeechInputService状态",
     "正式长测前增加约10秒高风险预检；若TTS→闭嘴→白板关闭链路失败会立即停止，不再先跑十分钟",
     "新增独立隐藏Watchdog：若XiaoMeili.exe测试期间闪退，自动抓Windows Application/WER错误并在桌面生成闪退监控ZIP",
     "继续实时追加timeline/events/rounds/status，主程序即使异常退出也保留已完成数据",
