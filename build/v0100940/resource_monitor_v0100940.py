@@ -56,6 +56,8 @@ def hidden_kwargs():
     return kw
 
 def windows_events_text(minutes=8):
+    if os.environ.get("XIAOMEILI_MONITOR_SKIP_WINDOWS_EVENTS") == "1":
+        return "Windows event query skipped by test environment.\n"
     if os.name != "nt":
         return ""
     cmd = [
