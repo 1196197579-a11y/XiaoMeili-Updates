@@ -95,12 +95,61 @@ old = '''        self.session_dir=self.data_root/"diagnostics"/"resource"/f"v010
 new = '''        self.session_dir=self.data_root/"diagnostics"/"resource"/f"v0100933_{token}"\n        self.session_dir.mkdir(parents=True,exist_ok=False)\n        self._open_live_journals()\n        wav_path=None; ok=True; err=""\n'''
 d = rep(d, old, new, 'open live journals')
 
-# Critical order fix: stop sampling, write the desktop report FIRST, and only then perform
-# child-process cleanup. Do not call nvmlShutdown during app lifetime because a native DLL
-# teardown fault would bypass Python exception handling and kill the whole application.
-old = '''        finally:\n            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)\n            try: setattr(self.brain,"_resource_diag_no_persist",False)\n            except Exception: pass\n            try: self.board_close_requested.emit(); self.state_requested.emit("idle")\n            except Exception: pass\n            self._sampling=False\n            self._gpu_stop.set()\n            try:\n                if sampler.is_alive(): sampler.join(timeout=4)\n            except Exception: pass\n            try:\n                if gpu_thread.is_alive(): gpu_thread.join(timeout=4)\n            except Exception: pass\n            if self._nvml_ready and pynvml is not None:\n                try: pynvml.nvmlShutdown()\n                except Exception: pass\n            self._nvml_ready=False; self._nvml_handle=None\n        try:\n            self._set_stage("report",99,"正在生成脱敏诊断 ZIP")\n            report=self._write_reports()\n            if ok:\n                self._progress(100,"测试完成：桌面已生成诊断ZIP")\n                msg=f"诊断完成：{report}"\n            else:\n                self._progress(90,"测试中止：已生成故障诊断ZIP")\n                msg=f"测试中止，已生成故障报告：{report}\\n{err}"\n            self.finished.emit(ok,str(report),msg)\n        except Exception as exc:\n            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")\n        finally:\n            self._disconnect_service_signals()\n            self._running=False\n'''
-new = '''        finally:\n            try: setattr(self.brain,"_resource_diag_no_persist",False)\n            except Exception: pass\n            try: self.board_close_requested.emit(); self.state_requested.emit("idle")\n            except Exception: pass\n            self._sampling=False\n            self._gpu_stop.set()\n            try:\n                if sampler.is_alive(): sampler.join(timeout=6)\n            except Exception: pass\n            try:\n                if gpu_thread.is_alive(): gpu_thread.join(timeout=6)\n            except Exception: pass\n            # Intentionally keep NVML initialized. Do not call pynvml.nvmlShutdown() here.\n            # The diagnostic must never risk a native DLL teardown before its report is saved.\n        report = None\n        try:\n            self._set_stage("report",99,"正在生成脱敏诊断 ZIP")\n            self._journal_status("reporting", "report")\n            self._close_live_journals()\n            report=self._write_reports()\n            try:\n                (self.session_dir / "finalized.flag").write_text(str(report), encoding="utf-8")\n            except Exception:\n                pass\n            if ok:\n                self._progress(100,"测试完成：桌面已生成诊断ZIP")\n                msg=f"诊断完成：{report}"\n            else:\n                self._progress(90,"测试中止：已生成故障诊断ZIP")\n                msg=f"测试中止，已生成故障报告：{report}\\n{err}"\n            self.finished.emit(ok,str(report),msg)\n        except Exception as exc:\n            self._journal_status("report_failed", "report", error=f"{type(exc).__name__}: {exc}")\n            self._close_live_journals()\n            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")\n        finally:\n            # Riskier child-process/native cleanup happens only after report generation.\n            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)\n            self._speech_proc=None; self._combined_speech_proc=None\n            self._disconnect_service_signals()\n            self._running=False\n'''
-d = rep(d, old, new, 'crash-safe finalization order')
+# Critical order fix: locate the actual V0.10.0.9.3.2 _run() tail by
+# semantic markers instead of one giant whitespace-sensitive literal.
+run_pos = d.index('    def _run(self):\n')
+terminate_line = '            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)\n'
+term_pos = d.index(terminate_line, run_pos)
+cleanup_start = d.rfind('        finally:\n', run_pos, term_pos + 1)
+if cleanup_start < 0:
+    raise RuntimeError('outer diagnostic finally block not found')
+end_marker = '            self._running=False\n'
+cleanup_end = d.index(end_marker, term_pos) + len(end_marker)
+
+new_tail = '''        finally:
+            try: setattr(self.brain,"_resource_diag_no_persist",False)
+            except Exception: pass
+            try: self.board_close_requested.emit(); self.state_requested.emit("idle")
+            except Exception: pass
+            self._sampling=False
+            self._gpu_stop.set()
+            try:
+                if sampler.is_alive(): sampler.join(timeout=6)
+            except Exception: pass
+            try:
+                if gpu_thread.is_alive(): gpu_thread.join(timeout=6)
+            except Exception: pass
+            # Keep NVML initialized for the application lifetime. Explicit native
+            # teardown is deliberately avoided before/after diagnostic reporting.
+        report = None
+        try:
+            self._set_stage("report",99,"正在生成脱敏诊断 ZIP")
+            self._journal_status("reporting", "report")
+            self._close_live_journals()
+            report=self._write_reports()
+            try:
+                (self.session_dir / "finalized.flag").write_text(str(report), encoding="utf-8")
+            except Exception:
+                pass
+            if ok:
+                self._progress(100,"测试完成：桌面已生成诊断ZIP")
+                msg=f"诊断完成：{report}"
+            else:
+                self._progress(90,"测试中止：已生成故障诊断ZIP")
+                msg=f"测试中止，已生成故障报告：{report}\\n{err}"
+            self.finished.emit(ok,str(report),msg)
+        except Exception as exc:
+            self._journal_status("report_failed", "report", error=f"{type(exc).__name__}: {exc}")
+            self._close_live_journals()
+            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")
+        finally:
+            # Riskier child-process cleanup happens only after report generation.
+            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)
+            self._speech_proc=None; self._combined_speech_proc=None
+            self._disconnect_service_signals()
+            self._running=False
+'''
+d = d[:cleanup_start] + new_tail + d[cleanup_end:]
 
 # Ensure any journal handles are closed if _write_reports itself exits unexpectedly.
 # No explicit NVML shutdown is allowed in the final diagnostic module.
@@ -119,7 +168,7 @@ for token in [
     'APP_VERSION = "0.10.0.9.3.3"', 'resource_diagnostic_v0100933',
     'recover_interrupted_resource_diagnostics', 'live_timeline.jsonl', 'live_events.jsonl',
     'live_rounds.jsonl', 'live_status.jsonl', 'finalized.flag',
-    'Do not call pynvml.nvmlShutdown()', '测试完成：桌面已生成诊断ZIP'
+    'Riskier child-process cleanup happens only after report generation.', '测试完成：桌面已生成诊断ZIP'
 ]:
     if token not in combined:
         raise RuntimeError('contract missing: ' + token)
