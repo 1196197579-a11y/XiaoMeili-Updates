@@ -155,18 +155,25 @@ new=r'''        flags=(getattr(subprocess,"CREATE_NO_WINDOW",0)
 d=rep(d,old,new,'detached watchdog')
 
 # Exclude the diagnostic watchdog from XiaoMeili resource totals.
-old='''        procs = [root]
-        try:
-            procs.extend(root.children(recursive=True))
+# V0.10.0.9.3.1 uses persistent psutil handles, so patch the current process
+# walker semantically instead of relying on the older "procs=[root]" shape.
+proc_start=d.index('    def _process_rows(self):\n')
+proc_end=d.index('    @staticmethod\n    def _qsize',proc_start)
+proc=d[proc_start:proc_end]
+needle='''            try:
+                current.extend(root.children(recursive=True))
+            except Exception:
+                pass
         except Exception:
-            pass
+            return []
         rows = []
 '''
-new='''        procs = [root]
-        try:
-            procs.extend(root.children(recursive=True))
+repl='''            try:
+                current.extend(root.children(recursive=True))
+            except Exception:
+                pass
         except Exception:
-            pass
+            return []
         ignored=set()
         try:
             if self._watchdog_proc is not None:
@@ -175,10 +182,13 @@ new='''        procs = [root]
                 ignored.update(x.pid for x in wp.children(recursive=True))
         except Exception:
             pass
-        procs=[p for p in procs if p.pid not in ignored]
+        current=[p for p in current if int(p.pid) not in ignored]
         rows = []
 '''
-d=rep(d,old,new,'exclude watchdog resources')
+if needle not in proc:
+    raise RuntimeError("current process_rows shape missing")
+proc=proc.replace(needle,repl,1)
+d=d[:proc_start]+proc+d[proc_end:]
 
 # Architecture/safety contracts.
 if '_main_action("hard_silence"' in d:
