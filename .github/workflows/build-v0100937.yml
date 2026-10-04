@@ -1,0 +1,29 @@
+name: Build and publish XiaoMeili v0.10.0.9.3.7
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/release-trigger-v0100937/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xiaomeili-v0100937-safe-release
+  cancel-in-progress: true
+
+jobs:
+  build-publish:
+    runs-on: windows-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and publish V0.10.0.9.3.7
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pwsh -NoProfile -File "build/v0100937/release_v0100937.ps1"
