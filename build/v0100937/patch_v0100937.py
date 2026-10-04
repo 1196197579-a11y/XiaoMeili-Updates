@@ -99,14 +99,14 @@ d=d.replace('8/10 TTS/白板中止回收：不伪造ASR口令，不触碰输入�
             '8/10 TTS自然播放回收：3轮自然播完→白板关闭→资源回落')
 
 old=r'''$Start = Get-Date
-while ($true) {
-  if (Test-Path (Join-Path $Session 'finalized.flag')) { exit 0 }
+while ($true) {{
+  if (Test-Path (Join-Path $Session 'finalized.flag')) {{ exit 0 }}
 '''
 new=r'''$Start = Get-Date
 $ready = Join-Path $Session 'watchdog_ready.flag'
 Set-Content -LiteralPath $ready -Value ((Get-Date).ToString('o')) -Encoding UTF8
-while ($true) {
-  if (Test-Path (Join-Path $Session 'finalized.flag')) { exit 0 }
+while ($true) {{
+  if (Test-Path (Join-Path $Session 'finalized.flag')) {{ exit 0 }}
 '''
 d=rep(d,old,new,'watchdog ready flag')
 
