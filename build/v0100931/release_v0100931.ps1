@@ -27,6 +27,8 @@ $Source = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $Main.FullN
 Write-Host "[2/12] Apply V0.10.0.9.3.1 patch and contracts"
 python "build\v0100931\patch_v0100931.py" $Source $Root
 if ($LASTEXITCODE -ne 0) { throw "patch failed" }
+python -m pip install --disable-pip-version-check "psutil>=6,<8"
+if ($LASTEXITCODE -ne 0) { throw "psutil contract dependency install failed" }
 python "build\v0100931\test_v0100931_contract.py" $Source
 if ($LASTEXITCODE -ne 0) { throw "V0.10.0.9.3.1 contract failed" }
 python "build\v010092\test_ndm_fast_fallback_v010092.py" $Source
