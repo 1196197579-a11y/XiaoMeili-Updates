@@ -1,17 +1,17 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.3.3",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3.3/XiaoMeili_0.10.0.9.3.3_update.zip",
-  "sha256": "3c4a571ae09ca631fee06f8d5b819c784d3522edbf33c33ba1c2da99065da371",
-  "package_size": 266386228,
+  "version": "0.10.0.9.3.4",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3.4/XiaoMeili_0.10.0.9.3.4_update.zip",
+  "sha256": "a58a4b99f3c070d30882ee3667da0da38b1d02f6bd938e871334e2b30967ef7f",
+  "package_size": 266460850,
   "notes": [
-    "V0.10.0.9.3.3：修复完整资源测试结束后主程序可能在报告生成前直接退出、导致桌面无报告的问题",
-    "诊断结束改为先生成桌面ZIP、再执行ASR子进程等清理；即使后续清理异常，报告也已经落盘",
-    "取消诊断结束时主动调用 pynvml.nvmlShutdown()，避免原生NVML DLL退出路径在报告前造成进程级崩溃",
-    "新增崩溃安全实时日志：timeline/events/rounds/status 持续追加写入受控诊断目录，异常退出也能保留大部分数据",
-    "新版启动会自动恢复上次中断的诊断并在桌面生成“自动恢复”ZIP；兼容恢复V0.10.0.9.3.2遗留speech诊断日志",
-    "自动恢复只复制安全诊断文件，不删除、不移动、不覆盖任何原始文件",
-    "继续保留NVML无黑框GPU/显存采集、真实CPU、稳定250ms、WAV/ASR、30轮聊天、闭嘴、离线识别、综合满载和90秒回落",
+    "V0.10.0.9.3.4：一键深度资源测试升级为 Crash-Safe Diagnostic 3.0，重点修复闭嘴阶段的跨线程竞态",
+    "Brain/TTS/Speech/Pet 的所有状态修改都通过 Qt.QueuedConnection 回到GUI主线程串行执行；诊断后台线程不再直接 voice.speak / brain.ask / utterance_ready.emit",
+    "正式长测前增加高风险 TTS→闭嘴→白板关闭预检，若预检失败会在约10秒内停止，不再让用户白等整轮",
+    "新增独立隐藏PowerShell看门狗：即使 XiaoMeili.exe 原生闪退，看门狗仍会在桌面生成崩溃ZIP",
+    "看门狗会收集最后阶段/事件、Windows Application Error/WER、crashrpt/Sogou相关线索；新增 Python faulthandler 全线程证据",
+    "持续保留live timeline/events/rounds/status；自动恢复与看门狗报告均只复制/追加，不删除、不移动、不覆盖原始文件",
+    "继续保留30轮聊天、离线画面识别、综合满载、90秒回落、NVML无黑框、真实CPU、稳定250ms、WAV/ASR修复",
     "继续保留NDM真实URL文件名识别与25秒/75秒快速回退；FullSafe不删除、不移动、不递归清理用户文件或任何旧版本"
   ]
 }
