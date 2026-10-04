@@ -43,6 +43,23 @@ jobs:
               "" | Add-Content $out
             }
           }
+          foreach($spec in @(
+            @("main.py",13140,13250),
+            @("main.py",13520,13570),
+            @("speech_input.py",680,735),
+            @("speech_input.py",960,1010),
+            @("resource_diagnostic_v0100932.py",840,925)
+          )){
+            $p=Join-Path $src $spec[0]
+            if(Test-Path $p){
+              $lines=Get-Content -LiteralPath $p
+              "===== CONTEXT $($spec[0]) $($spec[1])-$($spec[2]) =====" | Add-Content $out -Encoding utf8
+              for($i=[int]$spec[1]; $i -le [int]$spec[2] -and $i -le $lines.Count; $i++){
+                ("L{0}:{1}" -f $i,$lines[$i-1]) | Add-Content $out -Encoding utf8
+              }
+              "" | Add-Content $out -Encoding utf8
+            }
+          }
       - name: Commit inspection report
         shell: pwsh
         run: |
