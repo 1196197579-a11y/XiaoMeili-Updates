@@ -24,13 +24,11 @@ $Main = Get-ChildItem $Stage -Recurse -File -Filter main.py | Where-Object { $_.
 if (-not $Main) { throw "main.py not found" }
 $Source = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $Main.FullName))
 
-Write-Host "[2/12] Apply V0.10.0.9.3.4 patch and contracts"
+Write-Host "[2/12] Apply V0.10.0.9.3.4 patch and embedded contracts"
 python "build\v0100934\patch_v0100934.py" $Source
 if ($LASTEXITCODE -ne 0) { throw "patch failed" }
 python -m pip install --disable-pip-version-check "psutil>=6,<8" "PySide6>=6.7,<7" "numpy>=1.26,<3" "opencv-python-headless>=4.10,<5" "nvidia-ml-py>=12,<14"
 if ($LASTEXITCODE -ne 0) { throw "contract dependency install failed" }
-python "build\v0100934\test_v0100934_contract.py" $Source
-if ($LASTEXITCODE -ne 0) { throw "V0.10.0.9.3.4 queued-dispatch/watchdog contract failed" }
 python "build\v010092\test_ndm_fast_fallback_v010092.py" $Source
 if ($LASTEXITCODE -ne 0) { throw "NDM regression contract failed" }
 python "build\v010092\test_fullsafe_no_delete_v010092.py" $Source
@@ -103,7 +101,7 @@ if ($ReleaseExists) {
   gh release upload "v0.10.0.9.3.4" $UpdateZip $SourceZip --repo $Repo --clobber
   if ($LASTEXITCODE -ne 0) { throw "release upload failed" }
 } else {
-  gh release create "v0.10.0.9.3.4" $UpdateZip $SourceZip --repo $Repo --title "XiaoMeili V0.10.0.9.3.4 | Crash-Safe Diagnostic 3.0" --notes "Crash-Safe Diagnostic 3.0: all mutating Brain/TTS/Speech/Pet actions are marshalled back to the GUI thread through explicit Qt queued connections; the dangerous TTS-to-hard-silence path is smoke-tested before the long run; an independent hidden PowerShell watchdog survives native app crashes and writes crash evidence including Windows Application Error/WER data. Persistent live journals, Python faulthandler, NDM and FullSafe remain enabled."
+  gh release create "v0.10.0.9.3.4" $UpdateZip $SourceZip --repo $Repo --title "XiaoMeili V0.10.0.9.3.4 | Crash-Safe Diagnostic 3.0" --notes "Crash-Safe Diagnostic 3.0: Qt-thread marshaling removes worker-thread Brain/TTS/hard-silence mutations; a short high-risk preflight runs before the long test; an independent hidden watchdog captures Windows Application/WER crash evidence if XiaoMeili exits unexpectedly. Append-only journals, NDM and FullSafe are preserved."
   if ($LASTEXITCODE -ne 0) { throw "release create failed" }
 }
 
@@ -124,14 +122,14 @@ $Manifest = [ordered]@{
   sha256 = $UpdateHash
   package_size = [int64]$UpdateSize
   notes = @(
-    'V0.10.0.9.3.4：一键深度资源测试升级为 Crash-Safe Diagnostic 3.0，重点修复闭嘴阶段的跨线程竞态',
-    'Brain/TTS/Speech/Pet 的所有状态修改都通过 Qt.QueuedConnection 回到GUI主线程串行执行；诊断后台线程不再直接 voice.speak / brain.ask / utterance_ready.emit',
-    '正式长测前增加高风险 TTS→闭嘴→白板关闭预检，若预检失败会在约10秒内停止，不再让用户白等整轮',
-    '新增独立隐藏PowerShell看门狗：即使 XiaoMeili.exe 原生闪退，看门狗仍会在桌面生成崩溃ZIP',
-    '看门狗会收集最后阶段/事件、Windows Application Error/WER、crashrpt/Sogou相关线索；新增 Python faulthandler 全线程证据',
-    '持续保留live timeline/events/rounds/status；自动恢复与看门狗报告均只复制/追加，不删除、不移动、不覆盖原始文件',
-    '继续保留30轮聊天、离线画面识别、综合满载、90秒回落、NVML无黑框、真实CPU、稳定250ms、WAV/ASR修复',
-    '继续保留NDM真实URL文件名识别与25秒/75秒快速回退；FullSafe不删除、不移动、不递归清理用户文件或任何旧版本'
+    'V0.10.0.9.3.4：Crash-Safe Diagnostic 3.0，修复闭嘴阶段跨线程操作TTS/ASR/AppController导致主程序原生闪退的风险',
+    'Brain/TTS启动与中止、闭嘴硬打断和状态查询全部经Qt QueuedConnection回到主线程串行执行',
+    '正式长测前增加约10秒高风险预检；若TTS→闭嘴→白板关闭链路失败会立即停止，不再先跑十分钟',
+    '新增独立隐藏Watchdog：若XiaoMeili.exe测试期间闪退，自动抓Windows Application/WER错误并在桌面生成闪退监控ZIP',
+    '继续实时追加timeline/events/rounds/status，主程序即使异常退出也保留已完成数据',
+    'Watchdog与恢复器均只复制诊断白名单文件，不删除、不移动、不覆盖、不递归清理任何用户文件或旧版本',
+    '继续保留NVML无黑框、真实CPU、250ms采样、WAV/ASR、30轮聊天、离线识别、综合满载和90秒回落',
+    '继续保留NDM真实URL文件名识别与快速回退，以及FullSafe更新保护'
   )
 }
 $Manifest | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $Root "latest_safe.json") -Encoding utf8
