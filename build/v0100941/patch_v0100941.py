@@ -82,7 +82,7 @@ new_start=r'''    def _start_watchdog(self):
 
         self._event("external_monitor_started",pid=int(self._watchdog_proc.pid),mode="fixed_onedir")
         ready=self.session_dir/"watchdog_ready.flag"
-        deadline=time.monotonic()+8.0
+        deadline=time.monotonic()+10.0
         while time.monotonic()<deadline:
             if ready.exists():
                 self._event("external_monitor_ready",pid=int(self._watchdog_proc.pid),mode="fixed_onedir")
@@ -119,7 +119,7 @@ insert='''            self._progress(0,"正在启动外部资源监控器…")
             self._event("external_monitor_launch_begin",mode="fixed_onedir")
             watchdog_ready=self._start_watchdog()
             if not watchdog_ready:
-                raise RuntimeError("外部资源监控器启动失败或8秒内未握手；已停止长测并生成故障报告")
+                raise RuntimeError("外部资源监控器启动失败或10秒内未握手；已停止长测并生成故障报告")
             self._progress(1,"外部资源监控器已连接，开始测试")
             self._set_stage("preflight",1,"启动前快速自检：事件、CPU、GPU与ASR测试音频")
 '''
