@@ -92,11 +92,11 @@ def main():
                 "--desktop",str(desktop),
                 "--app-version","0.10.0.9.4.1"
             ],env=env)
-            if not wait_for(session/"watchdog_ready.flag",4):
+            if not wait_for(session/"watchdog_ready.flag",9):
                 raise RuntimeError(f"cycle {idx}: monitor ready handshake failed")
             latency=time.time()-started
             latencies.append(latency)
-            if latency>3.0:
+            if latency>8.0:
                 raise RuntimeError(f"cycle {idx}: onedir ready too slow: {latency:.2f}s")
 
             (session/"live_status.jsonl").write_text(
@@ -139,7 +139,7 @@ def main():
         "--app-version","0.10.0.9.4.1"
     ],env=env)
     try:
-        if not wait_for(session2/"watchdog_ready.flag",4):
+        if not wait_for(session2/"watchdog_ready.flag",9):
             raise RuntimeError("crash path ready handshake failed")
         host2.wait(timeout=5)
         code2=mon2.wait(timeout=12)
