@@ -1,0 +1,53 @@
+name: Inspect XiaoMeili v0.10.0.9.3.2 diagnostic exit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/inspect-trigger-v0100932-exit/**"
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download V0.10.0.9.3.2 source
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference="Stop"
+          New-Item -ItemType Directory -Force -Path "$PWD\tmp0932" | Out-Null
+          gh release download "v0.10.0.9.3.2" --repo "${{ github.repository }}" --pattern "XiaoMeili_V0.10.0.9.3.2_SourceProject.zip" --dir "$PWD\tmp0932"
+          Expand-Archive -LiteralPath "$PWD\tmp0932\XiaoMeili_V0.10.0.9.3.2_SourceProject.zip" -DestinationPath "$PWD\src0932" -Force
+      - name: Create targeted exit-path report
+        shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $main=Get-ChildItem "$PWD\src0932" -Recurse -File -Filter main.py | Where-Object { $_.FullName -match '[\\/]app[\\/]src[\\/]main\.py$' } | Select-Object -First 1
+          if(-not $main){ throw "main.py missing" }
+          $src=$main.Directory.FullName
+          $out="$PWD\build\v0100933\exit_path_report.txt"
+          New-Item -ItemType Directory -Force -Path (Split-Path $out -Parent) | Out-Null
+          foreach($name in @("resource_diagnostic_v0100932.py","speech_input.py","main.py","voice_dual.py","brain_dual.py")){
+            $p=Join-Path $src $name
+            if(Test-Path $p){
+              "===== $name =====" | Add-Content $out -Encoding utf8
+              Select-String -Path $p -Pattern 'os\._exit|sys\.exit|SystemExit|QApplication.*quit|QCoreApplication.*quit|\.quit\(|terminate\(|kill\(|exit\(|aboutToQuit|finished\.emit|_write_reports|_terminate_proc|diagnostic_process_v01005|closeEvent|lastWindowClosed|setQuitOnLastWindowClosed|fatal|crash|excepthook|atexit' | ForEach-Object {
+                "$($_.LineNumber):$($_.Line.TrimEnd())"
+              } | Add-Content $out -Encoding utf8
+              "" | Add-Content $out
+            }
+          }
+      - name: Commit inspection report
+        shell: pwsh
+        run: |
+          git config user.name "XiaoMeili Inspect Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add build/v0100933/exit_path_report.txt
+          git commit -m "Inspect V0.10.0.9.3.2 diagnostic exit paths"
+          git push origin main
