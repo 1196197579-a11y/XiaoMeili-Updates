@@ -1,17 +1,14 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.4.1",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.1/XiaoMeili_0.10.0.9.4.1_update.zip",
-  "sha256": "d45cf82691335317fa33e4c5bf635ce869da298787b91249bec3fa414bd73722",
-  "package_size": 275315345,
+  "version": "0.10.0.9.4.2",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.2/XiaoMeili_0.10.0.9.4.2_update.zip",
+  "sha256": "ec632416ca0bdc18fced00ca7dc2d53c23c7bdcde0e706aa79d2ce38f8ac7e0f",
+  "package_size": 308929038,
   "notes": [
-    "V0.10.0.9.4.1：外部资源监控器改为固定 onedir 组件 ResourceMonitor/XiaoMeiliResourceMonitor.exe，不再使用one-file启动自解压",
-    "发布前对打包后的监控器实际运行5轮ready握手/正常停止，并额外执行1轮宿主进程异常退出测试",
-    "点击测试会明确显示“正在启动外部资源监控器…”和“外部资源监控器已连接，开始测试”；10秒未ready会停止并生成故障报告，不再无限卡0%",
-    "外部监控器继续每250ms记录CPU/RAM/GPU/显存/线程/进程，且自身资源不计入小美丽",
-    "深度资源测试继续禁止强制TTS abort和伪造闭嘴ASR；保留自然TTS、ASR、大脑、白板、动画、30轮聊天、离线识别、综合满载和90秒回落",
-    "外部监控启动日志会随诊断ZIP打包，后续启动故障不再是黑箱",
-    "继续保留NDM真实URL文件名识别与快速回退",
-    "FullSafe继续禁止删除、移动、覆盖、递归清理任何用户文件、D盘数据或旧版本"
+    "修复深度资源测试启动阶段的Path异常，完整启动链每步10秒超时生成失败报告",
+    "正式打包主程序真实按钮链路连续3次通过，完成ASR、大脑、自然TTS和诊断ZIP",
+    "宿主异常退出后外部监控器独立生成crash ZIP；NDM、FullSafe、runtime和settings UI自检通过",
+    "保留白板、动画、30轮聊天、离线识别、综合满载、90秒回落；禁止强制TTS abort和伪造闭嘴ASR",
+    "公开更新包和源码包均重新下载通过SHA-256验证；FullSafe用户文件保护规则不变"
   ]
 }
