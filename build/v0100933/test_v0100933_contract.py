@@ -18,7 +18,7 @@ def main():
         'recover_interrupted_resource_diagnostics','live_timeline.jsonl','live_events.jsonl',
         'live_rounds.jsonl','live_status.jsonl','finalized.flag',
         'self._open_live_journals()','self._journal_write(self._live_timeline_fp, row)',
-        'Riskier child-process/native cleanup happens only after report generation',
+        'Riskier child-process cleanup happens only after report generation',
         'CREATE_NO_WINDOW','nvidia-smi-hidden','wave.open(str(path), "wb")','wave.open(str(path), "rb")',
         'CHAT_ROUNDS = 30','FINAL_COOLDOWN_SECONDS = 90'
     ]
