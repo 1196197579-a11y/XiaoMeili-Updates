@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function New-UniquePath([string]$Dir,[string]$Stem,[string]$Ext) {
@@ -31,6 +32,14 @@ function Redact([string]$Text) {
 $session = [IO.Path]::GetFullPath($SessionDir)
 $desktop = [IO.Path]::GetFullPath($DesktopDir)
 if(-not (Test-Path -LiteralPath $session -PathType Container)) { exit 0 }
+$debugLog = Join-Path $session "watchdog_debug.jsonl"
+function Write-DebugLine([string]$Step,[string]$Detail="") {
+  try {
+    $obj=[ordered]@{ utc=(Get-Date).ToUniversalTime().ToString("o"); step=$Step; detail=(Redact $Detail) }
+    [IO.File]::AppendAllText($debugLog, (($obj | ConvertTo-Json -Compress) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
+  } catch {}
+}
+Write-DebugLine "watchdog_start" ("parent=" + $ParentPid)
 
 $finalFlag = Join-Path $session "finalized.flag"
 $startedMarker = Join-Path $session "watchdog_started.json"
@@ -45,19 +54,20 @@ if(-not (Test-Path -LiteralPath $startedMarker)) {
   $json = $obj | ConvertTo-Json -Depth 4
   try {
     $fs=[IO.File]::Open($startedMarker,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::ReadWrite)
-    try { $sw=New-Object IO.StreamWriter($fs,[Text.UTF8Encoding]::new($false)); $sw.Write($json); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
+    try { $sw=[IO.StreamWriter]::new($fs,[Text.UTF8Encoding]::new($false)); $sw.Write($json); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
   } catch {}
 }
 
 while($true) {
-  if(Test-Path -LiteralPath $finalFlag) { exit 0 }
+  if(Test-Path -LiteralPath $finalFlag) { Write-DebugLine "finalized_seen"; exit 0 }
   $p = Get-Process -Id $ParentPid -ErrorAction SilentlyContinue
   if(-not $p) { break }
   Start-Sleep -Milliseconds 700
 }
 
+Write-DebugLine "parent_exit_detected"
 Start-Sleep -Seconds 2
-if(Test-Path -LiteralPath $finalFlag) { exit 0 }
+if(Test-Path -LiteralPath $finalFlag) { Write-DebugLine "finalized_after_exit"; exit 0 }
 
 $evidence = New-UniquePath $session "watchdog_exit_evidence" ".txt"
 $eventEvidence = New-UniquePath $session "windows_event_crash_evidence" ".txt"
@@ -96,7 +106,7 @@ safety=Evidence copied/created only. No user file was deleted, moved, cleaned or
 "@
 try {
   $fs=[IO.File]::Open($evidence,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::ReadWrite)
-  try { $sw=New-Object IO.StreamWriter($fs,[Text.UTF8Encoding]::new($false)); $sw.Write((Redact $body)); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
+  try { $sw=[IO.StreamWriter]::new($fs,[Text.UTF8Encoding]::new($false)); $sw.Write((Redact $body)); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
 } catch {}
 
 try {
@@ -107,7 +117,7 @@ try {
       ($_.Message -match "XiaoMeili|crashrpt|Sogou|Qt6|onnxruntime|torch|nvml|nvcuda")
     } |
     Select-Object -First 30
-  $txt = New-Object System.Text.StringBuilder
+  $txt = [System.Text.StringBuilder]::new()
   foreach($e in $rows) {
     [void]$txt.AppendLine(("TIME={0:o} ID={1} PROVIDER={2}" -f $e.TimeCreated,$e.Id,$e.ProviderName))
     [void]$txt.AppendLine((Redact ([string]$e.Message)))
@@ -115,7 +125,7 @@ try {
   }
   if($txt.Length -eq 0) { [void]$txt.AppendLine("No matching Windows Application Error/WER event was readable in the previous 5 minutes.") }
   $fs=[IO.File]::Open($eventEvidence,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::ReadWrite)
-  try { $sw=New-Object IO.StreamWriter($fs,[Text.UTF8Encoding]::new($false)); $sw.Write($txt.ToString()); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
+  try { $sw=[IO.StreamWriter]::new($fs,[Text.UTF8Encoding]::new($false)); $sw.Write($txt.ToString()); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
 } catch {}
 
 $zipPath = New-UniquePath $desktop "小美丽_资源测试_独立看门狗崩溃报告" ".zip"
@@ -123,12 +133,12 @@ $safeNames = @(
   "live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl",
   "speech_diagnostic_worker.log","diagnostic_input.wav","events.json","summary.json",
   "stage_summary.csv","round_ledger.csv","timeline_250ms.csv","vram_jump_events.csv",
-  "process_tree.csv","watchdog_started.json"
+  "process_tree.csv","watchdog_started.json","watchdog_debug.jsonl"
 )
 
 try {
   $fs=[IO.File]::Open($zipPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
-  $za=New-Object IO.Compression.ZipArchive($fs,[IO.Compression.ZipArchiveMode]::Create,$false)
+  $za=[IO.Compression.ZipArchive]::new($fs,[IO.Compression.ZipArchiveMode]::Create,$false)
   try {
     foreach($n in $safeNames) {
       $f=Join-Path $session $n
@@ -142,7 +152,7 @@ try {
       }
     }
     $entry=$za.CreateEntry("watchdog_summary.json")
-    $writer=New-Object IO.StreamWriter($entry.Open(),[Text.UTF8Encoding]::new($false))
+    $writer=[IO.StreamWriter]::new($entry.Open(),[Text.UTF8Encoding]::new($false))
     $summary=[ordered]@{
       watchdog="v0100934"
       app_version=$AppVersion
@@ -157,6 +167,8 @@ try {
     if($za){$za.Dispose()}
     if($fs){$fs.Dispose()}
   }
-} catch {}
-
+} catch {
+  Write-DebugLine "zip_error" ([string]$_)
+}
+if(Test-Path -LiteralPath $zipPath) { Write-DebugLine "zip_created" $zipPath }
 exit 0
