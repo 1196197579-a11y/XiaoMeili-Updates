@@ -1,17 +1,17 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.3.2",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3.2/XiaoMeili_0.10.0.9.3.2_update.zip",
-  "sha256": "ff4de2daec4477a5538741af4b274ff396b0734ef81ba35fffa4645c93bf758c",
-  "package_size": 266331177,
+  "version": "0.10.0.9.3.3",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3.3/XiaoMeili_0.10.0.9.3.3_update.zip",
+  "sha256": "3c4a571ae09ca631fee06f8d5b819c784d3522edbf33c33ba1c2da99065da371",
+  "package_size": 266386228,
   "notes": [
-    "V0.10.0.9.3.2：修复一键深度资源测试进入ASR阶段前生成测试WAV时因 wave 不支持 xb 模式而中止的问题",
-    "继续坚持不覆盖现有文件：诊断音频若已存在直接拒绝；新文件使用 wave 支持的 wb 创建，不删除、不移动任何旧文件",
-    "WAV创建后立即用 rb 重新读取并验证16kHz、单声道、16-bit PCM和有效帧数；失败会在60秒待机之前的预检阶段立即提示",
-    "CI新增真实WAV创建/回读、二次创建拒绝覆盖、模拟ASR diag_ready入口运行测试，避免同类错误再次进入正式版",
-    "继续保留V0.10.0.9.3.1的NVML无黑框GPU/显存采集、真实CPU采样、250ms稳定采样和准确的测试中止提示",
-    "继续保留自动白板、ASR、云端大脑、TTS、30轮聊天、闭嘴打断、离线画面识别、综合满载与90秒资源回落测试",
-    "继续保留NDM真实URL文件名识别和25秒/75秒快速回退；NDM源文件只复制、不移动、不删除",
-    "FullSafe继续生效：更新和诊断不删除、不移动、不递归清理桌面、下载、文档、D盘、XiaoMeiliData或任何旧版本"
+    "V0.10.0.9.3.3：修复完整资源测试结束后主程序可能在报告生成前直接退出、导致桌面无报告的问题",
+    "诊断结束改为先生成桌面ZIP、再执行ASR子进程等清理；即使后续清理异常，报告也已经落盘",
+    "取消诊断结束时主动调用 pynvml.nvmlShutdown()，避免原生NVML DLL退出路径在报告前造成进程级崩溃",
+    "新增崩溃安全实时日志：timeline/events/rounds/status 持续追加写入受控诊断目录，异常退出也能保留大部分数据",
+    "新版启动会自动恢复上次中断的诊断并在桌面生成“自动恢复”ZIP；兼容恢复V0.10.0.9.3.2遗留speech诊断日志",
+    "自动恢复只复制安全诊断文件，不删除、不移动、不覆盖任何原始文件",
+    "继续保留NVML无黑框GPU/显存采集、真实CPU、稳定250ms、WAV/ASR、30轮聊天、闭嘴、离线识别、综合满载和90秒回落",
+    "继续保留NDM真实URL文件名识别与25秒/75秒快速回退；FullSafe不删除、不移动、不递归清理用户文件或任何旧版本"
   ]
 }
