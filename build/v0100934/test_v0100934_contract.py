@@ -172,7 +172,7 @@ def main():
         ps_exe,"-NoProfile","-NonInteractive","-WindowStyle","Hidden","-ExecutionPolicy","Bypass",
         "-File",str(watchdog),"-ParentPid",str(parent.pid),"-SessionDir",str(wd_session),
         "-DesktopDir",str(desk),"-AppVersion","0.10.0.9.3.4"
-    ],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
+    ],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8",errors="replace",
       creationflags=flags,close_fds=True)
     parent.wait(timeout=10)
     wd_out,wd_err=wd.communicate(timeout=35)
@@ -180,7 +180,7 @@ def main():
     if not zips:
         dbg=wd_session/"watchdog_debug.jsonl"
         detail=dbg.read_text(encoding="utf-8",errors="replace")[-4000:] if dbg.is_file() else "<no watchdog debug>"
-        raise RuntimeError(f"independent watchdog did not create crash ZIP; rc={wd.returncode}; stdout={wd_out[-3000:]}; stderr={wd_err[-3000:]}; debug={detail}")
+        raise RuntimeError(f"independent watchdog did not create crash ZIP; rc={wd.returncode}; stdout={(wd_out or "")[-3000:]}; stderr={(wd_err or "")[-3000:]}; debug={detail}")
     if not status.is_file() or not events.is_file():
         raise RuntimeError("watchdog deleted or moved source evidence")
     with zipfile.ZipFile(zips[-1],"r") as zf:
