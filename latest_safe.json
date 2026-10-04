@@ -1,17 +1,17 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.2",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.2/XiaoMeili_0.10.0.9.2_update.zip",
-  "sha256": "4b325f0d7dcf5eb8eefe92567f0d0af16dd9c8437d7be1e5b5274eda60279c87",
-  "package_size": 266068409,
+  "version": "0.10.0.9.3",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.3/XiaoMeili_0.10.0.9.3_update.zip",
+  "sha256": "b60d808b5f46bd0ee089ebf428ed39bfe57616297b8a41e8ff34823df38a6f4a",
+  "package_size": 266142778,
   "notes": [
-    "V0.10.0.9.2：修复长时间聊天时动画与Qt过渡对象堆积，QMovie不再长期缓存整支动画并在替换时显式释放",
-    "修复thinking状态自反馈：去重状态恢复，禁止state_changed反复向Qt事件队列追加thinking事件",
-    "云端TTS完成或打断后及时释放stream/tts/queue等会话资源，并增加播报尾音回声保护，降低小美丽听到自己声音的概率",
-    "“闭嘴 / 你给我闭嘴 / 你别说话了 / 别说了 / 安静点”等在ASR后、大脑前本地P0拦截；立即停止大脑、TTS、白板/字幕且不回答",
-    "NDM仍是更新首选下载器；25秒未出现本次文件或连续75秒无写入进度时立即回退内置HTTPS，正常持续下载不受短超时影响",
-    "NDM源文件仍只复制到小美丽受控目录，不移动、不删除；下载后继续校验文件大小、SHA-256与ZIP完整性",
-    "FullSafe：更新只创建新的受控versions目录并切换active.json；功能测试确认桌面、下载、文档、D盘、旧版本等哨兵文件均不被删除或修改",
-    "修复“打包完整原始源码工程”：当前版本精确SourceProject.zip已嵌入程序并同时发布到Release，同名文件不会被覆盖"
+    "V0.10.0.9.3：系统栏资源诊断升级为“一键深度资源测试 2.0”，点击一次后全自动完成，无需开 VALORANT、无需说话或手动聊天",
+    "自动测试纯待机、30次状态动画切换、12轮白板、FSMN-VAD + Fun-ASR-Nano-2512、6轮云端大脑、8轮云端TTS、30轮完整聊天、闭嘴硬打断、离线画面识别与综合满载",
+    "每250ms记录 CPU/RAM/GPU/显存、线程数、TTS队列、QMovie、白板、ASR、大脑、TTS及识别状态；逐轮记录开始值、峰值、结束值、冷却回落值和未回收增量",
+    "诊断结束自动在桌面生成脱敏 ZIP，包含 timeline_250ms.csv、round_ledger.csv、stage_summary.csv、vram_jump_events.csv、process_tree.csv 和 summary.json",
+    "画面识别使用内存标准画面离线回放，覆盖队伍/贤者头像匹配、击杀UI、结算OCR、高光快照和组合压力，不要求进入真实游戏",
+    "云端大脑与TTS测试会产生少量真实API费用，但测试提示词与回答不写入聊天历史、长期记忆或养成库，报告也不保存聊天原文/回答原文/API Key/录音/截图/昵称",
+    "继续保留V0.10.0.9.2的五段版本比较、更新防缓存、更新源持久化、NDM真实URL文件名识别与25秒/75秒快速回退、闭嘴P0硬打断、动画/TTS资源释放和完整源码导出",
+    "FullSafe：更新只创建新的受控 versions 目录并切换 active.json；不删除、不移动、不递归清理桌面、下载、文档、D盘、XiaoMeiliData或任何旧版本；NDM源文件只复制不删除"
   ]
 }
