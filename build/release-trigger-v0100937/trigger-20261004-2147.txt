@@ -1,0 +1,1 @@
+Build and publish XiaoMeili V0.10.0.9.3.7 Stable Resource Diagnostic 3.2 from V0.10.0.9.3.6 baseline.
