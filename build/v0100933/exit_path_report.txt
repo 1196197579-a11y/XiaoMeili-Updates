@@ -467,3 +467,456 @@ L914:        finally:
 L915:            self._disconnect_service_signals()
 L916:            self._running=False
 
+===== resource_diagnostic_v0100932.py =====
+505:        proc = self.speech.diagnostic_process_v01005(str(wav_path), repeat=int(repeat), hold_seconds=int(hold_seconds))
+524:            try: proc.terminate()
+530:    def _terminate_proc(proc):
+535:                proc.terminate(); proc.wait(timeout=8)
+733:            self._terminate_proc(proc); self._combined_speech_proc = None
+792:    def _write_reports(self):
+858:            self._speech_proc=self._start_asr_diagnostic(wav_path,repeat=4,hold_seconds=35); self._sleep(15); self._terminate_proc(self._speech_proc); self._speech_proc=None; self._sleep(5)
+885:            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)
+904:            report=self._write_reports()
+911:            self.finished.emit(ok,str(report),msg)
+913:            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")
+
+===== speech_input.py =====
+341:        # reaches generate_chatml() but produces None, which later crashes in
+366:        # Passing fs through kwargs duplicates that keyword and crashes.
+711:                "WORKER_FATAL",
+722:    raise SystemExit(main())
+792:            self.setup_finished.emit(True, "FSMN-VAD 与 Fun-ASR-Nano-2512 已就绪。")
+840:                self.setup_finished.emit(ok, msg)
+992:            try: proc.terminate()
+1080:SpeechInputService.diagnostic_process_v01005 = _v01005_diagnostic_process
+
+===== main.py =====
+5757:            self.check_finished.emit(False, None, "尚未绑定永久更新源。当前版本已具备安全更新器，请在“更新”页绑定固定 latest.json 地址。")
+5785:                    self.check_finished.emit(True, manifest, msg)
+5787:                    self.check_finished.emit(False, manifest, f"当前已是最新版本 V{APP_VERSION}。")
+5790:                self.check_finished.emit(False, None, f"检查更新失败：{type(e).__name__}: {e}")
+5806:            self.check_finished.emit(False, None, "请先检查更新。")
+6016:                self.check_finished.emit(False, None, f"安装更新失败：{type(e).__name__}: {e}")
+13181:                    proc.terminate()
+13199:            self.quit()
+13231:            self.app.quit()
+13273:    app=QApplication(sys.argv); app.setQuitOnLastWindowClosed(False); app.setApplicationName(APP_NAME); app.setWindowIcon(QIcon(resource("assets/xiaomeili_icon.png")))
+13277:    def excepthook(exc_type,exc,tb):
+13281:    sys.excepthook=excepthook
+13282:    if hasattr(threading, "excepthook"):
+13283:        def thread_excepthook(args):
+13285:        threading.excepthook=thread_excepthook
+13287:    sys.exit(app.exec())
+13544:            raise SystemExit(0)
+13547:            raise SystemExit(8)
+13551:            raise SystemExit(0)
+13554:            raise SystemExit(7)
+
+===== voice_dual.py =====
+463:            self.synthesis_finished.emit(bool(ok), "云端复刻音色试听完成" if ok else str(message))
+464:        self.playback_finished.emit(bool(ok), str(message), str(ctx.get("tag") or "dialogue"))
+470:                self.playback_finished.emit(False, "没有可播报的文字。", str(tag or "dialogue"))
+473:                self.playback_finished.emit(False, "上一条云端语音还在生成或播放，请稍等。", str(tag or "dialogue"))
+487:                self.synthesis_finished.emit(False, "请输入试听文字。")
+491:                self.synthesis_finished.emit(False, "上一条云端语音还在生成或播放，请稍等。")
+
+===== brain_dual.py =====
+243:        self.generation_finished.emit(
+251:            self.generation_finished.emit(False, {}, "请输入一句话。")
+254:            self.generation_finished.emit(False, {}, "小美丽还在想上一句话，稍等一下。")
+290:                    self.generation_finished.emit(False, {}, f"固定回复失败：{type(exc).__name__}: {exc}")
+299:            self.generation_finished.emit(False, {}, "云端模式尚未保存阿里云 API Key。请到「大脑 → 云端双引擎」配置。")
+439:                self.generation_finished.emit(True, answer, status)
+452:                    self.generation_finished.emit(False, {}, "回答已被语音打断")
+487:            self.generation_finished.emit(False, {}, "回答已被语音打断")
+499:        self.generation_finished.emit(False, {}, f"云端回答失败：{reason}")
+
+===== CONTEXT main.py 13260-13305 =====
+L13260:            dst.flush()
+L13261:            os.fsync(dst.fileno())
+L13262:        LOGGER.info("已创建稳定桌面启动器：%s -> active.json 当前版本", target)
+L13263:        return target
+L13264:    except FileExistsError:
+L13265:        return desktop_dir() / "小美丽.exe"
+L13266:    except Exception:
+L13267:        LOGGER.warning("创建稳定桌面启动器失败（不影响小美丽运行）", exc_info=True)
+L13268:        return None
+L13269:
+L13270:
+L13271:def main():
+L13272:    set_windows_app_identity()
+L13273:    app=QApplication(sys.argv); app.setQuitOnLastWindowClosed(False); app.setApplicationName(APP_NAME); app.setWindowIcon(QIcon(resource("assets/xiaomeili_icon.png")))
+L13274:    ensure_desktop_launcher()
+L13275:    cfg=load_config()
+L13276:    maybe_adopt_report_font(cfg)
+L13277:    def excepthook(exc_type,exc,tb):
+L13278:        LOGGER.critical("未捕获异常:\n%s",''.join(traceback.format_exception(exc_type,exc,tb)), exc_info=(exc_type,exc,tb))
+L13279:        try: QMessageBox.critical(None,"小美丽发生异常",f"错误诊断已保存到：\n{DESKTOP_ERROR_LOG}\n\n{exc}")
+L13280:        except Exception: pass
+L13281:    sys.excepthook=excepthook
+L13282:    if hasattr(threading, "excepthook"):
+L13283:        def thread_excepthook(args):
+L13284:            LOGGER.critical("后台线程未捕获异常：%s", args.thread.name if args.thread else "unknown", exc_info=(args.exc_type,args.exc_value,args.exc_traceback))
+L13285:        threading.excepthook=thread_excepthook
+L13286:    ctl=AppController(app,cfg)
+L13287:    sys.exit(app.exec())
+L13288:
+L13289:
+L13290:def runtime_self_test():
+L13291:    # Qwen3-TTS is installed into an isolated external runtime on first use.
+L13292:    # The frozen desktop app only verifies the lightweight bridge module.
+L13293:    from voice_dual import VoiceService
+L13294:    from brain_dual import BrainService
+L13295:    from speech_input import SpeechInputService
+L13296:    _ = VoiceService
+L13297:    _ = BrainService
+L13298:    _ = SpeechInputService
+L13299:    return True
+L13300:
+L13301:
+L13302:def settings_ui_self_test():
+L13303:    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+L13304:    app = QApplication.instance() or QApplication([])
+L13305:    cfg = load_config()
+
+===== CONTEXT main.py 13140-13250 =====
+L13140:                cwd=str(Path(sys.executable).parent),
+L13141:                creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+L13142:            )
+L13143:
+L13144:            # V0.7.7.2: Windows Defender / PowerShell cold start can take longer than the
+L13145:            # old 4-second window. Wait up to 20 seconds. We accept either the explicit
+L13146:            # READY file or the helper's first log line as proof that the script parsed
+L13147:            # and entered its protected try/catch path.
+L13148:            ready = False
+L13149:            for _ in range(200):
+L13150:                if ready_file.exists():
+L13151:                    ready = True
+L13152:                    break
+L13153:
+L13154:                rc = proc.poll()
+L13155:                if rc is not None:
+L13156:                    detail = ""
+L13157:                    try:
+L13158:                        if desktop_log.exists():
+L13159:                            detail = desktop_log.read_text(
+L13160:                                encoding="utf-8-sig", errors="replace"
+L13161:                            )[-3000:]
+L13162:                    except Exception:
+L13163:                        pass
+L13164:                    raise RuntimeError(f"存储迁移助手启动失败（exit={rc}）。{detail}")
+L13165:
+L13166:                try:
+L13167:                    if desktop_log.exists():
+L13168:                        probe = desktop_log.read_text(
+L13169:                            encoding="utf-8-sig", errors="replace"
+L13170:                        )
+L13171:                        if "D-drive migration helper started." in probe:
+L13172:                            ready = True
+L13173:                            break
+L13174:                except Exception:
+L13175:                    pass
+L13176:
+L13177:                time.sleep(0.10)
+L13178:
+L13179:            if not ready:
+L13180:                try:
+L13181:                    proc.terminate()
+L13182:                except Exception:
+L13183:                    pass
+L13184:                detail = ""
+L13185:                try:
+L13186:                    if desktop_log.exists():
+L13187:                        detail = desktop_log.read_text(
+L13188:                            encoding="utf-8-sig", errors="replace"
+L13189:                        )[-3000:]
+L13190:                except Exception:
+L13191:                    pass
+L13192:                raise RuntimeError(
+L13193:                    "存储迁移助手 20 秒内没有完成启动握手。"
+L13194:                    "为保护现有数据，小美丽保持运行且没有开始迁移。"
+L13195:                    + (f"\n\n迁移助手日志：\n{detail}" if detail else "")
+L13196:                )
+L13197:
+L13198:            LOGGER.info("D盘迁移助手握手成功：%s -> %s", source, target)
+L13199:            self.quit()
+L13200:        except Exception as exc:
+L13201:            LOGGER.exception("启动 D 盘迁移失败")
+L13202:            QMessageBox.critical(
+L13203:                None,
+L13204:                "小美丽存储迁移失败",
+L13205:                f"没有改动现有数据。错误：{type(exc).__name__}: {exc}\n\n"
+L13206:                f"迁移诊断会保存在：{STORAGE_DIAGNOSTIC_DIR}",
+L13207:            )
+L13208:            if self.settings:
+L13209:                try:
+L13210:                    self.settings.storage_migrate_btn.setEnabled(True)
+L13211:                    self.settings._refresh_storage_status()
+L13212:                except Exception:
+L13213:                    pass
+L13214:
+L13215:    def quit(self):
+L13216:        try:
+L13217:            self.cfg["x"],self.cfg["y"]=self.pet.x(),self.pet.y(); save_config(self.cfg)
+L13218:            try: self.ability_sidebar.hide()
+L13219:            except Exception: pass
+L13220:            try: self.ability_node.hide()
+L13221:            except Exception: pass
+L13222:            self.pet.lock_bubble.hide(); self.hotkeys.unregister_all(); self.vision.stop(); self.vision.wait(1800)
+L13223:            try: self.speech_service.shutdown()
+L13224:            except Exception: pass
+L13225:            try: self.voice_service.shutdown()
+L13226:            except Exception: pass
+L13227:            try: self.brain_service.shutdown()
+L13228:            except Exception: pass
+L13229:            LOGGER.info("正常退出")
+L13230:        finally:
+L13231:            self.app.quit()
+L13232:
+L13233:
+L13234:def ensure_desktop_launcher():
+L13235:    """Create a stable desktop XiaoMeili launcher without touching existing files."""
+L13236:    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+L13237:        return None
+L13238:    try:
+L13239:        target = desktop_dir() / "小美丽.exe"
+L13240:        if target.exists():
+L13241:            return target
+L13242:
+L13243:        candidates = [
+L13244:            Path(sys.executable).resolve().parent / "XiaoMeiliLauncher.exe",
+L13245:        ]
+L13246:        local = str(os.environ.get("LOCALAPPDATA", "") or "").strip()
+L13247:        if local:
+L13248:            candidates.append(Path(local).absolute() / "XiaoMeiliApp" / "XiaoMeiliLauncher.exe")
+L13249:
+L13250:        source = next((p for p in candidates if p.is_file()), None)
+
+===== CONTEXT main.py 13520-13570 =====
+L13520:        return True
+L13521:    finally:
+L13522:        try:
+L13523:            dialog.close()
+L13524:        except Exception:
+L13525:            pass
+L13526:        try:
+L13527:            speech.shutdown()
+L13528:        except Exception:
+L13529:            pass
+L13530:        try:
+L13531:            brain.shutdown()
+L13532:        except Exception:
+L13533:            pass
+L13534:        try:
+L13535:            voice.shutdown()
+L13536:        except Exception:
+L13537:            pass
+L13538:
+L13539:
+L13540:if __name__=="__main__":
+L13541:    if "--settings-ui-self-test" in sys.argv:
+L13542:        try:
+L13543:            settings_ui_self_test()
+L13544:            raise SystemExit(0)
+L13545:        except Exception:
+L13546:            LOGGER.exception("V0.7.7.4 设置中心自检失败")
+L13547:            raise SystemExit(8)
+L13548:    if "--runtime-self-test" in sys.argv:
+L13549:        try:
+L13550:            runtime_self_test()
+L13551:            raise SystemExit(0)
+L13552:        except Exception:
+L13553:            LOGGER.exception("冻结版运行时自检失败")
+L13554:            raise SystemExit(7)
+L13555:    main()
+
+===== CONTEXT speech_input.py 680-735 =====
+L680:    ap.add_argument("--diagnostic-hold", type=int, default=0)
+L681:    ap.add_argument("--device-index", type=int, default=-1)
+L682:    ap.add_argument("--hotwords", default="")
+L683:    args = ap.parse_args()
+L684:    setup_log(args.log)
+L685:    if args.download_asr:
+L686:        download_model("FunAudioLLM/Fun-ASR-Nano-2512", args.asr_model_dir); return 0
+L687:    if args.download_vad:
+L688:        download_model("iic/speech_fsmn_vad_zh-cn-16k-common-pytorch", args.vad_model_dir); return 0
+L689:    if args.diagnostic_wav:
+L690:        if hasattr(EVENT_STREAM, "reconfigure"):
+L691:            EVENT_STREAM.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+L692:        try:
+L693:            with contextlib.redirect_stdout(sys.stderr):
+L694:                return diagnostic_file(args)
+L695:        except Exception as exc:
+L696:            logging.exception("Speech diagnostic failed")
+L697:            emit("error", message=f"语音输入诊断失败：{type(exc).__name__}: {exc}")
+L698:            return 1
+L699:    if args.listen:
+L700:        # Parent reads UTF-8 JSON lines; keep library progress on stderr.
+L701:        if hasattr(EVENT_STREAM, "reconfigure"):
+L702:            EVENT_STREAM.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+L703:        try:
+L704:            with contextlib.redirect_stdout(sys.stderr):
+L705:                listen(args)
+L706:            return 0
+L707:        except Exception as exc:
+L708:            logging.exception("Speech listener failed")
+L709:            message = f"语音监听启动失败：{type(exc).__name__}: {exc}"
+L710:            desktop_diagnostic(
+L711:                "WORKER_FATAL",
+L712:                message,
+L713:                args.log,
+L714:                traceback.format_exc(),
+L715:            )
+L716:            emit("error", message=message)
+L717:            emit("state", code="error", label=message)
+L718:            return 1
+L719:    return 2
+L720:
+L721:if __name__ == "__main__":
+L722:    raise SystemExit(main())
+L723:'''
+L724:
+L725:
+L726:class SpeechInputService(QObject):
+L727:    setup_progress = Signal(int, str)
+L728:    setup_finished = Signal(bool, str)
+L729:    devices_ready = Signal(list)
+L730:    state_changed = Signal(str, str)
+L731:    utterance_ready = Signal(str)
+L732:    interrupt_requested = Signal(str)
+L733:    error = Signal(str)
+L734:
+L735:    def __init__(self, parent=None):
+
+===== CONTEXT speech_input.py 960-1010 =====
+L960:
+L961:    def _command(self, text):
+L962:        if not self._alive() or self._worker.stdin is None:
+L963:            return False
+L964:        try:
+L965:            with self._stdin_lock:
+L966:                self._worker.stdin.write(str(text).strip() + "\n")
+L967:                self._worker.stdin.flush()
+L968:            return True
+L969:        except Exception:
+L970:            return False
+L971:
+L972:    def pause(self):
+L973:        return self._command("pause")
+L974:
+L975:    def interrupt_only(self):
+L976:        return self._command("interrupt")
+L977:
+L978:    def resume(self):
+L979:        return self._command("resume")
+L980:
+L981:    def stop(self):
+L982:        proc = self._worker
+L983:        if proc is None:
+L984:            return
+L985:        try:
+L986:            self._command("stop")
+L987:        except Exception:
+L988:            pass
+L989:        try:
+L990:            proc.wait(timeout=3)
+L991:        except Exception:
+L992:            try: proc.terminate()
+L993:            except Exception: pass
+L994:        self._worker = None
+L995:        self._emit_state("stopped", "语音监听已停止")
+L996:
+L997:    def shutdown(self):
+L998:        self.stop()
+L999:
+L1000:
+L1001:# V0.10.0.5: one-shot microphone-free diagnostic entry point.
+L1002:# It reuses the installed speech runtime/models and creates no temporary cleanup task.
+L1003:def _v01005_pick_runtime_path(preferred_name, name_contains=(), value_contains=()):
+L1004:    import os as _os
+L1005:    from pathlib import Path as _Path
+L1006:    value = globals().get(preferred_name)
+L1007:    if value:
+L1008:        try:
+L1009:            p = _Path(value)
+L1010:            if p.exists():
+
+===== CONTEXT resource_diagnostic_v0100932.py 840-925 =====
+L840:        sampler=threading.Thread(target=self._sampler_loop,name="XiaoMeiliResourceSamplerV0100932",daemon=True)
+L841:        gpu_thread=threading.Thread(target=self._gpu_loop,name="XiaoMeiliGpuSamplerV0100932",daemon=True)
+L842:        setattr(self.brain,"_resource_diag_no_persist",True)
+L843:        try:
+L844:            self._set_stage("preflight",1,"启动前快速自检：事件、CPU、GPU与ASR测试音频")
+L845:            self._preflight_self_test()
+L846:            wav_path = self._make_test_wav(self.session_dir / "diagnostic_input.wav")
+L847:            gpu_thread.start(); sampler.start(); self._sleep(1.0)
+L848:            self._set_stage("baseline",2,f"1/10 纯待机基线：记录 {BASELINE_SECONDS} 秒")
+L849:            self.state_requested.emit("idle"); self._sleep(BASELINE_SECONDS)
+L850:
+L851:            self._set_stage("animation",10,"2/10 状态动画：自动切换30次，检查QMovie/Qt对象回收")
+L852:            self._animation_stage()
+L853:
+L854:            self._set_stage("whiteboard",18,"3/10 白板动画：自动打开/打字/关闭12轮")
+L855:            self._whiteboard_stage()
+L856:
+L857:            self._set_stage("asr",27,"4/10 语音输入：FSMN-VAD + Fun-ASR-Nano-2512 自动离线测试")
+L858:            self._speech_proc=self._start_asr_diagnostic(wav_path,repeat=4,hold_seconds=35); self._sleep(15); self._terminate_proc(self._speech_proc); self._speech_proc=None; self._sleep(5)
+L859:
+L860:            self._set_stage("brain",35,"5/10 云端大脑：6轮短回答测试（会产生少量API费用，不写入记忆/历史）")
+L861:            self._brain_stage()
+L862:
+L863:            self._set_stage("tts",43,"6/10 云端TTS：短句/长句连续8轮")
+L864:            self._tts_stage()
+L865:
+L866:            self._set_stage("chat",52,f"7/10 完整聊天链路：自动执行 {CHAT_ROUNDS} 轮 大脑→TTS→白板→动画→回落")
+L867:            for i in range(CHAT_ROUNDS):
+L868:                self._progress(52+int(18*(i+1)/CHAT_ROUNDS),f"7/10 完整聊天链路：第 {i+1}/{CHAT_ROUNDS} 轮")
+L869:                self._chat_round(i+1)
+L870:
+L871:            self._set_stage("hard_silence",72,"8/10 闭嘴硬打断：分别测试闭嘴/你给我闭嘴/你别说话了")
+L872:            self._hard_silence_stage()
+L873:
+L874:            self._set_stage("offline_vision",79,"9/10 画面识别离线回放：头像/击杀UI/结算OCR/高光，无需打开游戏")
+L875:            self._offline_vision_stage(45)
+L876:
+L877:            self._set_stage("combined",88,"10/10 综合满载：ASR + 大脑 + TTS + 白板 + 动画 + 全部离线识别")
+L878:            self._combined_stage(wav_path)
+L879:
+L880:            self._set_stage("final_cooldown",96,f"最终冷却：静置 {FINAL_COOLDOWN_SECONDS} 秒，检查CPU/RAM/显存是否回落")
+L881:            self.board_close_requested.emit(); self.state_requested.emit("idle"); self._sleep(FINAL_COOLDOWN_SECONDS)
+L882:        except Exception as exc:
+L883:            ok=False; err=f"{type(exc).__name__}: {exc}"; self._event("error",message=err)
+L884:        finally:
+L885:            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)
+L886:            try: setattr(self.brain,"_resource_diag_no_persist",False)
+L887:            except Exception: pass
+L888:            try: self.board_close_requested.emit(); self.state_requested.emit("idle")
+L889:            except Exception: pass
+L890:            self._sampling=False
+L891:            self._gpu_stop.set()
+L892:            try:
+L893:                if sampler.is_alive(): sampler.join(timeout=4)
+L894:            except Exception: pass
+L895:            try:
+L896:                if gpu_thread.is_alive(): gpu_thread.join(timeout=4)
+L897:            except Exception: pass
+L898:            if self._nvml_ready and pynvml is not None:
+L899:                try: pynvml.nvmlShutdown()
+L900:                except Exception: pass
+L901:            self._nvml_ready=False; self._nvml_handle=None
+L902:        try:
+L903:            self._set_stage("report",99,"正在生成脱敏诊断 ZIP")
+L904:            report=self._write_reports()
+L905:            if ok:
+L906:                self._progress(100,"测试完成：桌面已生成诊断ZIP")
+L907:                msg=f"诊断完成：{report}"
+L908:            else:
+L909:                self._progress(90,"测试中止：已生成故障诊断ZIP")
+L910:                msg=f"测试中止，已生成故障报告：{report}\n{err}"
+L911:            self.finished.emit(ok,str(report),msg)
+L912:        except Exception as exc:
+L913:            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")
+L914:        finally:
+L915:            self._disconnect_service_signals()
+L916:            self._running=False
+
