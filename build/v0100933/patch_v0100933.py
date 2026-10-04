@@ -103,8 +103,10 @@ term_pos = d.index(terminate_line, run_pos)
 cleanup_start = d.rfind('        finally:\n', run_pos, term_pos + 1)
 if cleanup_start < 0:
     raise RuntimeError('outer diagnostic finally block not found')
-end_marker = '            self._running=False\n'
+end_marker = '            self._running=False'
 cleanup_end = d.index(end_marker, term_pos) + len(end_marker)
+if cleanup_end < len(d) and d[cleanup_end:cleanup_end+1] == '\n':
+    cleanup_end += 1
 
 new_tail = '''        finally:
             try: setattr(self.brain,"_resource_diag_no_persist",False)
