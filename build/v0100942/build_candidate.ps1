@@ -11,6 +11,8 @@ if ((Get-FileHash $SourceZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'a45
 if ((Get-FileHash $UpdateZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'd45cf82691335317fa33e4c5bf635ce869da298787b91249bec3fa414bd73722') { throw 'Baseline update mismatch' }
 Expand-Archive -LiteralPath $SourceZip -DestinationPath $Source
 $BuildFiles=Join-Path (Get-Location).Path 'build/v0100942'
+python (Join-Path $BuildFiles 'normalize_patch.py') $Source $BuildFiles
+if ($LASTEXITCODE -ne 0) { throw 'Line ending normalization failed' }
 Push-Location $Source
 try { git apply (Join-Path $BuildFiles 'changes.diff'); if ($LASTEXITCODE -ne 0) { throw 'Patch apply failed' } } finally { Pop-Location }
 foreach($Name in @('BUILD_V0100942.ps1','BUILD_DEPENDENCIES_V0100942.txt','V0100942_ACCEPTANCE.md')) {
