@@ -89,7 +89,7 @@ $MonitorExe = Join-Path $MonitorDir "XiaoMeiliResourceMonitor.exe"
 if (-not (Test-Path $MonitorExe)) { throw "onedir monitor EXE missing" }
 $DestMonitor = Join-Path $Out "XiaoMeili\ResourceMonitor"
 New-Item -ItemType Directory -Force -Path $DestMonitor | Out-Null
-Copy-Item -LiteralPath (Join-Path $MonitorDir "*") -Destination $DestMonitor -Recurse -Force
+Copy-Item -Path (Join-Path $MonitorDir "*") -Destination $DestMonitor -Recurse -Force
 
 Write-Host "[9/14] Run packaged ONEDIR monitor 5x ready/crash contract"
 $PackagedMonitor = Join-Path $DestMonitor "XiaoMeiliResourceMonitor.exe"
