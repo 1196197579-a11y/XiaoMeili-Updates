@@ -128,7 +128,7 @@ try {
   try { $sw=[IO.StreamWriter]::new($fs,[Text.UTF8Encoding]::new($false)); $sw.Write($txt.ToString()); $sw.Flush(); $sw.Dispose() } finally { if($fs){$fs.Dispose()} }
 } catch {}
 
-$zipPath = New-UniquePath $desktop "小美丽_资源测试_独立看门狗崩溃报告" ".zip"
+$zipPath = New-UniquePath $desktop "XiaoMeili_ResourceDiagnostic_Watchdog_CrashReport" ".zip"
 $safeNames = @(
   "live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl",
   "speech_diagnostic_worker.log","diagnostic_input.wav","events.json","summary.json",
