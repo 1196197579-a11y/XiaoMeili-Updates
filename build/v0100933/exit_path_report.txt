@@ -1,0 +1,64 @@
+===== resource_diagnostic_v0100932.py =====
+505:        proc = self.speech.diagnostic_process_v01005(str(wav_path), repeat=int(repeat), hold_seconds=int(hold_seconds))
+524:            try: proc.terminate()
+530:    def _terminate_proc(proc):
+535:                proc.terminate(); proc.wait(timeout=8)
+733:            self._terminate_proc(proc); self._combined_speech_proc = None
+792:    def _write_reports(self):
+858:            self._speech_proc=self._start_asr_diagnostic(wav_path,repeat=4,hold_seconds=35); self._sleep(15); self._terminate_proc(self._speech_proc); self._speech_proc=None; self._sleep(5)
+885:            self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)
+904:            report=self._write_reports()
+911:            self.finished.emit(ok,str(report),msg)
+913:            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")
+
+===== speech_input.py =====
+341:        # reaches generate_chatml() but produces None, which later crashes in
+366:        # Passing fs through kwargs duplicates that keyword and crashes.
+711:                "WORKER_FATAL",
+722:    raise SystemExit(main())
+792:            self.setup_finished.emit(True, "FSMN-VAD 与 Fun-ASR-Nano-2512 已就绪。")
+840:                self.setup_finished.emit(ok, msg)
+992:            try: proc.terminate()
+1080:SpeechInputService.diagnostic_process_v01005 = _v01005_diagnostic_process
+
+===== main.py =====
+5757:            self.check_finished.emit(False, None, "尚未绑定永久更新源。当前版本已具备安全更新器，请在“更新”页绑定固定 latest.json 地址。")
+5785:                    self.check_finished.emit(True, manifest, msg)
+5787:                    self.check_finished.emit(False, manifest, f"当前已是最新版本 V{APP_VERSION}。")
+5790:                self.check_finished.emit(False, None, f"检查更新失败：{type(e).__name__}: {e}")
+5806:            self.check_finished.emit(False, None, "请先检查更新。")
+6016:                self.check_finished.emit(False, None, f"安装更新失败：{type(e).__name__}: {e}")
+13181:                    proc.terminate()
+13199:            self.quit()
+13231:            self.app.quit()
+13273:    app=QApplication(sys.argv); app.setQuitOnLastWindowClosed(False); app.setApplicationName(APP_NAME); app.setWindowIcon(QIcon(resource("assets/xiaomeili_icon.png")))
+13277:    def excepthook(exc_type,exc,tb):
+13281:    sys.excepthook=excepthook
+13282:    if hasattr(threading, "excepthook"):
+13283:        def thread_excepthook(args):
+13285:        threading.excepthook=thread_excepthook
+13287:    sys.exit(app.exec())
+13544:            raise SystemExit(0)
+13547:            raise SystemExit(8)
+13551:            raise SystemExit(0)
+13554:            raise SystemExit(7)
+
+===== voice_dual.py =====
+463:            self.synthesis_finished.emit(bool(ok), "云端复刻音色试听完成" if ok else str(message))
+464:        self.playback_finished.emit(bool(ok), str(message), str(ctx.get("tag") or "dialogue"))
+470:                self.playback_finished.emit(False, "没有可播报的文字。", str(tag or "dialogue"))
+473:                self.playback_finished.emit(False, "上一条云端语音还在生成或播放，请稍等。", str(tag or "dialogue"))
+487:                self.synthesis_finished.emit(False, "请输入试听文字。")
+491:                self.synthesis_finished.emit(False, "上一条云端语音还在生成或播放，请稍等。")
+
+===== brain_dual.py =====
+243:        self.generation_finished.emit(
+251:            self.generation_finished.emit(False, {}, "请输入一句话。")
+254:            self.generation_finished.emit(False, {}, "小美丽还在想上一句话，稍等一下。")
+290:                    self.generation_finished.emit(False, {}, f"固定回复失败：{type(exc).__name__}: {exc}")
+299:            self.generation_finished.emit(False, {}, "云端模式尚未保存阿里云 API Key。请到「大脑 → 云端双引擎」配置。")
+439:                self.generation_finished.emit(True, answer, status)
+452:                    self.generation_finished.emit(False, {}, "回答已被语音打断")
+487:            self.generation_finished.emit(False, {}, "回答已被语音打断")
+499:        self.generation_finished.emit(False, {}, f"云端回答失败：{reason}")
+
