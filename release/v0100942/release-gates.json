@@ -1,0 +1,214 @@
+{
+  "version": "0.10.0.9.4.2",
+  "candidate_run_id": 37237746863,
+  "candidate_artifact_name": "XiaoMeili-v0100942-unpublished",
+  "main_exe_sha256": "0594df9e01aab6dfb747e904a81479d5d9dacd58f1787327467901ebdce7afaa",
+  "monitor_exe_sha256": "4e0b78ea32099935a77eb730e3a840af2a6787d0493e39048cfd486cc63abc45",
+  "assets": {
+    "XiaoMeili_V0.10.0.9.4.2_SourceProject.zip": {
+      "sha256": "2979022eed9b19f9715e16e095e200a7bd2798b3f5c14bb73c3a4094cbe3f510",
+      "size": 38246112
+    },
+    "XiaoMeili_0.10.0.9.4.2_update.zip": {
+      "sha256": "ec632416ca0bdc18fced00ca7dc2d53c23c7bdcde0e706aa79d2ce38f8ac7e0f",
+      "size": 308929038
+    }
+  },
+  "tests": [
+    {
+      "name": "NDM",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151097.446891,
+      "ended_at": 1791151102.3544772
+    },
+    {
+      "name": "FullSafe",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151102.3558128,
+      "ended_at": 1791151102.522568
+    },
+    {
+      "name": "Packaged runtime/settings self-tests",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151102.522568,
+      "ended_at": 1791151111.3615909
+    },
+    {
+      "name": "Packaged complete button chain 1",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151111.3615909,
+      "ended_at": 1791151255.385234
+    },
+    {
+      "name": "Packaged complete button chain 2",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151255.3862398,
+      "ended_at": 1791151400.9385624
+    },
+    {
+      "name": "Packaged complete button chain 3",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151400.9400635,
+      "ended_at": 1791151549.8220932
+    },
+    {
+      "name": "Packaged host crash",
+      "pass": true,
+      "exit_code": 0,
+      "started_at": 1791151549.8220932,
+      "ended_at": 1791151555.072072
+    }
+  ],
+  "normal_count": 3,
+  "crash_count": 1,
+  "all_local_gates_pass": true,
+  "public_readback": "pending",
+  "latest_safe_promoted": false,
+  "reports": [
+    {
+      "mode": "crash",
+      "pass": true,
+      "exe_sha256": "0594df9e01aab6dfb747e904a81479d5d9dacd58f1787327467901ebdce7afaa",
+      "report_sha256": "f3e0d489c1847b55ccdc496e556831c6f98d857ea87d1970ae82bc2401e7e627",
+      "samples": 1,
+      "ui_progress": null,
+      "trace": null
+    },
+    {
+      "mode": "normal",
+      "pass": true,
+      "exe_sha256": "0594df9e01aab6dfb747e904a81479d5d9dacd58f1787327467901ebdce7afaa",
+      "report_sha256": "585d81d2bcc149d057f0b210cf98525a0d7e2fafcffbef1fdb2586b614ede709",
+      "samples": 448,
+      "ui_progress": [
+        0,
+        1,
+        1,
+        1,
+        2,
+        10,
+        18,
+        27,
+        35,
+        43,
+        99,
+        100
+      ],
+      "trace": [
+        "runner_created",
+        "runner_started",
+        "session_created",
+        "journals_opened",
+        "monitor_path_found",
+        "monitor_process_started",
+        "monitor_ready",
+        "waiting_for_ui_progress",
+        "ui_progress_visible",
+        "test_started"
+      ]
+    },
+    {
+      "mode": "normal",
+      "pass": true,
+      "exe_sha256": "0594df9e01aab6dfb747e904a81479d5d9dacd58f1787327467901ebdce7afaa",
+      "report_sha256": "4e5659c81dd7de965508b236ee95ac53a51ab083f80f0cb4f904323abdb53f7a",
+      "samples": 434,
+      "ui_progress": [
+        0,
+        1,
+        1,
+        1,
+        2,
+        10,
+        18,
+        27,
+        35,
+        43,
+        99,
+        100
+      ],
+      "trace": [
+        "runner_created",
+        "runner_started",
+        "session_created",
+        "journals_opened",
+        "monitor_path_found",
+        "monitor_process_started",
+        "monitor_ready",
+        "waiting_for_ui_progress",
+        "ui_progress_visible",
+        "test_started"
+      ]
+    },
+    {
+      "mode": "normal",
+      "pass": true,
+      "exe_sha256": "0594df9e01aab6dfb747e904a81479d5d9dacd58f1787327467901ebdce7afaa",
+      "report_sha256": "14f7a46b9cefea77603c1411dfb89f2f4c908c05cd39e8c7dc5cd2c55501678a",
+      "samples": 436,
+      "ui_progress": [
+        0,
+        1,
+        1,
+        1,
+        2,
+        10,
+        18,
+        27,
+        35,
+        43,
+        99,
+        100
+      ],
+      "trace": [
+        "runner_created",
+        "runner_started",
+        "session_created",
+        "journals_opened",
+        "monitor_path_found",
+        "monitor_process_started",
+        "monitor_ready",
+        "waiting_for_ui_progress",
+        "ui_progress_visible",
+        "test_started"
+      ]
+    }
+  ],
+  "runtime_integrity": {
+    "unchanged_files_sha256_verified": 1337,
+    "changed_files": [
+      "ResourceMonitor/XiaoMeiliResourceMonitor.exe",
+      "XiaoMeili.exe",
+      "_internal/assets/VERSION.txt"
+    ],
+    "baseline_sha256": "d45cf82691335317fa33e4c5bf635ce869da298787b91249bec3fa414bd73722",
+    "missing_files": []
+  },
+  "startup_fault_tests": [
+    {
+      "case": "journal_exception",
+      "elapsed": 0.01600000000325963,
+      "report": "startup-fault-tests_5df1529876a94eb7b4988736963c640f\\journal_exception\\reports\\小美丽_启动故障_52dcbe2dc3ee49a9b4e9bad6cbb7c543.zip",
+      "failed_step": "session_created"
+    },
+    {
+      "case": "monitor_blocked",
+      "elapsed": 10.03100000001723,
+      "report": "startup-fault-tests_5df1529876a94eb7b4988736963c640f\\monitor_blocked\\reports\\小美丽_启动故障_a097b9a770714edeb4e6b65b2f1a07e6.zip",
+      "failed_step": "journals_opened"
+    },
+    {
+      "case": "ui_progress_unacknowledged",
+      "elapsed": 10.172000000020489,
+      "report": "startup-fault-tests_5df1529876a94eb7b4988736963c640f\\ui_progress_unacknowledged\\reports\\小美丽_启动故障_29fe633d77c2429680158928c3058fde.zip",
+      "failed_step": "waiting_for_ui_progress"
+    }
+  ],
+  "acceptance_profile": "preflight, short idle, animations, whiteboard, real ASR/brain/natural TTS; full long profile retained"
+}

@@ -1,0 +1,19 @@
+name: Promote verified XiaoMeili V0.10.0.9.4.2
+on:
+  push:
+    branches: [codex/v0100942-e2e-20261005]
+    paths: [release/v0100942/release-gates.json]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  promote:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify accepted assets and public downloads before safe promotion
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pwsh -NoProfile -File release/v0100942/promote_verified.ps1
