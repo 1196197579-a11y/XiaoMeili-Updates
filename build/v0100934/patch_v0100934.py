@@ -99,14 +99,14 @@ d = rep(d, "from PySide6.QtCore import QObject, Signal\n",
 d = d.replace(
     '"speech_diagnostic_worker.log", "diagnostic_input.wav", "events.json", "summary.json",',
     '"speech_diagnostic_worker.log", "diagnostic_input.wav", "events.json", "summary.json",\n'
-    '        "python_faulthandler.log", "watchdog_started.json", "watchdog_heartbeat.jsonl",\n'
+    '        "python_faulthandler.log", "watchdog_started.json", "watchdog_heartbeat.jsonl", "watchdog_debug.jsonl",\n'
     '        "watchdog_exit_evidence.txt", "windows_event_crash_evidence.txt",',
 )
 d = d.replace('legacy = session.name.startswith("v0100932_")',
               'legacy = session.name.startswith(("v0100932_","v0100933_","v0100934_"))')
 d = d.replace(
     '"live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl"}',
-    '"live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl","python_faulthandler.log","watchdog_started.json","watchdog_heartbeat.jsonl"}',
+    '"live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl","python_faulthandler.log","watchdog_started.json","watchdog_heartbeat.jsonl","watchdog_debug.jsonl"}',
 )
 
 # Insert the one and only dispatcher before the runner class. This QObject is created
