@@ -5,13 +5,13 @@
   "sha256": "9115949b80400bbb566bf2082ac830bbe4cc92899b137bc5c9116bbde53cfb92",
   "package_size": 266454711,
   "notes": [
-    "V0.10.0.9.3.6：Stable Resource Diagnostic 3.1：资源测试不再伪造“闭嘴”ASR口令，避免在speech_state=stopped的非法测试状态触发原生闪退",
-    "第8阶段和启动前预检改为安全TTS/白板中止回收，仍测试资源释放，但不再强制改变SpeechInputService状态",
-    "正式长测前增加约10秒高风险预检；若TTS→闭嘴→白板关闭链路失败会立即停止，不再先跑十分钟",
-    "新增独立隐藏Watchdog：若XiaoMeili.exe测试期间闪退，自动抓Windows Application/WER错误并在桌面生成闪退监控ZIP",
-    "继续实时追加timeline/events/rounds/status，主程序即使异常退出也保留已完成数据",
+    "V0.10.0.9.3.6：Stable Resource Diagnostic 3.1，深度资源测试不再伪造“闭嘴”ASR口令，避免在 speech_state=stopped 的非法测试状态触发原生闪退",
+    "启动前约10秒预检和第8阶段改为安全TTS/白板中止回收：仍测试TTS abort、白板关闭与资源回落，但不再强制改变SpeechInputService状态",
+    "真实“闭嘴”功能本身不删除、不降级；只是从资源压力测试中移除不符合真实运行状态的合成口令注入",
+    "Watchdog改为独立/脱离主进程启动，并在允许时BREAKAWAY_FROM_JOB，提高主程序原生崩溃后继续生成Windows/WER报告的可靠性",
+    "Watchdog及其conhost不再计入小美丽RAM/CPU统计，避免监控器自身开销污染资源报告",
+    "继续实时追加timeline/events/rounds/status，并保留30轮聊天、ASR、大脑、TTS、白板、动画、离线识别、综合满载和90秒回落",
     "Watchdog与恢复器均只复制诊断白名单文件，不删除、不移动、不覆盖、不递归清理任何用户文件或旧版本",
-    "继续保留NVML无黑框、真实CPU、250ms采样、WAV/ASR、30轮聊天、离线识别、综合满载和90秒回落",
     "继续保留NDM真实URL文件名识别与快速回退，以及FullSafe更新保护"
   ]
 }
