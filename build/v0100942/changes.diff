@@ -1,0 +1,646 @@
+--- a/app/src/main.py
++++ b/app/src/main.py
+@@ -1,5 +1,19 @@
+ # -*- coding: utf-8 -*-
+ import os, sys, json, shutil, logging, traceback, subprocess, threading, time, ctypes, re, gc, random, tempfile, zipfile, urllib.request, hashlib, uuid
++if "--resource-e2e" in sys.argv:
++    _e2e_index = sys.argv.index("--resource-e2e")
++    if _e2e_index + 1 >= len(sys.argv):
++        raise SystemExit("--resource-e2e requires a new isolated run directory")
++    _e2e_root = os.path.abspath(sys.argv[_e2e_index + 1])
++    if os.path.exists(_e2e_root):
++        raise SystemExit("E2E run directory must not already exist")
++    os.makedirs(_e2e_root, exist_ok=False)
++    os.environ["PUBLIC"] = _e2e_root
++    os.environ["XM_RESOURCE_E2E_ROOT"] = _e2e_root
++    os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
++    os.environ["HF_HOME"] = os.path.join(_e2e_root, "model-cache")
++    os.environ["MODELSCOPE_CACHE"] = os.path.join(_e2e_root, "model-cache", "modelscope")
++
+ # Limit math/image libraries to one worker thread. The previous build could let
+ # OpenCV/ONNX fan out across many cores during frequent HUD scans.
+ os.environ.setdefault("OMP_NUM_THREADS", "1")
+@@ -31,9 +45,9 @@
+ from interaction_diagnostic_v010091 import InteractionDiagnosticRunner, interaction_diag_note
+ from resource_diagnostic_v0100934 import ResourceDiagnosticRunnerV2, recover_interrupted_resource_diagnostics
+ 
+-APP_NAME = "小美丽 V0.10.0.9.4.1｜External Resource Diagnostic 4.1"
+-APP_VERSION = "0.10.0.9.4.1"
+-APP_UPDATE_VERSION = "0.10.0.9.4.1"
++APP_NAME = "小美丽 V0.10.0.9.4.2｜External Resource Diagnostic 4.2"
++APP_VERSION = "0.10.0.9.4.2"
++APP_UPDATE_VERSION = "0.10.0.9.4.2"
+ UPDATE_PROTOCOL_VERSION = 1
+ ORG_NAME = "XiaoMeili"
+ ASSET_RNG = random.SystemRandom()  # independent draw with replacement; consecutive repeats are allowed
+@@ -102,6 +116,8 @@
+ 
+ 
+ def desktop_dir() -> Path:
++    if os.environ.get("XM_RESOURCE_E2E_ROOT"):
++        return Path(os.environ["XM_RESOURCE_E2E_ROOT"]) / "reports"
+     """Return the real Windows Desktop path when possible, including OneDrive/localized setups."""
+     if sys.platform == "win32":
+         try:
+@@ -6370,6 +6386,7 @@
+ 
+ 
+ class SettingsDialog(QDialog):
++    resource_entry_failed = Signal(bool, str, str)
+     hotkeys_changed = Signal()
+     config_changed = Signal()
+     storage_migration_requested = Signal(str)
+@@ -8835,9 +8852,40 @@
+         self.v01005_diag_btn.setEnabled(False)
+         self.v01005_diag_btn.setText("自动测试运行中…")
+         self.v01005_diag_status.setText("正在准备全自动测试；无需开游戏、无需说话、无需操作。")
+-        runner=ResourceDiagnosticRunnerV2(
+-            self.cfg,self.brain_service,self.voice_service,self.speech_service,self.vision,self.pet,
+-            xiaomeili_logical_data_root(),desktop_dir(),APP_VERSION,self)
++        if not getattr(self, "_resource_entry_signal_connected", False):
++            self.resource_entry_failed.connect(self._v01005_diagnostic_finished, Qt.ConnectionType.QueuedConnection)
++            self._resource_entry_signal_connected = True
++        entry_done = threading.Event()
++        entry_failed = threading.Event()
++        def entry_failure(reason):
++            if entry_done.is_set() or entry_failed.is_set():
++                return
++            entry_failed.set()
++            report = ""
++            try:
++                target = desktop_dir() / ("小美丽_入口故障_" + uuid.uuid4().hex + ".zip")
++                target.parent.mkdir(parents=True, exist_ok=True)
++                with zipfile.ZipFile(target, "x", zipfile.ZIP_DEFLATED) as zf:
++                    zf.writestr("startup_failure.json", json.dumps({"ok":False,"failed_step":"runner_creation", "reason":str(reason)},ensure_ascii=False))
++                report = str(target)
++            except Exception:
++                LOGGER.exception("入口故障报告生成失败")
++            self.resource_entry_failed.emit(False, report, "入口启动失败：" + str(reason))
++        entry_guard = threading.Timer(10.0, lambda: entry_failure("Runner创建超过10秒"))
++        entry_guard.daemon = True
++        entry_guard.start()
++        LOGGER.info("resource_startup: button_triggered")
++        try:
++            runner=ResourceDiagnosticRunnerV2(
++                self.cfg,self.brain_service,self.voice_service,self.speech_service,self.vision,self.pet,
++                xiaomeili_logical_data_root(),desktop_dir(),APP_VERSION,self)
++        except Exception as exc:
++            entry_failure(f"{type(exc).__name__}: {exc}")
++            entry_guard.cancel()
++            return
++        entry_done.set(); entry_guard.cancel()
++        if entry_failed.is_set():
++            return
+         self._v01005_diag_runner=runner
+         runner.progress_changed.connect(self._v01005_diagnostic_progress)
+         runner.state_requested.connect(lambda state:self.pet.play_state(str(state),force_new_clip=True))
+@@ -8882,15 +8930,8 @@
+                     tag=str(payload.get("tag") or "resource_diag"),
+                     extra_instruct="",
+                 )
+-            elif action=="tts_abort":
+-                self.voice_service.abort_playback(str(payload.get("reason") or "resource_diag"))
+-            elif action=="hard_silence":
+-                # This settings/controller object does not own _hard_silence_now.
+-                # Re-inject the recognized phrase through SpeechInputService on
+-                # the Qt main thread. AppController receives the real
+-                # utterance_ready signal and executes the production P0 path.
+-                phrase=str(payload.get("phrase") or "闭嘴")
+-                self.speech_service.utterance_ready.emit(phrase)
++            elif action in ("tts_abort", "hard_silence"):
++                raise RuntimeError("深度资源测试禁止强制TTS中止和伪造ASR")
+             elif action=="interrupt_snapshot":
+                 result={
+                     "tts_active": bool(self.voice_service.cloud_stream_in_progress()),
+@@ -8911,6 +8952,9 @@
+     def _v01005_diagnostic_progress(self, value, text):
+         if hasattr(self, "v01005_diag_progress"):
+             self.v01005_diag_progress.setValue(max(0, min(100, int(value))))
++            runner=getattr(self,"_v01005_diag_runner",None)
++            if runner is not None:
++                runner.confirm_ui_progress(self.v01005_diag_progress.value())
+         if hasattr(self, "v01005_diag_status"):
+             self.v01005_diag_status.setText(str(text))
+ 
+@@ -8918,6 +8962,8 @@
+         self.v01005_diag_btn.setEnabled(True); self.v01005_diag_btn.setText("开始一键深度资源测试 2.0")
+         self.v01005_diag_progress.setRange(0,100); self.v01005_diag_progress.setValue(100 if ok and report_path else (90 if report_path else 0))
+         self.v01005_diag_status.setText(str(message))
++        if os.environ.get("XM_RESOURCE_E2E_ROOT"):
++            return
+         if ok and report_path:
+             QMessageBox.information(self,"一键深度资源测试 2.0 完成",
+                 f"{message}\n\n桌面已生成脱敏诊断 ZIP，请直接上传给 ChatGPT。\n"
+@@ -10755,6 +10801,10 @@
+         self.brain_status.setText("小美丽正在想…")
+ 
+     def _brain_generation_finished(self, ok, answer, message):
++        if bool(getattr(self.brain_service, "_resource_diag_no_persist", False)):
++            # The diagnostic owns this answer and its natural TTS playback.
++            # A settings-chat preview would start a second competing audio task.
++            return
+         interaction_diag_note("brain_generation_end",ok=bool(ok),chars=len(str((answer or {}).get("spoken_text") or "")) if isinstance(answer,dict) else 0)
+         self.brain_send_btn.setEnabled(True)
+         self.brain_status.setText(str(message))
+@@ -13330,8 +13380,12 @@
+ def main():
+     set_windows_app_identity()
+     app=QApplication(sys.argv); app.setQuitOnLastWindowClosed(False); app.setApplicationName(APP_NAME); app.setWindowIcon(QIcon(resource("assets/xiaomeili_icon.png")))
+-    ensure_desktop_launcher()
++    if not os.environ.get("XM_RESOURCE_E2E_ROOT"):
++        ensure_desktop_launcher()
+     cfg=load_config()
++    if os.environ.get("XM_RESOURCE_E2E_ROOT"):
++        from resource_e2e import prepare_config
++        cfg=prepare_config(cfg, USER)
+     maybe_adopt_report_font(cfg)
+     try:
+         recovered = recover_interrupted_resource_diagnostics(
+@@ -13351,6 +13405,9 @@
+             LOGGER.critical("后台线程未捕获异常：%s", args.thread.name if args.thread else "unknown", exc_info=(args.exc_type,args.exc_value,args.exc_traceback))
+         threading.excepthook=thread_excepthook
+     ctl=AppController(app,cfg)
++    if os.environ.get("XM_RESOURCE_E2E_ROOT"):
++        from resource_e2e import attach_acceptance
++        ctl._resource_acceptance=attach_acceptance(ctl,app,USER)
+     sys.exit(app.exec())
+ 
+ 
+@@ -13472,8 +13529,9 @@
+             raise RuntimeError("editable avatar widget missing")
+ 
+         theme_buttons = list(getattr(dialog, "v0777_theme_buttons", []))
+-        if len(theme_buttons) != 6:
+-            raise RuntimeError(f"expected 6 in-layout theme buttons, got {len(theme_buttons)}")
++        expected_theme_buttons = len(dialog.v774_nav_names)
++        if len(theme_buttons) != expected_theme_buttons:
++            raise RuntimeError(f"expected {expected_theme_buttons} in-layout theme buttons, got {len(theme_buttons)}")
+         before_mode = dialog._v0775_theme_mode
+         theme_buttons[0].click()
+         app.processEvents()
+@@ -13576,7 +13634,12 @@
+             raise RuntimeError(f"human pause text transform failed: {humanized}")
+ 
+         # V0.7.7.11 startup notice must be fully retired.
+-        source_text = Path(__file__).read_text(encoding="utf-8")
++        if getattr(sys, "frozen", False):
++            source_snapshot = Path(resource(f"assets/XiaoMeili_V{APP_VERSION}_SourceProject.zip"))
++            with zipfile.ZipFile(source_snapshot) as snapshot:
++                source_text = snapshot.read("app/src/main.py").decode("utf-8-sig")
++        else:
++            source_text = Path(__file__).read_text(encoding="utf-8")
+         retired_title = "设置中心" + "焕新完成"
+         if retired_title in source_text:
+             raise RuntimeError("retired settings-center startup popup text returned")
+--- a/app/src/resource_diagnostic_v0100934.py
++++ b/app/src/resource_diagnostic_v0100934.py
+@@ -20,6 +20,7 @@
+ import time
+ import wave
+ import zipfile
++import uuid
+ from array import array
+ from pathlib import Path
+ 
+@@ -65,7 +66,7 @@
+         return []
+     recovered = []
+     safe_names = {
+-        "live_timeline.jsonl", "live_events.jsonl", "live_rounds.jsonl", "live_status.jsonl","external_report_path.txt","external_windows_event_log.txt","external_monitor_summary.json","external_monitor_status.jsonl","external_process_tree.csv","external_timeline_250ms.csv",
++        "live_timeline.jsonl", "live_events.jsonl", "live_rounds.jsonl", "live_status.jsonl","external_monitor_stdout.log","external_monitor_stderr.log","external_report_path.txt","external_windows_event_log.txt","external_monitor_summary.json","external_monitor_status.jsonl","external_process_tree.csv","external_timeline_250ms.csv",
+         "speech_diagnostic_worker.log", "diagnostic_input.wav", "events.json", "summary.json",
+         "stage_summary.csv", "round_ledger.csv", "timeline_250ms.csv",
+         "vram_jump_events.csv", "process_tree.csv"
+@@ -74,7 +75,7 @@
+     for session in sessions:
+         if (session / "finalized.flag").exists() or (session / "recovered.flag").exists():
+             continue
+-        live = session / "live_status.jsonl","external_report_path.txt","external_windows_event_log.txt","external_monitor_summary.json","external_monitor_status.jsonl","external_process_tree.csv","external_timeline_250ms.csv"
++        live = session / "live_status.jsonl"
+         legacy = session.name.startswith("v0100932_")
+         if not live.exists() and not legacy:
+             continue
+@@ -99,6 +100,10 @@
+             pass
+         recovered.append(str(target))
+     return recovered
++
++
++class _AcceptanceComplete(Exception):
++    pass
+ 
+ 
+ class ResourceDiagnosticRunnerV2(QObject):
+@@ -157,6 +162,14 @@
+         self._main_action_seq = 0
+         self._main_action_event = threading.Event()
+         self._main_action_reply = (0, False, "", {})
++        self._startup_lock = threading.RLock()
++        self._startup_done = threading.Event()
++        self._ui_progress_ack = threading.Event()
++        self._startup_failed = threading.Event()
++        self._finished_once = False
++        self._startup_state = "button_triggered"
++        self._startup_since = time.monotonic()
++        self._startup_trace = []
+         self._watchdog_proc = None
+         self._watchdog_script = None
+         try:
+@@ -174,7 +187,7 @@
+         self._live_timeline_fp = (self.session_dir / "live_timeline.jsonl").open("x", encoding="utf-8", buffering=1)
+         self._live_events_fp = (self.session_dir / "live_events.jsonl").open("x", encoding="utf-8", buffering=1)
+         self._live_rounds_fp = (self.session_dir / "live_rounds.jsonl").open("x", encoding="utf-8", buffering=1)
+-        self._live_status_fp = (self.session_dir / "live_status.jsonl","external_report_path.txt","external_windows_event_log.txt","external_monitor_summary.json","external_monitor_status.jsonl","external_process_tree.csv","external_timeline_250ms.csv").open("x", encoding="utf-8", buffering=1)
++        self._live_status_fp = (self.session_dir / "live_status.jsonl").open("x", encoding="utf-8", buffering=1)
+         self._journal_status("running", "created")
+ 
+     def _journal_write(self, fp, payload):
+@@ -244,6 +257,7 @@
+         if not helper.is_file():
+             self._event("external_monitor_missing",helper=str(helper))
+             return False
++        self._startup_step("monitor_path_found")
+         out_path=self.session_dir/"external_monitor_stdout.log"
+         err_path=self.session_dir/"external_monitor_stderr.log"
+         try:
+@@ -274,11 +288,13 @@
+             try: err_fp.close()
+             except Exception: pass
+ 
++        self._startup_step("monitor_process_started")
+         self._event("external_monitor_started",pid=int(self._watchdog_proc.pid),mode="fixed_onedir")
+         ready=self.session_dir/"watchdog_ready.flag"
+         deadline=time.monotonic()+10.0
+         while time.monotonic()<deadline:
+             if ready.exists():
++                self._startup_step("monitor_ready")
+                 self._event("external_monitor_ready",pid=int(self._watchdog_proc.pid),mode="fixed_onedir")
+                 return True
+             try:
+@@ -324,8 +340,76 @@
+         if self._running:
+             return False
+         self._running = True
+-        threading.Thread(target=self._run, name="XiaoMeiliResourceDiagnosticV0100934", daemon=True).start()
++        self._startup_step("runner_created")
++        threading.Thread(target=self._startup_watch, name="ResourceStartupDeadline", daemon=True).start()
++        threading.Thread(target=self._run, name="XiaoMeiliResourceDiagnosticV0100942", daemon=True).start()
+         return True
++
++    def _startup_step(self, state):
++        with self._startup_lock:
++            if self._startup_failed.is_set():
++                raise RuntimeError("startup already failed")
++            self._startup_state = str(state)
++            self._startup_since = time.monotonic()
++            self._startup_trace.append({"state": str(state), "time": time.time()})
++        self._event("startup_state", state=str(state))
++
++    def _emit_finished_once(self, ok, path, message):
++        with self._startup_lock:
++            if self._finished_once:
++                return
++            self._finished_once = True
++        self._running = False
++        self.finished.emit(bool(ok), str(path or ""), str(message))
++
++    def _startup_failure(self, reason):
++        with self._startup_lock:
++            if self._startup_done.is_set() or self._startup_failed.is_set():
++                return
++            self._startup_failed.set()
++            trace = list(self._startup_trace)
++        self._sampling = False
++        self._gpu_stop.set()
++        report = ""
++        try:
++            self.desktop.mkdir(parents=True, exist_ok=True)
++            target = self.desktop / ("小美丽_启动故障_" + uuid.uuid4().hex + ".zip")
++            payload = {"ok": False, "app_version": self.app_version, "failed_step": self._startup_state,
++                       "reason": str(reason), "startup_trace": trace}
++            with zipfile.ZipFile(target, "x", zipfile.ZIP_DEFLATED) as zf:
++                zf.writestr("startup_failure.json", json.dumps(payload, ensure_ascii=False, indent=2))
++            report = str(target)
++        except Exception as exc:
++            reason = str(reason) + "; failure ZIP error: " + str(exc)
++        self._progress(0, "启动失败：" + str(reason))
++        self._emit_finished_once(False, report, "启动失败，已停止测试：" + str(reason))
++
++    def _startup_watch(self):
++        while not self._startup_done.wait(0.05):
++            if self._startup_failed.is_set():
++                return
++            with self._startup_lock:
++                elapsed = time.monotonic() - self._startup_since
++                state = self._startup_state
++            if elapsed >= 10.0:
++                self._startup_failure(f"{state} 超过10秒未完成")
++                return
++
++    def confirm_ui_progress(self, value):
++        if int(value) >= 1 and self._startup_state == "waiting_for_ui_progress" and not self._startup_failed.is_set():
++            self._startup_step("ui_progress_visible")
++            self._ui_progress_ack.set()
++
++    def _run(self):
++        try:
++            self._run_body()
++        except Exception as exc:
++            self._startup_failure(f"{type(exc).__name__}: {exc}")
++            if self._startup_done.is_set():
++                self._emit_finished_once(False, "", str(exc))
++        finally:
++            self._close_live_journals()
++            self._disconnect_service_signals()
+ 
+     def _on_brain_finished(self, ok, answer, message):
+         self._brain_result = (bool(ok), dict(answer or {}) if isinstance(answer, dict) else {}, str(message or ""))
+@@ -735,8 +819,22 @@
+         ready = False
+         events = []
+         deadline = time.monotonic() + 240
++        lines = queue.Queue()
++        def read_lines():
++            if proc.stdout:
++                for line in proc.stdout:
++                    lines.put(line)
++            lines.put(None)
++        threading.Thread(target=read_lines, name="DiagnosticASRLines", daemon=True).start()
+         while time.monotonic() < deadline:
+-            line = proc.stdout.readline() if proc.stdout else ""
++            try:
++                line = lines.get(timeout=0.1)
++            except queue.Empty:
++                if proc.poll() is not None:
++                    break
++                continue
++            if line is None:
++                break
+             if line:
+                 evt = self._parse_event_line(line)
+                 if evt:
+@@ -800,14 +898,14 @@
+ 
+     def _animation_stage(self):
+         states = ["idle", "low_hp", "kill", "dead", "victory", "defeat"]
+-        for i in range(30):
++        for i in range(6 if self.cfg.get("_resource_e2e") else 30):
+             self.state_requested.emit(states[i % len(states)])
+             self._sleep(0.75)
+         self.state_requested.emit("idle")
+         self._sleep(3)
+ 
+     def _whiteboard_stage(self):
+-        for i in range(12):
++        for i in range(2 if self.cfg.get("_resource_e2e") else 12):
+             rec = self._round_start("whiteboard", i + 1)
+             self.board_requested.emit(f"资源测试白板第{i+1}轮", 1400)
+             self._sleep(1.8)
+@@ -1043,18 +1141,21 @@
+         stamp=time.strftime("%Y%m%d_%H%M%S")
+         target=self.desktop/f"小美丽_一键深度资源测试2.0_{stamp}.zip"; n=1
+         while target.exists(): target=self.desktop/f"小美丽_一键深度资源测试2.0_{stamp}_{n}.zip"; n+=1
+-        names={"timeline_250ms.csv","round_ledger.csv","stage_summary.csv","vram_jump_events.csv","process_tree.csv","events.json","summary.json","请上传给ChatGPT_一键深度资源测试2.0摘要.txt","speech_diagnostic_worker.log","live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl","external_report_path.txt","external_windows_event_log.txt","external_monitor_summary.json","external_monitor_status.jsonl","external_process_tree.csv","external_timeline_250ms.csv","windows_event_log.txt","watchdog_summary.json","watchdog_ready.flag"}
++        names={"timeline_250ms.csv","round_ledger.csv","stage_summary.csv","vram_jump_events.csv","process_tree.csv","events.json","summary.json","请上传给ChatGPT_一键深度资源测试2.0摘要.txt","speech_diagnostic_worker.log","live_timeline.jsonl","live_events.jsonl","live_rounds.jsonl","live_status.jsonl","external_monitor_stdout.log","external_monitor_stderr.log","external_report_path.txt","external_windows_event_log.txt","external_monitor_summary.json","external_monitor_status.jsonl","external_process_tree.csv","external_timeline_250ms.csv","windows_event_log.txt","watchdog_summary.json","watchdog_ready.flag"}
+         with zipfile.ZipFile(target,"x",zipfile.ZIP_DEFLATED) as zf:
+             for p in sorted(self.session_dir.iterdir()):
+                 if p.is_file() and p.name in names: zf.write(p,arcname=p.name)
+         self.report_zip=target
+         return target
+ 
+-    def _run(self):
+-        self._started=time.monotonic(); token=f"{int(time.time())}_{os.getpid()}"
+-        self.session_dir=self.data_root/"diagnostics"/"resource"/f"v0100934_{token}"
++    def _run_body(self):
++        self._startup_step("runner_started")
++        self._started=time.monotonic(); token=uuid.uuid4().hex
++        self.session_dir=self.data_root/"diagnostics"/"resource"/f"v0100942_{token}"
+         self.session_dir.mkdir(parents=True,exist_ok=False)
++        self._startup_step("session_created")
+         self._open_live_journals()
++        self._startup_step("journals_opened")
+         watchdog_ready=False
+         wav_path=None; ok=True; err=""
+         self._sampling=True
+@@ -1068,7 +1169,12 @@
+             watchdog_ready=self._start_watchdog()
+             if not watchdog_ready:
+                 raise RuntimeError("外部资源监控器启动失败或10秒内未握手；已停止长测并生成故障报告")
++            self._startup_step("waiting_for_ui_progress")
+             self._progress(1,"外部资源监控器已连接，开始测试")
++            if not self._ui_progress_ack.wait(10.0):
++                raise RuntimeError("界面10秒内未确认进入1%，已停止测试")
++            self._startup_step("test_started")
++            self._startup_done.set()
+             self._set_stage("preflight",1,"启动前快速自检：事件、CPU、GPU与ASR测试音频")
+             self._preflight_self_test()
+             wav_path = self._make_test_wav(self.session_dir / "diagnostic_input.wav")
+@@ -1077,7 +1183,7 @@
+             self._hard_silence_preflight()
+ 
+             self._set_stage("baseline",2,f"1/10 纯待机基线：记录 {BASELINE_SECONDS} 秒")
+-            self.state_requested.emit("idle"); self._sleep(BASELINE_SECONDS)
++            self.state_requested.emit("idle"); self._sleep(3 if self.cfg.get("_resource_e2e") else BASELINE_SECONDS)
+ 
+             self._set_stage("animation",10,"2/10 状态动画：自动切换30次，检查QMovie/Qt对象回收")
+             self._animation_stage()
+@@ -1087,6 +1193,19 @@
+ 
+             self._set_stage("asr",27,"4/10 语音输入：FSMN-VAD + Fun-ASR-Nano-2512 自动离线测试")
+             self._speech_proc=self._start_asr_diagnostic(wav_path,repeat=4,hold_seconds=35); self._sleep(15); self._terminate_proc(self._speech_proc); self._speech_proc=None; self._sleep(5)
++
++            if self.cfg.get("_resource_e2e"):
++                self._set_stage("brain",35,"端到端验收：真实大脑调用")
++                rec=self._round_start("brain",1)
++                brain_ok, spoken=self._brain_once(1)
++                self._round_end(rec,brain_ok,0.5)
++                self._set_stage("tts",43,"端到端验收：真实TTS自然播放")
++                rec=self._round_start("tts",1)
++                tts_ok=self._tts_once(spoken or "测试正常。","resource_diag_e2e",35)
++                self._round_end(rec,tts_ok,0.5)
++                if not brain_ok or not tts_ok:
++                    raise RuntimeError("真实大脑/TTS验收失败")
++                raise _AcceptanceComplete()
+ 
+             self._set_stage("brain",35,"5/10 云端大脑：6轮短回答测试（会产生少量API费用，不写入记忆/历史）")
+             self._brain_stage()
+@@ -1110,8 +1229,12 @@
+ 
+             self._set_stage("final_cooldown",96,f"最终冷却：静置 {FINAL_COOLDOWN_SECONDS} 秒，检查CPU/RAM/显存是否回落")
+             self.board_close_requested.emit(); self.state_requested.emit("idle"); self._sleep(FINAL_COOLDOWN_SECONDS)
++        except _AcceptanceComplete:
++            pass
+         except Exception as exc:
+             ok=False; err=f"{type(exc).__name__}: {exc}"; self._event("error",message=err)
++            if not self._startup_done.is_set():
++                self._startup_failure(err)
+         finally:
+             try: setattr(self.brain,"_resource_diag_no_persist",False)
+             except Exception: pass
+@@ -1127,6 +1250,10 @@
+             except Exception: pass
+             # Keep NVML initialized for the application lifetime. Explicit native
+             # teardown is deliberately avoided before/after diagnostic reporting.
++        if self._startup_failed.is_set():
++            self._close_live_journals()
++            self._stop_external_monitor_for_report(timeout=1.0)
++            return
+         report = None
+         try:
+             self._set_stage("report",99,"正在生成脱敏诊断 ZIP")
+@@ -1134,6 +1261,10 @@
+             external_stopped=self._stop_external_monitor_for_report(timeout=10.0)
+             self._event("external_monitor_report_ready",ok=bool(external_stopped))
+             self._close_live_journals()
++            if not external_stopped:
++                ok=False; err="外部监控器未正常停止"
++            if any(not r.get("ok", False) for r in self._rounds):
++                ok=False; err=err or "存在失败的诊断轮次"
+             report=self._write_reports()
+             try:
+                 (self.session_dir / "finalized.flag").write_text(str(report), encoding="utf-8")
+@@ -1145,11 +1276,11 @@
+             else:
+                 self._progress(90,"测试中止：已生成故障诊断ZIP")
+                 msg=f"测试中止，已生成故障报告：{report}\n{err}"
+-            self.finished.emit(ok,str(report),msg)
++            self._emit_finished_once(ok,str(report),msg)
+         except Exception as exc:
+             self._journal_status("report_failed", "report", error=f"{type(exc).__name__}: {exc}")
+             self._close_live_journals()
+-            self.finished.emit(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")
++            self._emit_finished_once(False,"",f"生成诊断报告失败：{type(exc).__name__}: {exc}")
+         finally:
+             # Riskier child-process cleanup happens only after report generation.
+             self._terminate_proc(self._speech_proc); self._terminate_proc(self._combined_speech_proc)
+--- a/app/src/resource_monitor_v0100941.py
++++ b/app/src/resource_monitor_v0100941.py
+@@ -1,5 +1,5 @@
+ # -*- coding: utf-8 -*-
+-"""XiaoMeili external resource monitor V0.10.0.9.4.1.
++"""XiaoMeili external resource monitor V0.10.0.9.4.2.
+ 
+ Authoritative resource collection lives OUTSIDE XiaoMeili.exe.
+ Safety contract:
+@@ -382,7 +382,7 @@
+ 
+     duration = round(time.monotonic() - start_mono, 3)
+     summary = {
+-        "monitor_version":"0.10.0.9.4.1",
++        "monitor_version":"0.10.0.9.4.2",
+         "app_version":args.app_version,
+         "host_pid":args.pid,
+         "monitor_pid":os.getpid(),
+--- a/app/assets/VERSION.txt
++++ b/app/assets/VERSION.txt
+@@ -1 +1 @@
+-0.10.0.9.4.1
++0.10.0.9.4.2
+--- /dev/null
++++ b/app/src/resource_e2e.py
+@@ -0,0 +1,105 @@
++"""Acceptance driver: real AppController, real settings button and real services."""
++import json
++import re
++import os
++import time
++import threading
++from pathlib import Path
++from PySide6.QtCore import QObject, QTimer
++
++
++def prepare_config(default, user):
++    source=Path(r'C:\Users\Public\XiaoMeiliData')
++    config=source/'config.json'
++    cfg=json.loads(config.read_text(encoding='utf-8-sig')) if config.is_file() else default
++    cfg['_resource_e2e']=True
++    # All mutable caches/logs/config live in the new PUBLIC root. No microphone,
++    # updater, hotkey or unrelated background feature is needed for acceptance.
++    cfg.setdefault('speech',{})['enabled']=False
++    cfg.setdefault('vision',{})['enabled']=False
++    cfg.setdefault('updates',{})['auto_check']=False
++    cfg.setdefault('brain',{})['mode']='cloud'
++    cfg.setdefault('voice',{})['mode']='cloud'
++    secret=source/'cloud/aliyun_api_key.dpapi'
++    if secret.is_file():
++        target=user/'cloud/aliyun_api_key.dpapi'
++        with target.open('xb') as f:
++            f.write(secret.read_bytes())
++    # Runtime interpreter/models are read-only inputs. The generated worker and
++    # diagnostic logs remain under the isolated data directory.
++    import speech_input
++    runtime=source/'voice_runtime/qwen3_tts'
++    speech_input.VENV_PYTHON=runtime/'.venv/Scripts/python.exe'
++    speech_input.ASR_MODEL_DIR=source/'speech/fun_asr_nano_2512'
++    speech_input.VAD_MODEL_DIR=source/'speech/fsmn_vad'
++    return cfg
++
++
++class Acceptance(QObject):
++    def __init__(self,ctl,app,user):
++        super().__init__(app)
++        self.ctl=ctl; self.app=app; self.user=Path(user)
++        self.progress=[]; self.start=time.monotonic()
++        self.timer=QTimer(self); self.timer.setSingleShot(True)
++        self.timer.timeout.connect(self.launch); self.timer.start(2500)
++        self.deadline=QTimer(self); self.deadline.setSingleShot(True)
++        self.deadline.timeout.connect(self.timeout); self.deadline.start(360000)
++
++    def write(self,name,payload):
++        with (self.user/name).open('x',encoding='utf-8') as f:
++            json.dump(payload,f,ensure_ascii=False,indent=2)
++
++    def launch(self):
++        self.ctl.open_settings()
++        dialog=self.ctl.settings
++        dialog.open_system_section('资源占用')
++        # This emits the exact signal connected to the user's actual button.
++        dialog.v01005_diag_btn.click()
++        runner=dialog._v01005_diag_runner
++        runner.progress_changed.connect(self.on_progress)
++        runner.finished.connect(self.done)
++        self.runner=runner
++        if os.environ.get('XM_RESOURCE_E2E_CRASH')=='1':
++            self.crash_timer=QTimer(self)
++            self.crash_timer.timeout.connect(self.crash_when_ready)
++            self.crash_timer.start(100)
++
++    def crash_when_ready(self):
++        if self.runner._startup_done.is_set():
++            self.crash_timer.stop()
++            self.write('crash_host.json',{'pid':os.getpid(),'session':str(self.runner.session_dir),
++                                       'ready':True,'elapsed':time.monotonic()-self.start})
++
++    def on_progress(self,value,text):
++        self.progress.append({'value':int(value),'text':str(text),'t':time.monotonic()-self.start,
++                              'ui_value':self.ctl.settings.v01005_diag_progress.value()})
++
++    def done(self,ok,path,message):
++        self.deadline.stop()
++        self.write('e2e_result.json',{'ok':bool(ok),'report':str(path),'message':str(message),
++                                    'progress':self.progress,'session':str(self.runner.session_dir),
++                                    'startup_trace':self.runner._startup_trace,
++                                    'tts_status':re.sub(r'sk-[A-Za-z0-9]+','[redacted]',self.runner._tts_result[1])[:500]})
++        # Clicking a production diagnostic does not exit the application. Keep
++        # the same behavior and prove ten seconds of healthy UI after completion.
++        # The external harness owns later test-process cleanup.
++        self.health_timer=QTimer(self); self.health_timer.setSingleShot(True)
++        self.health_timer.timeout.connect(self.after_completion)
++        self.health_timer.start(10000)
++
++    def after_completion(self):
++        self.write('post_completion.json',{
++            'host_pid':os.getpid(),'ui_value':self.ctl.settings.v01005_diag_progress.value(),
++            'button_enabled':self.ctl.settings.v01005_diag_btn.isEnabled(),
++            'tts_active':bool(self.ctl.voice_service.cloud_stream_in_progress()),
++            'monitor_exit_code':self.runner._watchdog_proc.poll() if self.runner._watchdog_proc else None,
++            'elapsed':time.monotonic()-self.start})
++
++    def timeout(self):
++        self.write('e2e_timeout.json',{'ok':False,'reason':'six-minute acceptance timeout',
++                                      'progress':self.progress})
++        os._exit(21)
++
++
++def attach_acceptance(ctl,app,user):
++    return Acceptance(ctl,app,user)
