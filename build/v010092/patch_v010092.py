@@ -75,6 +75,20 @@ s = rep(s,
 ''',
 'update notes current-version label')
 
+# Preserve a user-saved update source across restarts. V0.10.0.9.1
+# forcibly reset manifest_url to latest_safe.json on every launch, which made
+# the "保存更新源" button misleading. The one-off legacy bootstrap source is
+# intentionally normalized back to latest_safe after V0.10.0.9.2 is installed.
+s = rep(s,
+'''    cfg.setdefault("updates", {})["manifest_url"] = "https://raw.githubusercontent.com/1196197579-a11y/XiaoMeili-Updates/main/latest_safe.json"
+''',
+'''    cfg.setdefault("updates", {})
+    _manifest_url = str(cfg["updates"].get("manifest_url", "") or "").strip()
+    if (not _manifest_url) or _manifest_url.endswith("/latest_v010092.json"):
+        cfg["updates"]["manifest_url"] = "https://raw.githubusercontent.com/1196197579-a11y/XiaoMeili-Updates/main/latest_safe.json"
+''',
+'persist update source and retire bootstrap source')
+
 # Config schema bump without changing user settings.
 s = s.replace('cfg["config_version"] = max(30, int(cfg.get("config_version", 0) or 0))',
               'cfg["config_version"] = max(31, int(cfg.get("config_version", 0) or 0))')
