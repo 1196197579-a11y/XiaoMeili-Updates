@@ -146,15 +146,13 @@ new='''        self._open_live_journals()
 '''
 d=rep(d,old,new,'watchdog ready variable')
 
-old='''        try:
-            self._set_stage("preflight",0,"启动前快速自检：事件、CPU、GPU与ASR测试音频")
+anchor='''            self._set_stage("preflight_interrupt",1,"安全预检：TTS自然播完→白板关闭→资源回落（约10秒）")
 '''
-new='''        try:
-            if not watchdog_ready:
+insert='''            if not watchdog_ready:
                 raise RuntimeError("独立闪退监控器未确认启动，已停止资源长测，避免再次出现无证据闪退")
-            self._set_stage("preflight",0,"启动前快速自检：事件、CPU、GPU与ASR测试音频")
+            self._set_stage("preflight_interrupt",1,"安全预检：TTS自然播完→白板关闭→资源回落（约10秒）")
 '''
-d=rep(d,old,new,'watchdog fail-stop')
+d=rep(d,anchor,insert,'watchdog fail-stop before TTS preflight')
 
 d=d.replace('"resource_diag_watchdog.ps1","windows_event_log.txt","watchdog_summary.json"}',
             '"resource_diag_watchdog.ps1","windows_event_log.txt","watchdog_summary.json","watchdog_ready.flag"}')
