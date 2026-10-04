@@ -5,13 +5,13 @@
   "sha256": "288f6720cc4661da844d3c71d3e7dd107b14d54d8962f21bdd6f0b2cdafd751a",
   "package_size": 266456588,
   "notes": [
-    "V0.10.0.9.3.7：Stable Resource Diagnostic 3.2：资源测试彻底移除强制TTS中止，改为TTS自然播放完成后的资源回落测试",
-    "启动前预检和第8阶段均改为TTS自然播完→白板关闭→资源回落；TTS超时只安全停止测试，绝不abort",
-    "正式长测前增加约10秒高风险预检；若TTS→闭嘴→白板关闭链路失败会立即停止，不再先跑十分钟",
-    "新增独立隐藏Watchdog：若XiaoMeili.exe测试期间闪退，自动抓Windows Application/WER错误并在桌面生成闪退监控ZIP",
-    "继续实时追加timeline/events/rounds/status，主程序即使异常退出也保留已完成数据",
-    "Watchdog与恢复器均只复制诊断白名单文件，不删除、不移动、不覆盖、不递归清理任何用户文件或旧版本",
-    "继续保留NVML无黑框、真实CPU、250ms采样、WAV/ASR、30轮聊天、离线识别、综合满载和90秒回落",
-    "继续保留NDM真实URL文件名识别与快速回退，以及FullSafe更新保护"
+    "V0.10.0.9.3.7：Stable Resource Diagnostic 3.2，深度资源测试彻底移除强制TTS中止，不再调用 tts_abort / abort_playback，也不再伪造“闭嘴”ASR口令",
+    "启动前预检改为：TTS自然播完 → 白板关闭 → 资源回落；第8阶段同样执行3轮自然播放回收测试",
+    "若TTS自然播放超时，只记录错误并安全停止资源测试，绝不强制abort，避免再次触发原生音频层闪退",
+    "真实“闭嘴”功能本身保持不变；只是从资源压力测试中移除危险的强制中断场景",
+    "独立Watchdog新增ready握手；未确认监控器已启动时不会进入TTS长测，避免再次出现无证据闪退",
+    "Watchdog继续脱离主进程运行且不计入小美丽RAM/CPU统计；实时timeline/events/rounds/status继续追加落盘",
+    "继续保留ASR、大脑、TTS、白板、动画、30轮聊天、离线识别、综合满载和90秒回落",
+    "继续保留NDM真实URL文件名识别与快速回退；FullSafe不删除、不移动、不覆盖、不递归清理任何用户文件或旧版本"
   ]
 }
