@@ -43,6 +43,7 @@ def main():
         "self._hard_silence_smoke()",
         "python_faulthandler.log",
         "watchdog_heartbeat.jsonl",
+        "watchdog_debug.jsonl",
         "watchdog_exit_evidence",
         "windows_event_crash_evidence",
         "FileMode]::CreateNew",
@@ -177,7 +178,9 @@ def main():
     wd.wait(timeout=35)
     zips=sorted(desk.glob("小美丽_资源测试_独立看门狗崩溃报告_*.zip"))
     if not zips:
-        raise RuntimeError("independent watchdog did not create crash ZIP")
+        dbg=wd_session/"watchdog_debug.jsonl"
+        detail=dbg.read_text(encoding="utf-8",errors="replace")[-4000:] if dbg.is_file() else "<no watchdog debug>"
+        raise RuntimeError(f"independent watchdog did not create crash ZIP; rc={wd.returncode}; debug={detail}")
     if not status.is_file() or not events.is_file():
         raise RuntimeError("watchdog deleted or moved source evidence")
     with zipfile.ZipFile(zips[-1],"r") as zf:
