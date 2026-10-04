@@ -1,16 +1,16 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.4.0",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.0/XiaoMeili_0.10.0.9.4.0_update.zip",
-  "sha256": "6e760cec1224c395f8473fef95876fd0bfd73db1cbd72ff702c9df4ef3295525",
-  "package_size": 274942449,
+  "version": "0.10.0.9.4.1",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.1/XiaoMeili_0.10.0.9.4.1_update.zip",
+  "sha256": "d45cf82691335317fa33e4c5bf635ce869da298787b91249bec3fa414bd73722",
+  "package_size": 275315345,
   "notes": [
-    "V0.10.0.9.4.0：External Resource Diagnostic 4.0，资源监控迁移到独立 XiaoMeiliResourceMonitor.exe",
-    "外部监控器每250ms记录CPU/RAM/GPU/显存/线程/进程，小美丽内部只负责正常业务自动化与阶段标记",
-    "外部监控器通过ready握手后才允许长测；XiaoMeili原生崩溃时监控器仍可独立生成桌面闪退ZIP",
-    "正常结束时先让外部监控器关闭CSV，再由小美丽的正常诊断ZIP统一打包外部权威资源数据",
-    "深度资源测试继续禁止强制TTS abort和伪造闭嘴ASR，只测试自然TTS完成后的资源回落",
-    "继续保留ASR、大脑、TTS、白板、动画、30轮聊天、离线识别、综合满载和90秒回落",
+    "V0.10.0.9.4.1：外部资源监控器改为固定 onedir 组件 ResourceMonitor/XiaoMeiliResourceMonitor.exe，不再使用one-file启动自解压",
+    "发布前对打包后的监控器实际运行5轮ready握手/正常停止，并额外执行1轮宿主进程异常退出测试",
+    "点击测试会明确显示“正在启动外部资源监控器…”和“外部资源监控器已连接，开始测试”；8秒未ready会停止并生成故障报告，不再无限卡0%",
+    "外部监控器继续每250ms记录CPU/RAM/GPU/显存/线程/进程，且自身资源不计入小美丽",
+    "深度资源测试继续禁止强制TTS abort和伪造闭嘴ASR；保留自然TTS、ASR、大脑、白板、动画、30轮聊天、离线识别、综合满载和90秒回落",
+    "外部监控启动日志会随诊断ZIP打包，后续启动故障不再是黑箱",
     "继续保留NDM真实URL文件名识别与快速回退",
     "FullSafe继续禁止删除、移动、覆盖、递归清理任何用户文件、D盘数据或旧版本"
   ]
