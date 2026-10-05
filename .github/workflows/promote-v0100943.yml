@@ -1,0 +1,39 @@
+name: Promote XiaoMeili V0.10.0.9.4.3 after public hash readback
+on:
+  push:
+    branches: [main]
+    paths: ['build/promote-trigger-v0100943/public-readback.json']
+permissions:
+  contents: write
+concurrency:
+  group: xiaomeili-v0100943-promotion
+  cancel-in-progress: false
+jobs:
+  promote:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Verify and select accepted compression runtime
+        shell: pwsh
+        run: |
+          $taskCiPython = python build/v0100943/bootstrap-python.py
+          if ($LASTEXITCODE -ne 0) { throw 'CI interpreter checksum or zlib mismatch' }
+          "XM_CI_PYTHON=$taskCiPython" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Independently verify public bytes before promotion
+        shell: pwsh
+        run: |
+          & $env:XM_CI_PYTHON build/v0100943/verify-public.py
+          if ($LASTEXITCODE -ne 0) { throw 'Public package readback rejected' }
+      - name: Promote verified release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload v0.10.0.9.4.3 --repo $env:GITHUB_REPOSITORY build/v0100943/public-readback.json
+          if ($LASTEXITCODE -ne 0) { throw 'Readback proof upload failed' }
+          gh release edit v0.10.0.9.4.3 --repo $env:GITHUB_REPOSITORY --prerelease=false --latest=true --title '小美丽 V0.10.0.9.4.3｜资源释放与TTS失败重试修复' --notes-file build/v0100943/release-notes-final.md
+          if ($LASTEXITCODE -ne 0) { throw 'Release promotion failed; updater manifest unchanged' }

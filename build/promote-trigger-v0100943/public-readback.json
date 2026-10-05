@@ -1,0 +1,22 @@
+{
+  "pass": true,
+  "version": "0.10.0.9.4.3",
+  "main_exe_sha256": "0b55fc501e0fe14206386026ef5aec5f266fe110d7e851d44bec130f914e3918",
+  "assets": [
+    {
+      "name": "XiaoMeili_V0.10.0.9.4.3_SourceProject.zip",
+      "url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.3/XiaoMeili_V0.10.0.9.4.3_SourceProject.zip",
+      "sha256": "d3bc141e04a562b6fd7575ebd9228feb062f5ed2a0d7d649730db6a0b6366111",
+      "size": 45935962,
+      "crc_pass": true
+    },
+    {
+      "name": "XiaoMeili_0.10.0.9.4.3_update.zip",
+      "url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.3/XiaoMeili_0.10.0.9.4.3_update.zip",
+      "sha256": "6756a4548b3b79011a7b323774d6cb7fe3fcf5cc2236edc38fa465c1bc72a5ad",
+      "size": 346827975,
+      "crc_pass": true
+    }
+  ],
+  "validation": "Independent public downloads verified sizes, SHA-256, ZIP CRC, tested EXE, version marker and embedded source hash; local acceptance all passed."
+}
