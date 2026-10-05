@@ -1,14 +1,15 @@
 {
   "protocol": 1,
-  "version": "0.10.0.9.4.2",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.2/XiaoMeili_0.10.0.9.4.2_update.zip",
-  "sha256": "ec632416ca0bdc18fced00ca7dc2d53c23c7bdcde0e706aa79d2ce38f8ac7e0f",
-  "package_size": 308929038,
+  "version": "0.10.0.9.4.3",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.10.0.9.4.3/XiaoMeili_0.10.0.9.4.3_update.zip",
+  "sha256": "6756a4548b3b79011a7b323774d6cb7fe3fcf5cc2236edc38fa465c1bc72a5ad",
+  "package_size": 346827975,
   "notes": [
-    "修复深度资源测试启动阶段的Path异常，完整启动链每步10秒超时生成失败报告",
-    "正式打包主程序真实按钮链路连续3次通过，完成ASR、大脑、自然TTS和诊断ZIP",
-    "宿主异常退出后外部监控器独立生成crash ZIP；NDM、FullSafe、runtime和settings UI自检通过",
-    "保留白板、动画、30轮聊天、离线识别、综合满载、90秒回落；禁止强制TTS abort和伪造闭嘴ASR",
-    "公开更新包和源码包均重新下载通过SHA-256验证；FullSafe用户文件保护规则不变"
+    "修复TTS与聊天后的内存和线程释放；TTS单次失败最多自动重试一次",
+    "综合测试复用已有ASR进程和模型，避免重复加载第二份约6GB模型",
+    "30轮资源专项及第19轮真实TTS失败注入通过，恰好一次重试成功且接收线程释放",
+    "完整深度资源测试和NDM、FullSafe、Runtime、Settings自检通过",
+    "公开更新包与完整源码包重新下载通过哈希和完整性回读；保留用户文件和旧版本",
+    "自动诊断隔离外部输入法，使用临时10秒等待预算；日常键盘和聊天设置不变"
   ]
 }
