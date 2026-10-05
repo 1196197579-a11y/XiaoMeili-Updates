@@ -1,0 +1,16 @@
+{
+  "version": "0.10.0.9.4.3",
+  "baseline_source_sha256": "2979022eed9b19f9715e16e095e200a7bd2798b3f5c14bb73c3a4094cbe3f510",
+  "baseline_update_sha256": "ec632416ca0bdc18fced00ca7dc2d53c23c7bdcde0e706aa79d2ce38f8ac7e0f",
+  "main_exe_sha256": "0b55fc501e0fe14206386026ef5aec5f266fe110d7e851d44bec130f914e3918",
+  "assets": {
+    "XiaoMeili_V0.10.0.9.4.3_SourceProject.zip": {
+      "sha256": "d3bc141e04a562b6fd7575ebd9228feb062f5ed2a0d7d649730db6a0b6366111",
+      "size": 45935962
+    },
+    "XiaoMeili_0.10.0.9.4.3_update.zip": {
+      "sha256": "6756a4548b3b79011a7b323774d6cb7fe3fcf5cc2236edc38fa465c1bc72a5ad",
+      "size": 346827975
+    }
+  }
+}

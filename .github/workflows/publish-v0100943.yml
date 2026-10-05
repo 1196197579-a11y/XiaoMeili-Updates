@@ -1,0 +1,39 @@
+name: Publish verified XiaoMeili V0.10.0.9.4.3 candidate
+on:
+  push:
+    branches: [main]
+    paths: ['build/release-trigger-v0100943/candidate.json']
+permissions:
+  contents: write
+concurrency:
+  group: xiaomeili-v0100943-candidate
+  cancel-in-progress: false
+jobs:
+  assemble-candidate:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Verify and select accepted compression runtime
+        shell: pwsh
+        run: |
+          $taskCiPython = python build/v0100943/bootstrap-python.py
+          if ($LASTEXITCODE -ne 0) { throw 'CI interpreter checksum or zlib mismatch' }
+          "XM_CI_PYTHON=$taskCiPython" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Check local acceptance and reconstruct accepted bytes
+        shell: pwsh
+        run: |
+          & $env:XM_CI_PYTHON -c "import json; p=json.load(open('build/v0100943/local-gates.json')); assert p['all_local_gates_pass'] and p['main_exe_sha256']==json.load(open('build/v0100943/candidate.json'))['main_exe_sha256']"
+          if ($LASTEXITCODE -ne 0) { throw 'Local acceptance proof missing' }
+          & $env:XM_CI_PYTHON build/v0100943/assemble943.py --root build/v0100943 --out candidate943
+          if ($LASTEXITCODE -ne 0) { throw 'Accepted package byte reconstruction failed' }
+      - name: Stage public candidate for independent SHA-256 readback
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.10.0.9.4.3 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --latest=false --title 'XiaoMeili V0.10.0.9.4.3 - awaiting public hash readback' --notes-file build/v0100943/release-notes.md candidate943/XiaoMeili_0.10.0.9.4.3_update.zip candidate943/XiaoMeili_V0.10.0.9.4.3_SourceProject.zip candidate943/candidate.json build/v0100943/local-gates.json
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate upload failed; updater manifest remains unchanged' }

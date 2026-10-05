@@ -1,0 +1,175 @@
+{
+  "version": "0.10.0.9.4.3",
+  "main_exe_sha256": "0b55fc501e0fe14206386026ef5aec5f266fe110d7e851d44bec130f914e3918",
+  "all_local_gates_pass": true,
+  "public_readback": "pending",
+  "resource_release": {
+    "host_rss_growth_mb": -3.08,
+    "round19_rss_growth_mb": -6.51,
+    "thread_growth": -1,
+    "host_private_growth_mb": -1.15,
+    "round19_private_growth_mb": -13.74,
+    "last10_private_growth_mb": 14.77,
+    "resource_gate_pass": true,
+    "gate_basis": "Retained private memory and final-ten-round trend; raw shared working set and mapped-file growth remain separately reported."
+  },
+  "full_resource": {
+    "host_rss_growth_mb": -1.08,
+    "round19_rss_growth_mb": -21.63,
+    "thread_growth": -4,
+    "host_private_growth_mb": 6.36,
+    "round19_private_growth_mb": 4.58,
+    "last10_private_growth_mb": 17.94,
+    "resource_gate_pass": true,
+    "gate_basis": "Retained private memory and final-ten-round trend; raw shared working set and mapped-file growth remain separately reported."
+  },
+  "round19_failure_injection": "Exactly one real-network failure followed by exactly one successful retry; SDK receiver released",
+  "full_test": "All phases, 30 chat rounds, 6 combined rounds, offline ASR/VAD and vision/OCR, 90-second cooldown, same ASR PID and max one resident ASR model",
+  "tts_calls": {
+    "release": 31,
+    "full": 48
+  },
+  "checks": [
+    {
+      "name": "NDM",
+      "pass": true
+    },
+    {
+      "name": "FullSafe",
+      "pass": true
+    },
+    {
+      "name": "TTS failure, retry cap and receiver release",
+      "pass": true
+    },
+    {
+      "name": "--runtime-self-test",
+      "pass": true
+    },
+    {
+      "name": "--settings-ui-self-test",
+      "pass": true
+    }
+  ],
+  "test_environment": {
+    "external_ime_disabled_in_test_process": true,
+    "user_keyboard_settings_changed": false
+  },
+  "diagnostic_network_budget_ms": 10000,
+  "interactive_budget_preserved": true,
+  "full_round_counts": {
+    "chat": 36,
+    "tts": 8,
+    "natural_tts_recovery": 3,
+    "whiteboard": 12,
+    "brain": 6,
+    "natural_tts_preflight": 1
+  },
+  "asr_reuse_evidence": [
+    {
+      "t": 172.75,
+      "stage": "asr",
+      "event": "asr_diagnostic_ready",
+      "ready": true,
+      "pid": 196312,
+      "reused": false,
+      "runs": 4,
+      "owned": true
+    },
+    {
+      "t": 501.375,
+      "stage": "combined",
+      "event": "asr_diagnostic_ready",
+      "ready": true,
+      "pid": 196312,
+      "reused": true,
+      "runs": 2,
+      "owned": false
+    }
+  ],
+  "vision_coverage": {
+    "team_avatar": "PASS",
+    "kill_ui": "PASS",
+    "context_death": "PASS",
+    "highlight_snapshot": "PASS",
+    "result_ocr": "PASS"
+  },
+  "full_final_cooldown": {
+    "rss_growth_mb": 55.59,
+    "private_growth_mb": 47.34,
+    "thread_growth": -8,
+    "resident_asr_model_processes": 0
+  },
+  "chat_http_lifecycle": {
+    "pass": true,
+    "calls": 9,
+    "diagnostic_budget_ms": 10000,
+    "interactive_budget_ms": 3200,
+    "user_settings_preserved": true,
+    "transient_failure_retried_once": true,
+    "failure_attempts_capped_at_two": true,
+    "no_retry_after_spoken_text": true,
+    "responses_closed": 6,
+    "same_session_reused": true,
+    "failure_recovered_next_call": true,
+    "shutdown_closes_session": true,
+    "brain_threads_remaining": 0
+  },
+  "ndm_live_connection": {
+    "pass": true,
+    "ndm_live_connected": true,
+    "test": "Read-only local WebSocket connection opened and closed; no download task sent"
+  },
+  "ocr_lifecycle": {
+    "pass": true,
+    "sessions": [
+      {
+        "intra_op": 1,
+        "inter_op": 1
+      },
+      {
+        "intra_op": 1,
+        "inter_op": 1
+      },
+      {
+        "intra_op": 1,
+        "inter_op": 1
+      }
+    ],
+    "reuse_same_engine": true,
+    "thread_growth": 0,
+    "real_ocr_calls": 3
+  },
+  "ci_compression_runtime": {
+    "pass": true,
+    "metadata": {
+      "name": "cpython",
+      "arch": {
+        "family": "x86_64",
+        "variant": null
+      },
+      "os": "windows",
+      "libc": "none",
+      "major": 3,
+      "minor": 12,
+      "patch": 14,
+      "prerelease": "",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "sha256": "7c45c9622400d578709a9b2cddbe8124cc21d382409d9f13406d706d28e31b14",
+      "variant": null,
+      "build": "20260901"
+    },
+    "exact_package_reassembly_verified": true
+  },
+  "assets": {
+    "XiaoMeili_V0.10.0.9.4.3_SourceProject.zip": {
+      "sha256": "d3bc141e04a562b6fd7575ebd9228feb062f5ed2a0d7d649730db6a0b6366111",
+      "size": 45935962
+    },
+    "XiaoMeili_0.10.0.9.4.3_update.zip": {
+      "sha256": "6756a4548b3b79011a7b323774d6cb7fe3fcf5cc2236edc38fa465c1bc72a5ad",
+      "size": 346827975
+    }
+  },
+  "safety": "Only new isolated working/test directories; user files and old versions preserved"
+}
