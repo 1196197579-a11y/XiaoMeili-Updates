@@ -18,7 +18,7 @@ for token in required_main:
 required_desk=[
     "'exit_chain': '爬出屏幕后接下一支动作'",
     "'fixed': '固定位置播放（视频内部自己动）'",
-    "ending in ('chain','exit_chain')",
+    "self.profile['ending'] in ('chain','exit_chain')",
     'WindowModal if parent_window is not None',
     '下一支动作使用它自己的模板位置和运动方式',
 ]
