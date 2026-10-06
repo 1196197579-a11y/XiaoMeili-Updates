@@ -1,0 +1,7 @@
+{
+  "version": "0.11.0.2",
+  "baseline": "0.11.0",
+  "features": ["transparent-webm-alpha", "desktop-zero-update-landing"],
+  "safety": "append-only-no-user-file-deletion",
+  "attempt": 1
+}
