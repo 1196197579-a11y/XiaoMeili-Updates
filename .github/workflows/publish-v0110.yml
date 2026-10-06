@@ -31,7 +31,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.11.0-rc1 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --latest=false --title '小美丽 V0.11.0 桌面动作系统｜验收候选' --notes-file build/v0110/release-notes.md candidate0110/XiaoMeili_0.11.0_update.zip candidate0110/XiaoMeili_V0.11.0_SourceProject.zip candidate0110/candidate.json build/v0110/local-gates.json
+          gh release view v0.11.0-rc1 --repo $env:GITHUB_REPOSITORY --json tagName
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v0.11.0-rc1 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --latest=false --title '小美丽 V0.11.0 桌面动作系统｜验收候选' --notes-file build/v0110/release-notes.md candidate0110/XiaoMeili_0.11.0_update.zip candidate0110/XiaoMeili_V0.11.0_SourceProject.zip candidate0110/candidate.json build/v0110/local-gates.json
+          }
           if ($LASTEXITCODE -ne 0) { throw 'New candidate upload failed; existing assets are never replaced' }
           python build/v0110/verify_public0110.py --root build/v0110 --tag v0.11.0-rc1 --out public-candidate-readback
           if ($LASTEXITCODE -ne 0) { throw 'Candidate public bytes rejected; safe manifest unchanged' }
@@ -40,11 +43,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.11.0 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --latest=false --title '小美丽 V0.11.0｜桌面动作系统' --notes-file build/v0110/release-notes.md candidate0110/XiaoMeili_0.11.0_update.zip candidate0110/XiaoMeili_V0.11.0_SourceProject.zip candidate0110/candidate.json build/v0110/local-gates.json
+          gh release view v0.11.0 --repo $env:GITHUB_REPOSITORY --json tagName
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v0.11.0 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --latest=false --title '小美丽 V0.11.0｜桌面动作系统' --notes-file build/v0110/release-notes.md candidate0110/XiaoMeili_0.11.0_update.zip candidate0110/XiaoMeili_V0.11.0_SourceProject.zip candidate0110/candidate.json build/v0110/local-gates.json
+          }
           if ($LASTEXITCODE -ne 0) { throw 'New formal release failed; safe manifest unchanged' }
           python build/v0110/verify_public0110.py --root build/v0110 --tag v0.11.0 --out public-formal-readback
           if ($LASTEXITCODE -ne 0) { throw 'Formal public bytes rejected; safe manifest unchanged' }
-          gh release upload v0.11.0 --repo $env:GITHUB_REPOSITORY public-candidate-readback/public-readback.json#candidate-readback.json public-formal-readback/public-readback.json#formal-readback.json
+          Copy-Item -LiteralPath 'public-candidate-readback/public-readback.json' -Destination 'public-candidate-readback/candidate-readback.json'
+          Copy-Item -LiteralPath 'public-formal-readback/public-readback.json' -Destination 'public-formal-readback/formal-readback.json'
+          gh release upload v0.11.0 --repo $env:GITHUB_REPOSITORY public-candidate-readback/candidate-readback.json public-formal-readback/formal-readback.json
           if ($LASTEXITCODE -ne 0) { throw 'Evidence upload failed; safe manifest unchanged' }
       - name: Promote the safe updater after both public readbacks
         shell: pwsh
