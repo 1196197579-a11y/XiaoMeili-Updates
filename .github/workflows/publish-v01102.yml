@@ -1,0 +1,37 @@
+name: Publish XiaoMeili V0.11.0.2 transparent WebM and Desktop-zero updater
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/release-trigger-v01102/candidate.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xiaomeili-v01102-safe-release
+  cancel-in-progress: false
+
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+      - name: Build, verify, publish, and promote V0.11.0.2
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File "build/v01102/release_v01102.ps1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v01102-release-evidence
+          path: |
+            work-v01102/build-metadata.json
+            work-v01102/public-readback.json
+            work-v01102/test-output.txt
