@@ -23,6 +23,8 @@ def _decoder_candidates(codec: str):
         return (("-c:v", "libvpx-vp9"),)
     if "vp8" in codec:
         return (("-c:v", "libvpx"),)
+    # WebM alpha is normally VP8/VP9. Unknown codecs are not force-decoded,
+    # because a wrong decoder could make a valid file look corrupt.
     return ((),)
 
 
@@ -40,7 +42,11 @@ def _probe_codec(path: Path) -> str:
 
 def _alpha_pix_fmt(pix_fmt: str) -> bool:
     fmt = str(pix_fmt or "").split("(", 1)[0].strip().lower()
-    return (fmt.startswith("yuva") or fmt.startswith("gbrap") or fmt in {"rgba", "bgra", "argb", "abgr", "ya8", "ya16le", "ya16be"})
+    return (
+        fmt.startswith("yuva")
+        or fmt.startswith("gbrap")
+        or fmt in {"rgba", "bgra", "argb", "abgr", "ya8", "ya16le", "ya16be"}
+    )
 
 
 def _alpha_decoder(path: Path):
@@ -52,7 +58,10 @@ def _alpha_decoder(path: Path):
         params = list(candidate)
         reader = None
         try:
-            reader = imageio_ffmpeg.read_frames(str(path), pix_fmt="rgba", bits_per_pixel=32, input_params=params or None)
+            reader = imageio_ffmpeg.read_frames(
+                str(path), pix_fmt="rgba", bits_per_pixel=32,
+                input_params=params or None,
+            )
             meta = next(reader)
             if _alpha_pix_fmt(meta.get("pix_fmt", "")):
                 return params, meta
@@ -70,6 +79,7 @@ def _alpha_decoder(path: Path):
 
 
 def has_transparent_alpha(path) -> bool:
+    """Return True only when the WebM exposes an alpha-capable decoded pixel format."""
     try:
         _alpha_decoder(Path(path))
         return True
@@ -77,25 +87,30 @@ def has_transparent_alpha(path) -> bool:
         return False
 
 
-def _add_soft_white_glow(rgba, outline_px=1, glow_px=6, outline_strength=0.42, glow_strength=0.24):
+def _add_soft_white_glow(rgba, outline_px=1, glow_px=6,
+                         outline_strength=0.42, glow_strength=0.24):
+    """Match XiaoMeili's existing subtle white rim/glow without re-keying alpha."""
     if rgba is None or rgba.ndim != 3 or rgba.shape[2] != 4:
         return rgba
     src = rgba.astype(np.float32)
     alpha = src[..., 3] / 255.0
     if float(alpha.max()) <= 0.001:
         return rgba
+
     a8 = np.clip(alpha * 255.0, 0, 255).astype(np.uint8)
     opx = max(1, int(outline_px))
     gpx = max(opx + 1, int(glow_px))
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (opx * 2 + 1, opx * 2 + 1))
     dilated = cv2.dilate(a8, kernel, iterations=1).astype(np.float32) / 255.0
     outline = np.clip(dilated - alpha, 0.0, 1.0) * float(outline_strength)
+
     kernel_glow = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (gpx * 2 + 1, gpx * 2 + 1))
     expanded = cv2.dilate(a8, kernel_glow, iterations=1)
     sigma = max(1.2, gpx * 0.62)
     blurred = cv2.GaussianBlur(expanded, (0, 0), sigmaX=sigma, sigmaY=sigma).astype(np.float32) / 255.0
     halo = np.clip(blurred - alpha, 0.0, 1.0) * float(glow_strength)
     white_a = np.maximum(outline, halo) * (1.0 - alpha)
+
     out_a = alpha + white_a * (1.0 - alpha)
     numer = src[..., :3] * alpha[..., None] + 255.0 * white_a[..., None] * (1.0 - alpha[..., None])
     denom = np.maximum(out_a[..., None], 1e-6)
@@ -104,14 +119,22 @@ def _add_soft_white_glow(rgba, outline_px=1, glow_px=6, outline_strength=0.42, g
 
 
 def convert_transparent_webm_to_webp(src, dst, max_width=420, target_fps=12):
-    """Read WebM alpha directly and create XiaoMeili's normal transparent WebP cache."""
+    """Read WebM alpha directly and create XiaoMeili's normal transparent WebP cache.
+
+    No chroma key/despill is applied. The source file is opened read-only; output
+    is a new file under the caller-selected app cache path.
+    """
     src = Path(src)
     dst = Path(dst)
     if not src.is_file():
         raise FileNotFoundError(str(src))
     params, _ = _alpha_decoder(src)
     dst.parent.mkdir(parents=True, exist_ok=True)
-    reader = imageio_ffmpeg.read_frames(str(src), pix_fmt="rgba", bits_per_pixel=32, input_params=params or None)
+
+    reader = imageio_ffmpeg.read_frames(
+        str(src), pix_fmt="rgba", bits_per_pixel=32,
+        input_params=params or None,
+    )
     frames = []
     try:
         meta = next(reader)
@@ -126,6 +149,7 @@ def convert_transparent_webm_to_webp(src, dst, max_width=420, target_fps=12):
         idx = 0
         max_frames = int(out_fps * 45)
         alpha_seen = False
+
         for raw in reader:
             if len(frames) >= max_frames:
                 break
@@ -146,12 +170,15 @@ def convert_transparent_webm_to_webp(src, dst, max_width=420, target_fps=12):
                 alpha_seen = True
             rgba = _add_soft_white_glow(rgba)
             frames.append(Image.fromarray(rgba, "RGBA"))
+
         if not frames:
             raise RuntimeError("透明 WebM 没有可读取帧")
         if not alpha_seen:
             raise NoTransparentAlpha("WebM 声明了 Alpha，但未读取到实际透明像素")
+
         duration = max(20, int(round(1000.0 / out_fps)))
-        kwargs = dict(save_all=True, append_images=frames[1:], duration=duration, loop=1, lossless=True, quality=100, method=4)
+        kwargs = dict(save_all=True, append_images=frames[1:], duration=duration,
+                      loop=1, lossless=True, quality=100, method=4)
         try:
             frames[0].save(dst, "WEBP", exact=True, **kwargs)
         except TypeError:
