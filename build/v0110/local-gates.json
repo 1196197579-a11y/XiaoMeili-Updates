@@ -1,0 +1,164 @@
+{
+  "version": "0.11.0",
+  "main_exe_sha256": "8097a3674cadac806a7d7d8a533bf916263e8840758d532dcbd736f568eac974",
+  "all_local_gates_pass": true,
+  "gates": [
+    {
+      "test": "packaged_desktop",
+      "passed": true
+    },
+    {
+      "test": "real_import_manage_buttons",
+      "passed": true
+    },
+    {
+      "test": "full_resource",
+      "passed": true
+    },
+    {
+      "test": "actual_fullsafe_update_install",
+      "passed": true
+    },
+    {
+      "test": "test_ndm_fast_fallback_v010092.py",
+      "passed": true
+    },
+    {
+      "test": "test_fullsafe_no_delete_v010092.py",
+      "passed": true
+    },
+    {
+      "test": "test_voice943.py",
+      "passed": true
+    },
+    {
+      "test": "test_pool_lifecycle943.py",
+      "passed": true
+    },
+    {
+      "test": "test_ocr_bound943.py",
+      "passed": true
+    },
+    {
+      "test": "--runtime-self-test",
+      "passed": true
+    },
+    {
+      "test": "--settings-ui-self-test",
+      "passed": true
+    },
+    {
+      "test": "independent_package_byte_reassembly_crc",
+      "passed": true
+    }
+  ],
+  "desktop": {
+    "all_pass": true,
+    "tests": [
+      {
+        "test": "old_config_and_desktop_pool_roundtrip",
+        "passed": true
+      },
+      {
+        "test": "three_resolution_geometry_and_monotonic_natural_rhythm",
+        "passed": true
+      },
+      {
+        "test": "eighth_library_row_four_buttons",
+        "passed": true
+      },
+      {
+        "test": "real_desktop_drag_locked_test_controls_save_reload",
+        "passed": true
+      },
+      {
+        "test": "left_native_ten_second_climb_exit",
+        "passed": true,
+        "samples": 224,
+        "clip_seconds": 10.126
+      },
+      {
+        "test": "right_native_ten_second_climb_exit",
+        "passed": true,
+        "samples": 223,
+        "clip_seconds": 10.126
+      },
+      {
+        "test": "six_game_states_preempt_and_return_idle",
+        "passed": true
+      },
+      {
+        "test": "four_endings_single_owner_cooldown",
+        "passed": true
+      },
+      {
+        "test": "independent_templates_chain_return",
+        "passed": true
+      },
+      {
+        "test": "twenty_native_repetitions_no_growth",
+        "passed": true,
+        "warm": {
+          "round": 4,
+          "rss_mb": 354.875,
+          "threads": 16,
+          "movies": 0,
+          "windows": 22
+        },
+        "tail": {
+          "round": 20,
+          "rss_mb": 335.5546875,
+          "threads": 15,
+          "movies": 0,
+          "windows": 22
+        }
+      }
+    ],
+    "input_sha256": "85e1f662ef0ccd5c6a292e26707f02b0cda4c774edb4adb5f89c997254c5b21c",
+    "clip_seconds": 10.126,
+    "screen": [
+      0,
+      0,
+      2560,
+      1440
+    ],
+    "video_import_scope": "isolated data root only"
+  },
+  "full_resource": {
+    "host_rss_growth_mb": -0.54,
+    "round19_rss_growth_mb": -15.66,
+    "thread_growth": -6,
+    "host_private_growth_mb": -5.51,
+    "round19_private_growth_mb": -12.59,
+    "last10_private_growth_mb": 0.78,
+    "resource_gate_pass": true,
+    "gate_basis": "Retained private memory and final-ten-round trend; raw shared working set and mapped-file growth remain separately reported."
+  },
+  "tts_calls": 48,
+  "full_resource_ui_completed": true,
+  "ui_import_cache_preserved": true,
+  "protected_install_files": 10,
+  "public_readback": "pending",
+  "resolution_validation": {
+    "actual_native_screen": [
+      0,
+      0,
+      2560,
+      1440
+    ],
+    "normalized_geometry_fixtures": [
+      [
+        2560,
+        1440
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1280,
+        720
+      ]
+    ]
+  }
+}

@@ -1,0 +1,73 @@
+name: Publish and verify XiaoMeili V0.11.0
+on:
+  push:
+    branches: [main]
+    paths: ['build/release-trigger-v0110/candidate.json']
+permissions:
+  contents: write
+concurrency:
+  group: xiaomeili-v0110
+  cancel-in-progress: false
+jobs:
+  publish-verified:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Check exact accepted EXE and all local gates
+        shell: pwsh
+        run: |
+          python -c "import json; p=json.load(open('build/v0110/local-gates.json')); m=json.load(open('build/v0110/candidate.json')); assert p['all_local_gates_pass'] and p['main_exe_sha256']==m['main_exe_sha256']; assert all(x['passed'] for x in p['gates']); assert json.load(open('latest_safe.json'))['version']=='0.10.0.9.4.3'"
+          if ($LASTEXITCODE -ne 0) { throw 'Acceptance or baseline rejected' }
+          python build/v0110/assemble0110.py --root build/v0110 --out candidate0110
+          if ($LASTEXITCODE -ne 0) { throw 'Accepted bytes reconstruction rejected' }
+      - name: Publish new public candidate and verify unauthenticated readback
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.11.0-rc1 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --latest=false --title '小美丽 V0.11.0 桌面动作系统｜验收候选' --notes-file build/v0110/release-notes.md candidate0110/XiaoMeili_0.11.0_update.zip candidate0110/XiaoMeili_V0.11.0_SourceProject.zip candidate0110/candidate.json build/v0110/local-gates.json
+          if ($LASTEXITCODE -ne 0) { throw 'New candidate upload failed; existing assets are never replaced' }
+          python build/v0110/verify_public0110.py --root build/v0110 --tag v0.11.0-rc1 --out public-candidate-readback
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate public bytes rejected; safe manifest unchanged' }
+      - name: Publish formal package and independently read it back
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.11.0 --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --latest=false --title '小美丽 V0.11.0｜桌面动作系统' --notes-file build/v0110/release-notes.md candidate0110/XiaoMeili_0.11.0_update.zip candidate0110/XiaoMeili_V0.11.0_SourceProject.zip candidate0110/candidate.json build/v0110/local-gates.json
+          if ($LASTEXITCODE -ne 0) { throw 'New formal release failed; safe manifest unchanged' }
+          python build/v0110/verify_public0110.py --root build/v0110 --tag v0.11.0 --out public-formal-readback
+          if ($LASTEXITCODE -ne 0) { throw 'Formal public bytes rejected; safe manifest unchanged' }
+          gh release upload v0.11.0 --repo $env:GITHUB_REPOSITORY public-candidate-readback/public-readback.json#candidate-readback.json public-formal-readback/public-readback.json#formal-readback.json
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence upload failed; safe manifest unchanged' }
+      - name: Promote the safe updater after both public readbacks
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main
+          if ($LASTEXITCODE -ne 0) { throw 'Fresh main fetch failed' }
+          git merge --ff-only origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Main changed incompatibly' }
+          python build/v0110/promote_manifest0110.py
+          if ($LASTEXITCODE -ne 0) { throw 'Safe promotion gates rejected' }
+          git config user.name 'XiaoMeili Update Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add latest_safe.json
+          git commit -m 'Promote V0.11.0 after desktop, resource and public readback acceptance'
+          if ($LASTEXITCODE -ne 0) { throw 'Safe manifest commit failed' }
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { throw 'Safe manifest push failed' }
+          gh release edit v0.11.0 --repo $env:GITHUB_REPOSITORY --latest=true
+          if ($LASTEXITCODE -ne 0) { throw 'Latest release marker failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v0110-public-readbacks
+          path: |
+            public-candidate-readback/public-readback.json
+            public-formal-readback/public-readback.json

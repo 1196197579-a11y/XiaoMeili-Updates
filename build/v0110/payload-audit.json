@@ -1,0 +1,95 @@
+{
+  "all_pass": true,
+  "repository": "1196197579-a11y/XiaoMeili-Updates",
+  "destination_evidence": "Formal943 source default updates.manifest_url and current published latest_safe.json both point to this repository; connected GitHub account has admin/push permissions",
+  "public_baseline_source_sha256": "d3bc141e04a562b6fd7575ebd9228feb062f5ed2a0d7d649730db6a0b6366111",
+  "public_baseline_update_sha256": "6756a4548b3b79011a7b323774d6cb7fe3fcf5cc2236edc38fa465c1bc72a5ad",
+  "source_delta": [
+    {
+      "path": "BUILD_V0110.ps1",
+      "size": 2351,
+      "sha256": "cc2755a44925d544d7f5a9da9ada592553407a5d933e96d2ae2b3fda6b07652b",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "V0110_CHANGELOG.md",
+      "size": 1672,
+      "sha256": "a282945392d438bd82b5a8319f36404bee4f5b12959130b328dba2c40dfc9b4f",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "acceptance/ocr-lifecycle943.json",
+      "size": 293,
+      "sha256": "bcfa04a6cac0381ef7d719f6d269fe0f7acb9f13b1ec4629cf6ec3283fbb8f7c",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "acceptance/pool-lifecycle943.json",
+      "size": 431,
+      "sha256": "ef660a596d6e9b3dcb6bf56958debf4e0adcca5a95172451cfa3a81deac8e781",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "acceptance/voice-failure-tests.json",
+      "size": 1160,
+      "sha256": "f4e3a39727720e304b5342f4eacc056bd9e372489752c47436e12aaca3ee67c9",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "app/assets/VERSION.txt",
+      "size": 8,
+      "sha256": "6a9b524a9fd4f1f95f08a1db768ade6b9ef841e66ecf4893ff9393dafc33c13e",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "app/src/desktop_acceptance.py",
+      "size": 11413,
+      "sha256": "3e6b8fa5a42a534132f01630712b266df14f56ada4cef34ef7ef39a90771b02a",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "app/src/desktop_actions.py",
+      "size": 30956,
+      "sha256": "2d92d059b297d146e2c6a893a0c81fef3a7ca2e0b2e1abd887f79c25640e6ab5",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "app/src/main.py",
+      "size": 693809,
+      "sha256": "c8cecdfc8780a94eedf823449e251a81d3ecb7b0f09bd054748a0fd3dc72f237",
+      "kind": "generated source/documentation or test summary"
+    },
+    {
+      "path": "BUILD_PROVENANCE_V0110.json",
+      "size": 3145,
+      "sha256": "93ae28a62c210c8dadffc4344d1e9c1c5fc2b7571ee2a645bce71ef467d9a20a",
+      "kind": "generated source/documentation or test summary"
+    }
+  ],
+  "runtime_delta": [
+    {
+      "path": "XiaoMeili.exe",
+      "size": 16323063,
+      "sha256": "8097a3674cadac806a7d7d8a533bf916263e8840758d532dcbd736f568eac974"
+    },
+    {
+      "path": "_internal/assets/VERSION.txt",
+      "size": 8,
+      "sha256": "6a9b524a9fd4f1f95f08a1db768ade6b9ef841e66ecf4893ff9393dafc33c13e"
+    },
+    {
+      "path": "_internal/PySide6/QtTest.pyd",
+      "size": 185144,
+      "sha256": "99d71955c692c7c62f295aef42fc4bf02a800bdb350d1ee32d3373a816a63e2a"
+    },
+    {
+      "path": "_internal/PySide6/Qt6Test.dll",
+      "size": 382264,
+      "sha256": "db459676d4b4a869fea1eedb5e9e28895a3adaa079d5dd0d7ff38c400edf1ad0"
+    }
+  ],
+  "new_user_configuration_or_secret_files": false,
+  "new_private_photos_or_videos": false,
+  "unchanged_resources": "All other source/resource entries are byte-identical to already-public formal943 packages",
+  "workflow_scope": "Only the explicitly requested V0.11.0 release, known accepted hashes and dedicated trigger path; GITHUB_TOKEN already provided by repository, no new secret, member, integration or account permission"
+}
