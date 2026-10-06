@@ -1,0 +1,7 @@
+{
+  "version": "0.11.0.3",
+  "baseline": "0.11.0.2",
+  "features": ["exit-chain", "fixed-position-desktop-action", "template-window-stack-fix", "responsive-template-ui", "safe-display-alias-rename"],
+  "safety": "append-only-no-user-file-deletion",
+  "attempt": 1
+}
