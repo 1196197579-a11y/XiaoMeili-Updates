@@ -3,7 +3,8 @@
   "baseline": "0.11.0",
   "feature": "transparent-webm-alpha",
   "safety": "append-only-no-user-file-deletion",
-  "attempt": 4,
+  "attempt": 5,
   "delta_mode": "standalone-exact-sha",
-  "contract_mode": "powershell-native"
+  "contract_mode": "powershell-native",
+  "pyinstaller_paths": "absolute"
 }
