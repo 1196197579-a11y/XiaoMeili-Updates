@@ -32,8 +32,12 @@ if ($SourceSha -ne '295addead4d866501c32f2c2e70a6b0b53452765e5c4eb3849fb69639b5e
 Expand-Archive -LiteralPath $BaselineSource -DestinationPath $Source
 Push-Location $Source
 try {
+    python -c "from pathlib import Path; p=Path('app/src/main.py'); p.write_text(p.read_text(encoding='utf-8'),encoding='utf-8',newline='\\n')"
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to normalize the isolated formal V0.11.0 main.py copy.' }
     git apply --whitespace=nowarn (Join-Path $Delta 'main_v01101.patch')
     if ($LASTEXITCODE -ne 0) { throw 'V0.11.0.1 main.py patch did not apply exactly to formal V0.11.0 source.' }
+    $PatchedMainSha = (Get-FileHash -LiteralPath 'app/src/main.py' -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($PatchedMainSha -ne '84c03b6ec60969f87874077188a3bf6e32e91124e749cffe48ca7437982538c3') { throw 'Patched main.py hash differs from the locally accepted V0.11.0.1 source.' }
 } finally { Pop-Location }
 Copy-Item -LiteralPath (Join-Path $Delta 'video_import_alpha.py') -Destination (Join-Path $Source 'app/src/video_import_alpha.py') -Force
 Copy-Item -LiteralPath (Join-Path $Delta 'VERSION.txt') -Destination (Join-Path $Source 'app/assets/VERSION.txt') -Force
