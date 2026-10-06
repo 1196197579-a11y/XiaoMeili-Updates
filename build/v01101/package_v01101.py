@@ -6,6 +6,7 @@ p.add_argument('--source',required=True)
 p.add_argument('--bundle',required=True)
 p.add_argument('--out',required=True)
 p.add_argument('--version',required=True)
+p.add_argument('--source-zip')
 a=p.parse_args()
 source=Path(a.source); bundle=Path(a.bundle); out=Path(a.out); out.mkdir(parents=True,exist_ok=True)
 
@@ -39,7 +40,15 @@ if f'APP_VERSION = "{a.version}"' not in main or 'convert_transparent_webm_to_we
 
 source_zip=out/f'XiaoMeili_V{a.version}_SourceProject.zip'
 update_zip=out/f'XiaoMeili_{a.version}_update.zip'
-zip_tree(source,source_zip)
+if a.source_zip:
+    prebuilt=Path(a.source_zip)
+    if not prebuilt.is_file(): raise SystemExit('Prebuilt source archive missing')
+    with zipfile.ZipFile(prebuilt,'r') as z:
+        bad=z.testzip()
+        if bad: raise SystemExit(f'Prebuilt source ZIP CRC failure: {bad}')
+    source_zip.write_bytes(prebuilt.read_bytes())
+else:
+    zip_tree(source,source_zip)
 embedded=bundle/'_internal/assets'/source_zip.name
 embedded.parent.mkdir(parents=True,exist_ok=True)
 if embedded.exists(): raise SystemExit('Refusing to overwrite embedded source archive')
