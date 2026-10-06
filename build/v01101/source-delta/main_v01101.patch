@@ -1,0 +1,107 @@
+--- a/app/src/main.py
++++ b/app/src/main.py
+@@ -56,6 +56,7 @@
+ import numpy as np
+ 
+ from desktop_actions import DesktopController, open_template as open_desktop_template, section as desktop_section
++from video_import_alpha import NoTransparentAlpha, convert_transparent_webm_to_webp
+ from ability_sidebar import AbilitySidebar, AbilityNode, FEATURES as ABILITY_FEATURES
+ from interaction_diagnostic_v010091 import InteractionDiagnosticRunner, interaction_diag_note
+ from resource_diagnostic_v0100934 import ResourceDiagnosticRunnerV2, recover_interrupted_resource_diagnostics
+@@ -68,9 +69,9 @@
+         return None
+ 
+ 
+-APP_NAME = "小美丽 V0.11.0｜桌面动作系统"
+-APP_VERSION = "0.11.0"
+-APP_UPDATE_VERSION = "0.11.0"
++APP_NAME = "小美丽 V0.11.0.1｜动作库透明 WebM"
++APP_VERSION = "0.11.0.1"
++APP_UPDATE_VERSION = "0.11.0.1"
+ UPDATE_PROTOCOL_VERSION = 1
+ ORG_NAME = "XiaoMeili"
+ ASSET_RNG = random.SystemRandom()  # independent draw with replacement; consecutive repeats are allowed
+@@ -5375,6 +5376,29 @@
+         except Exception: pass
+ 
+ 
++def convert_action_video(src, dst, max_width=420, target_fps=12):
++    """Import action-library video without touching the user's source file.
++
++    Transparent WebM is decoded through its Alpha plane directly, avoiding a
++    second chroma-key pass. WebM without Alpha and all other supported videos
++    continue through the established green-screen pipeline. Playback remains
++    the existing transparent animated WebP path, so every current state and
++    desktop-action template keeps its old behavior.
++    """
++    src = Path(src)
++    if src.suffix.lower() == ".webm":
++        try:
++            count, fps = convert_transparent_webm_to_webp(
++                src, dst, max_width=max_width, target_fps=target_fps
++            )
++            LOGGER.info("透明 WebM Alpha 直读完成: %s -> %s | %d帧 @ %.1ffps", src, dst, count, fps)
++            return count, fps, "transparent_webm"
++        except NoTransparentAlpha:
++            LOGGER.info("WebM 未检测到透明 Alpha，按原绿幕流程导入: %s", src)
++    count, fps = convert_greenscreen_video(src, dst, max_width=max_width, target_fps=target_fps)
++    return count, fps, "greenscreen"
++
++
+ def add_glow_to_transparent_animation(src, dst):
+@@ -5421,7 +5445,7 @@
+         self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+         self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+         self._apply_drop_style(False)
+-        self.setToolTip("可一次拖入多支视频到本行；支持 MP4 / MOV / MKV / WebM / AVI / M4V，最多补到 20 支。")
++        self.setToolTip("可一次拖入多支视频；透明 WebM 会直接读取 Alpha、不再抠绿，普通视频继续自动抠绿；最多补到 20 支。")
+@@ -6589,7 +6613,7 @@
+         title = QLabel("6 个识别状态 + 战报 + 桌面动作 → 每个状态最多 20 支视频")
+         title.setStyleSheet("font-weight:600; font-size:15px;")
+         title_row.addWidget(title); title_row.addWidget(HelpBadge(
+-            "绿幕视频导入后会自动抠绿、去绿边、添加淡白边/柔光并缓存为透明 WebP。\n"
++            "透明 WebM 会直接读取 Alpha，不再进行二次抠绿；普通视频仍自动抠绿、去绿边。两种素材都会添加淡白边/柔光并缓存为透明 WebP。\n"
+@@ -11901,7 +11925,7 @@
+         lab=self.asset_labels.get(state)
+         if lab:
+             lab.setText(f"{len(user)}/{MAX_ASSETS_PER_STATE}支" if state=="desktop" else f"{len(user)}/{MAX_ASSETS_PER_STATE} 支")
+-            lab.setToolTip("可一次拖入多支视频到本行；自动抠绿、白边/柔光；最多20支。")
++            lab.setToolTip("可一次拖入多支视频；透明 WebM 直读 Alpha，普通视频自动抠绿；都会保留白边/柔光；最多20支。")
+@@ -11947,7 +11971,7 @@
+         if remaining <= 0:
+             QMessageBox.information(self,"素材池已满",f"「{STATE_NAMES[state]}」已经有 20 支视频。请先点“管理”移除不需要的素材。")
+             return
+-        paths,_=QFileDialog.getOpenFileNames(self,f"为「{STATE_NAMES[state]}」选择绿幕视频（还可导入 {remaining} 支）",str(Path.home()),"Video (*.mp4 *.mov *.mkv *.webm *.avi *.m4v)")
++        paths,_=QFileDialog.getOpenFileNames(self,f"为「{STATE_NAMES[state]}」选择视频（透明 WebM / 绿幕，还可导入 {remaining} 支）",str(Path.home()),"Video (*.webm *.mp4 *.mov *.mkv *.avi *.m4v)")
+@@ -11975,21 +11999,22 @@
+-        progress=QProgressDialog("正在自动抠绿并生成透明动画…","取消",0,len(paths),self)
++        progress=QProgressDialog("正在识别透明 Alpha / 处理绿幕并生成透明动画…","取消",0,len(paths),self)
+         progress.setWindowTitle("批量导入小美丽动画" if source=="drop" else "导入小美丽动画")
+         progress.setWindowModality(Qt.WindowModality.WindowModal)
+         progress.setMinimumDuration(0)
+-        success=[]; failed=[]
+-        state_dir=CACHE_DIR/"v048"/state; state_dir.mkdir(parents=True,exist_ok=True)
++        success=[]; failed=[]; import_modes={"transparent_webm":0,"greenscreen":0}
++        state_dir=CACHE_DIR/"v01101"/state; state_dir.mkdir(parents=True,exist_ok=True)
+         for i,path in enumerate(paths, start=1):
+             if progress.wasCanceled(): break
+-            progress.setLabelText(f"[{i}/{len(paths)}] {Path(path).name}\n自动取绿幕颜色 → 去绿边 → 淡白边/白色柔光 → 透明 WebP")
++            progress.setLabelText(f"[{i}/{len(paths)}] {Path(path).name}\n透明 WebM：Alpha 直读｜普通视频：自动抠绿 → 淡白边/白色柔光 → 透明 WebP")
+             QApplication.processEvents()
+             try:
+                 stamp=int(time.time()*1000)
+                 safe=f"{state}_{stamp}_{i}_{uuid.uuid4().hex}.webp"
+                 dst=state_dir/safe
+-                convert_greenscreen_video(path,dst,max_width=420,target_fps=12)
++                _,_,mode=convert_action_video(path,dst,max_width=420,target_fps=12)
++                import_modes[mode]=import_modes.get(mode,0)+1
+                 success.append(str(dst))
+@@ -12002,6 +12027,10 @@
+             if state != "desktop": self.pet.play_state(state, force_new_clip=True)
+             self._refresh_asset_label(state)
+         msg=f"成功导入 {len(success)} 支。当前「{STATE_NAMES[state]}」素材池：{len(_asset_list(self.cfg['assets'].get(state)))}/{MAX_ASSETS_PER_STATE}。"
++        if import_modes.get("transparent_webm"):
++            msg += f"\n透明 WebM Alpha 直读：{import_modes['transparent_webm']} 支（未抠绿）。"
++        if import_modes.get("greenscreen"):
++            msg += f"\n普通/无 Alpha 视频自动抠绿：{import_modes['greenscreen']} 支。"
+         if overflow:
