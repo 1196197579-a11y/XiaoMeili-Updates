@@ -49,31 +49,48 @@
 +
 +
  def add_glow_to_transparent_animation(src, dst):
+     """Upgrade an already-transparent animated WebP with the V0.4.8 white rim/glow.
+ 
 @@ -5421,7 +5445,7 @@
          self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
          self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
          self._apply_drop_style(False)
 -        self.setToolTip("可一次拖入多支视频到本行；支持 MP4 / MOV / MKV / WebM / AVI / M4V，最多补到 20 支。")
 +        self.setToolTip("可一次拖入多支视频；透明 WebM 会直接读取 Alpha、不再抠绿，普通视频继续自动抠绿；最多补到 20 支。")
+ 
+     def _apply_drop_style(self, active):
+         if active:
 @@ -6589,7 +6613,7 @@
          title = QLabel("6 个识别状态 + 战报 + 桌面动作 → 每个状态最多 20 支视频")
          title.setStyleSheet("font-weight:600; font-size:15px;")
          title_row.addWidget(title); title_row.addWidget(HelpBadge(
 -            "绿幕视频导入后会自动抠绿、去绿边、添加淡白边/柔光并缓存为透明 WebP。\n"
 +            "透明 WebM 会直接读取 Alpha，不再进行二次抠绿；普通视频仍自动抠绿、去绿边。两种素材都会添加淡白边/柔光并缓存为透明 WebP。\n"
+             "支持按钮导入或批量拖拽。随机播放采用有放回抽取，允许连续抽到同一支。\n"
+             "‘战报’状态默认使用你提供的10秒静止白板模板。"))
+         title_row.addStretch(1); av.addLayout(title_row)
 @@ -11901,7 +11925,7 @@
          lab=self.asset_labels.get(state)
          if lab:
              lab.setText(f"{len(user)}/{MAX_ASSETS_PER_STATE}支" if state=="desktop" else f"{len(user)}/{MAX_ASSETS_PER_STATE} 支")
 -            lab.setToolTip("可一次拖入多支视频到本行；自动抠绿、白边/柔光；最多20支。")
 +            lab.setToolTip("可一次拖入多支视频；透明 WebM 直读 Alpha，普通视频自动抠绿；都会保留白边/柔光；最多20支。")
+ 
+     def _on_asset_files_dropped(self, state, paths):
+         """Handle batch drag-and-drop from an animation-state drop zone.
 @@ -11947,7 +11971,7 @@
          if remaining <= 0:
              QMessageBox.information(self,"素材池已满",f"「{STATE_NAMES[state]}」已经有 20 支视频。请先点“管理”移除不需要的素材。")
              return
 -        paths,_=QFileDialog.getOpenFileNames(self,f"为「{STATE_NAMES[state]}」选择绿幕视频（还可导入 {remaining} 支）",str(Path.home()),"Video (*.mp4 *.mov *.mkv *.webm *.avi *.m4v)")
 +        paths,_=QFileDialog.getOpenFileNames(self,f"为「{STATE_NAMES[state]}」选择视频（透明 WebM / 绿幕，还可导入 {remaining} 支）",str(Path.home()),"Video (*.webm *.mp4 *.mov *.mkv *.avi *.m4v)")
+         if paths:
+             self.import_video_paths_for(state, paths, source="dialog")
+ 
 @@ -11975,21 +11999,22 @@
+             return
+         overflow=max(0, len(valid)-remaining)
+         paths=valid[:remaining]
 -        progress=QProgressDialog("正在自动抠绿并生成透明动画…","取消",0,len(paths),self)
 +        progress=QProgressDialog("正在识别透明 Alpha / 处理绿幕并生成透明动画…","取消",0,len(paths),self)
          progress.setWindowTitle("批量导入小美丽动画" if source=="drop" else "导入小美丽动画")
@@ -96,6 +113,8 @@
 +                _,_,mode=convert_action_video(path,dst,max_width=420,target_fps=12)
 +                import_modes[mode]=import_modes.get(mode,0)+1
                  success.append(str(dst))
+             except Exception as e:
+                 LOGGER.exception("视频导入失败: %s",path)
 @@ -12002,6 +12027,10 @@
              if state != "desktop": self.pet.play_state(state, force_new_clip=True)
              self._refresh_asset_label(state)
@@ -105,3 +124,5 @@
 +        if import_modes.get("greenscreen"):
 +            msg += f"\n普通/无 Alpha 视频自动抠绿：{import_modes['greenscreen']} 支。"
          if overflow:
+             msg += f"\n\n素材池最多 20 支，本次有 {overflow} 支因容量限制未导入。"
+         if ignored:
