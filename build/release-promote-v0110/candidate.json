@@ -1,0 +1,19 @@
+{
+  "version": "0.11.0",
+  "main_exe_sha256": "8097a3674cadac806a7d7d8a533bf916263e8840758d532dcbd736f568eac974",
+  "baseline_source_sha256": "d3bc141e04a562b6fd7575ebd9228feb062f5ed2a0d7d649730db6a0b6366111",
+  "baseline_update_sha256": "6756a4548b3b79011a7b323774d6cb7fe3fcf5cc2236edc38fa465c1bc72a5ad",
+  "assets": {
+    "XiaoMeili_V0.11.0_SourceProject.zip": {
+      "sha256": "295addead4d866501c32f2c2e70a6b0b53452765e5c4eb3849fb69639b5e5bba",
+      "size": 45992316
+    },
+    "XiaoMeili_0.11.0_update.zip": {
+      "sha256": "7c7feab9da979fd4a9b178bc960345110d595ddba9665b5098fec32fc4cb31ef",
+      "size": 385221714
+    }
+  },
+  "zlib": "1.3.1",
+  "python": "3.12.10",
+  "payload_sha256": "5d36331e8f05763466839ed1e9b039f7b5e915e7d507889caeeb5693d59e60be"
+}

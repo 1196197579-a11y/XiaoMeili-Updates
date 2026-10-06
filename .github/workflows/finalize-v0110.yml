@@ -1,0 +1,56 @@
+name: Finalize V0.11.0 after accepted Windows build and public readbacks
+on:
+  push:
+    branches: [main]
+    paths: ['build/release-promote-v0110/candidate.json']
+env:
+  PYTHONUTF8: '1'
+permissions:
+  contents: write
+concurrency:
+  group: xiaomeili-v0110
+  cancel-in-progress: true
+jobs:
+  final-public-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check accepted local gates and unchanged official baseline
+        run: |
+          python -c "import json; p=json.load(open('build/v0110/local-gates.json',encoding='utf-8')); m=json.load(open('build/v0110/candidate.json',encoding='utf-8')); assert p['all_local_gates_pass'] and p['main_exe_sha256']==m['main_exe_sha256']; assert all(x['passed'] for x in p['gates']); assert json.load(open('latest_safe.json',encoding='utf-8-sig'))['version']=='0.10.0.9.4.3'"
+      - name: Independently verify existing public candidate and formal immutable packages
+        run: |
+          python build/v0110/verify_public0110.py --root build/v0110 --tag v0.11.0-rc1 --out public-candidate-readback
+          python build/v0110/verify_public0110.py --root build/v0110 --tag v0.11.0 --out public-formal-readback
+          python -c "import zipfile,hashlib,json; m=json.load(open('build/v0110/candidate.json')); z=zipfile.ZipFile('public-formal-readback/XiaoMeili_0.11.0_update.zip'); assert hashlib.sha256(z.read('XiaoMeili.exe')).hexdigest()==m['main_exe_sha256']"
+      - name: Append uniquely named public verification reports
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp public-candidate-readback/public-readback.json public-candidate-readback/candidate-readback.json
+          cp public-formal-readback/public-readback.json public-formal-readback/formal-readback.json
+          gh release upload v0.11.0 --repo "$GITHUB_REPOSITORY" public-candidate-readback/candidate-readback.json public-formal-readback/formal-readback.json
+      - name: Promote safe manifest only after independent public verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main
+          git merge --ff-only origin/main
+          python build/v0110/promote_manifest0110.py
+          git config user.name 'XiaoMeili Update Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add latest_safe.json
+          git commit -m 'Promote V0.11.0 after native desktop, resource and independent public verification'
+          git push origin HEAD:main
+          gh release edit v0.11.0 --repo "$GITHUB_REPOSITORY" --latest=true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v0110-final-public-readbacks
+          path: |
+            public-candidate-readback/public-readback.json
+            public-formal-readback/public-readback.json
