@@ -51,12 +51,15 @@ try {
     python tests/test_v01101_transparent_webm_runtime.py *>&1 | Tee-Object -FilePath $Evidence -Append
     if ($LASTEXITCODE -ne 0) { throw 'Transparent WebM Alpha runtime test failed.' }
 
-    python -m PyInstaller --windowed --name XiaoMeili --icon 'app/assets/xiaomeili_icon.ico' `
+    $IconPath = Join-Path $Source 'app/assets/xiaomeili_icon.ico'
+    $AssetsData = "$(Join-Path $Source 'app/assets');assets"
+    $EntryPoint = Join-Path $Source 'app/src/main.py'
+    python -m PyInstaller --windowed --name XiaoMeili --icon $IconPath `
       --distpath (Join-Path $DistRoot 'dist') --workpath (Join-Path $DistRoot 'work') --specpath (Join-Path $DistRoot 'spec') `
       --collect-all rapidocr --collect-all onnxruntime --collect-all soundfile --collect-all sounddevice `
       --collect-all dxcam --collect-all dashscope --collect-all websocket --collect-all imageio_ffmpeg `
       --hidden-import pynvml --hidden-import resource_e2e --hidden-import desktop_acceptance `
-      --add-data 'app/assets;assets' 'app/src/main.py'
+      --add-data $AssetsData $EntryPoint
     if ($LASTEXITCODE -ne 0) { throw 'V0.11.0.1 candidate EXE build failed.' }
 } finally { Pop-Location }
 
