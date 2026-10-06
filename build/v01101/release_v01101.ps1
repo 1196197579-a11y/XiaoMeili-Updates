@@ -32,7 +32,7 @@ if ($SourceSha -ne '295addead4d866501c32f2c2e70a6b0b53452765e5c4eb3849fb69639b5e
 Expand-Archive -LiteralPath $BaselineSource -DestinationPath $Source
 Push-Location $Source
 try {
-    python -c "from pathlib import Path; p=Path('app/src/main.py'); p.write_text(p.read_text(encoding='utf-8'),encoding='utf-8',newline='\\n')"
+    python -c "from pathlib import Path; p=Path('app/src/main.py'); p.write_bytes(p.read_text(encoding='utf-8').encode('utf-8'))"
     if ($LASTEXITCODE -ne 0) { throw 'Failed to normalize the isolated formal V0.11.0 main.py copy.' }
     git apply --whitespace=nowarn (Join-Path $Delta 'main_v01101.patch')
     if ($LASTEXITCODE -ne 0) { throw 'V0.11.0.1 main.py patch did not apply exactly to formal V0.11.0 source.' }
