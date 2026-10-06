@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths: ['build/release-trigger-v0110/candidate.json']
+env:
+  PYTHONUTF8: '1'
 permissions:
   contents: write
 concurrency:
@@ -20,7 +22,7 @@ jobs:
       - name: Check exact accepted EXE and all local gates
         shell: pwsh
         run: |
-          python -c "import json; p=json.load(open('build/v0110/local-gates.json')); m=json.load(open('build/v0110/candidate.json')); assert p['all_local_gates_pass'] and p['main_exe_sha256']==m['main_exe_sha256']; assert all(x['passed'] for x in p['gates']); assert json.load(open('latest_safe.json'))['version']=='0.10.0.9.4.3'"
+          python -c "import json; p=json.load(open('build/v0110/local-gates.json')); m=json.load(open('build/v0110/candidate.json')); assert p['all_local_gates_pass'] and p['main_exe_sha256']==m['main_exe_sha256']; assert all(x['passed'] for x in p['gates']); assert json.load(open('latest_safe.json',encoding='utf-8-sig'))['version']=='0.10.0.9.4.3'"
           if ($LASTEXITCODE -ne 0) { throw 'Acceptance or baseline rejected' }
           python build/v0110/assemble0110.py --root build/v0110 --out candidate0110
           if ($LASTEXITCODE -ne 0) { throw 'Accepted bytes reconstruction rejected' }
