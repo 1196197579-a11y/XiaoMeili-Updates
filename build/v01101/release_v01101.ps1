@@ -71,6 +71,15 @@ if (-not (Test-Path -LiteralPath $BuiltFFmpeg -PathType Container)) { throw 'ima
 $FfmpegExe = Get-ChildItem -LiteralPath $BuiltFFmpeg -Recurse -File | Where-Object { $_.Name -match '^ffmpeg.*\.exe$' } | Select-Object -First 1
 if ($null -eq $FfmpegExe) { throw 'Bundled FFmpeg executable missing; transparent WebM would fail after freezing.' }
 
+$PreSourceDir = Join-Path $Work 'pre-source'
+$PreSourceZip = Join-Path $PreSourceDir 'XiaoMeili_V0.11.0.1_SourceProject.zip'
+python build/v01101/source_zip_v01101.py --source $Source --out $PreSourceZip
+if ($LASTEXITCODE -ne 0) { throw 'Pre-self-test source archive build failed.' }
+$BuiltAssets = Join-Path $Built '_internal/assets'
+if (-not (Test-Path -LiteralPath $BuiltAssets)) { New-Item -ItemType Directory -Path $BuiltAssets | Out-Null }
+Copy-Item -LiteralPath $PreSourceZip -Destination (Join-Path $BuiltAssets 'XiaoMeili_V0.11.0.1_SourceProject.zip')
+if (-not (Test-Path -LiteralPath (Join-Path $BuiltAssets 'XiaoMeili_V0.11.0.1_SourceProject.zip') -PathType Leaf)) { throw 'Frozen source archive embed failed.' }
+
 $env:QT_QPA_PLATFORM = 'offscreen'
 & $BuiltExe --runtime-self-test *>&1 | Tee-Object -FilePath $Evidence -Append
 if ($LASTEXITCODE -ne 0) { throw 'Frozen runtime self-test failed.' }
@@ -84,7 +93,7 @@ $BundleFFmpeg = Join-Path $Bundle '_internal/imageio_ffmpeg'
 if (-not (Test-Path -LiteralPath $BundleFFmpeg)) { New-Item -ItemType Directory -Path $BundleFFmpeg | Out-Null }
 Copy-Item -Path (Join-Path $BuiltFFmpeg '*') -Destination $BundleFFmpeg -Recurse -Force
 
-python build/v01101/package_v01101.py --source $Source --bundle $Bundle --out $Out --version $Version
+python build/v01101/package_v01101.py --source $Source --bundle $Bundle --out $Out --version $Version --source-zip $PreSourceZip
 if ($LASTEXITCODE -ne 0) { throw 'Package assembly or CRC verification failed.' }
 $Meta = Get-Content -Raw -Encoding UTF8 (Join-Path $Out 'build-metadata.json') | ConvertFrom-Json
 if ($Meta.version -ne $Version -or -not $Meta.all_pass) { throw 'Build metadata gate rejected.' }
