@@ -1,0 +1,6 @@
+{
+  "version": "0.11.0.1",
+  "baseline": "0.11.0",
+  "feature": "transparent-webm-alpha",
+  "safety": "append-only-no-user-file-deletion"
+}
