@@ -42,8 +42,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Pinned build dependencies failed to install.' 
 
 Push-Location $Source
 try {
-    python -c "from pathlib import Path; m=Path('app/src/main.py').read_text(encoding='utf-8'); h=Path('app/src/video_import_alpha.py').read_text(encoding='utf-8'); assert 'APP_VERSION = \"0.11.0.1\"' in m; assert 'convert_action_video(path,dst,max_width=420,target_fps=12)' in m; assert 'imageio_ffmpeg.read_frames' in h; print('V01101_CONTRACT_OK')" *>&1 | Tee-Object -FilePath $Evidence
-    if ($LASTEXITCODE -ne 0) { throw 'Transparent WebM contract test failed.' }
+    $MainText = Get-Content -Raw -Encoding UTF8 'app/src/main.py'
+    $HelperText = Get-Content -Raw -Encoding UTF8 'app/src/video_import_alpha.py'
+    if (-not $MainText.Contains('APP_VERSION = "0.11.0.1"')) { throw 'Transparent WebM contract test failed: version.' }
+    if (-not $MainText.Contains('convert_action_video(path,dst,max_width=420,target_fps=12)')) { throw 'Transparent WebM contract test failed: action importer.' }
+    if (-not $HelperText.Contains('imageio_ffmpeg.read_frames')) { throw 'Transparent WebM contract test failed: alpha decoder.' }
+    'V01101_CONTRACT_OK' | Tee-Object -FilePath $Evidence
     python tests/test_v01101_transparent_webm_runtime.py *>&1 | Tee-Object -FilePath $Evidence -Append
     if ($LASTEXITCODE -ne 0) { throw 'Transparent WebM Alpha runtime test failed.' }
 
