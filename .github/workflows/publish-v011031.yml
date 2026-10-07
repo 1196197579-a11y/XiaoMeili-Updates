@@ -1,0 +1,37 @@
+name: Publish XiaoMeili V0.11.0.3.1 template hotfix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/release-trigger-v011031/candidate.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xiaomeili-v011031-safe-release
+  cancel-in-progress: false
+
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+      - name: Build, verify, publish, and promote V0.11.0.3.1
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File "build/v011031/release_v011031.ps1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v011031-release-evidence
+          path: |
+            work-v011031/build-metadata.json
+            work-v011031/public-readback.json
+            work-v011031/test-output.txt
