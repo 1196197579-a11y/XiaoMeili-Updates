@@ -1,14 +1,14 @@
 {
   "protocol": 1,
-  "version": "0.11.0.3.1",
-  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.11.0.3.1/XiaoMeili_0.11.0.3.1_update.zip",
-  "sha256": "28c30218288407e357144bdea529c0c0635aee992062bef5f419b520e34c08a0",
-  "package_size": 493274449,
+  "version": "0.11.0.3.2",
+  "package_url": "https://github.com/1196197579-a11y/XiaoMeili-Updates/releases/download/v0.11.0.3.2/XiaoMeili_0.11.0.3.2_update.zip",
+  "sha256": "c36faf5a7c6f43c77f40d87d9a8f661eb774a2c6219fe8abc908f5cda8d9826f",
+  "package_size": 531574186,
   "notes": [
-    "修复桌面动作模板真实测试/退出时偶发 libshiboken 已删除对象崩溃",
-    "待机素材池单独扩展至 30 支；其余状态继续保持 20 支",
-    "永久停用启动时自动在桌面生成“小美丽.exe”的旧机制；既有桌面文件完全不碰",
-    "保留 V0.11.0.3 的美蜘蛛动作链、透明 WebM、素材重命名显示别名、模板置前与自适应布局",
-    "继续保留 NDM 桌面零落地、FullSafe、旧版本回滚、现有配置与全部素材"
+    "修复当前从桌面测试副本启动时更新报“当前程序不在受保护的 versions 目录中”",
+    "下载方式、NDM 测试与下载目录已迁移到“系统 → 更新”",
+    "内置下载器作为推荐选项；NDM 继续保留为可选项并支持失败回退",
+    "保留待机 30 支、桌面动作模板热修复、透明 WebM、美蜘蛛动作链与素材显示别名",
+    "继续保留 FullSafe、受保护版本目录与旧版本回滚"
   ]
 }
