@@ -50,7 +50,7 @@ try {
     if (-not $NativeText.Contains('current_was_managed')) { throw 'native updater compatibility metadata missing.' }
     if (-not $MainText.Contains('IDLE_MAX_ASSETS = 30')) { throw 'idle 30 regression.' }
     if (-not $MainText.Contains('桌面 EXE 自动生成已禁用')) { throw 'desktop EXE regression.' }
-    if (-not $MainText.Contains("'exit_chain': '爬出屏幕后接下一支动作'")) { throw 'desktop chain regression.' }
+    if (-not $DesktopText.Contains("'exit_chain': '爬出屏幕后接下一支动作'")) { throw 'desktop chain regression.' }
     if (-not $MainText.Contains('convert_action_video(path,dst,max_width=420,target_fps=12)')) { throw 'transparent WebM regression.' }
 
     'V011032_STATIC_CONTRACT_OK' | Tee-Object -FilePath $Evidence
