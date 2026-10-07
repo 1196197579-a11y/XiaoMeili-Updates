@@ -30,7 +30,7 @@ if ($UpdateSha -ne '28c30218288407e357144bdea529c0c0635aee992062bef5f419b520e34c
 if ($SourceSha -ne 'dda2f45a3cb40b9fb04e31286a0c5b2c100f6f5acd84fc40206b87c4b17611cd') { throw 'Baseline source hash mismatch.' }
 
 Expand-Archive -LiteralPath $BaselineSource -DestinationPath $Source
-python build/v011032/apply_v011032_delta.py (Join-Path $Source 'app/src/main.py') (Join-Path $Source 'app/src/native_updater.py')
+python build/v011032/normalize_then_apply_v011032.py build/v011032/apply_v011032_delta.py (Join-Path $Source 'app/src/main.py') (Join-Path $Source 'app/src/native_updater.py')
 if ($LASTEXITCODE -ne 0) { throw 'V0.11.0.3.2 delta failed.' }
 '0.11.0.3.2' | Set-Content -LiteralPath (Join-Path $Source 'app/assets/VERSION.txt') -Encoding utf8NoBOM
 Copy-Item -LiteralPath (Join-Path $Root 'build/v011032/release-notes.md') -Destination (Join-Path $Source 'V011032_CHANGELOG.md') -Force

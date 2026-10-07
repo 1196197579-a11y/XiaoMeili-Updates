@@ -8,5 +8,5 @@
     "ndm-optional-fallback"
   ],
   "safety": "append-only-protected-install-root",
-  "attempt": 1
+  "attempt": 2
 }
