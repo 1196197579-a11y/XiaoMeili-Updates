@@ -1,0 +1,11 @@
+{
+  "version": "0.11.0.3.1",
+  "baseline": "0.11.0.3",
+  "features": [
+    "desktop-template-lifetime-hotfix",
+    "idle-pool-30",
+    "disable-desktop-exe-autogeneration"
+  ],
+  "safety": "append-only-no-user-file-deletion",
+  "attempt": 1
+}
