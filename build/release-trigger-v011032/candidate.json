@@ -1,0 +1,12 @@
+{
+  "version": "0.11.0.3.2",
+  "baseline": "0.11.0.3.1",
+  "features": [
+    "external-copy-safe-update",
+    "update-tab-download-selector",
+    "builtin-downloader-first-class",
+    "ndm-optional-fallback"
+  ],
+  "safety": "append-only-protected-install-root",
+  "attempt": 1
+}
