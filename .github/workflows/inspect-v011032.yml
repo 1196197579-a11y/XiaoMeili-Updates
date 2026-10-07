@@ -1,0 +1,43 @@
+name: Inspect V0.11.0.3.1 updater source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "build/inspect-trigger-v011032/candidate.json"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download source baseline
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Path inspect-src | Out-Null
+          gh release download v0.11.0.3.1 --repo $env:GITHUB_REPOSITORY --dir inspect-src --pattern 'XiaoMeili_V0.11.0.3.1_SourceProject.zip'
+          Expand-Archive -LiteralPath inspect-src/XiaoMeili_V0.11.0.3.1_SourceProject.zip -DestinationPath inspect-src/source
+      - name: Print relevant updater and UI snippets
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          root=Path("inspect-src/source")
+          files=[root/"app/src/native_updater.py",root/"app/src/main.py"]
+          needles=["class NativeUpdateError","def _validate_root","def install_update_package","下载方式","NDM 下载目录","download_mode","ndm","内置下载","检查更新","立即更新"]
+          for p in files:
+              print("\n=====FILE",p,"=====")
+              s=p.read_text(encoding="utf-8")
+              lines=s.splitlines()
+              for i,line in enumerate(lines):
+                  if any(n.lower() in line.lower() for n in needles):
+                      a=max(0,i-18); b=min(len(lines),i+35)
+                      print(f"--- lines {a+1}-{b} around {i+1} ---")
+                      for j in range(a,b):
+                          print(f"{j+1:05d}: {lines[j]}")
+          '@ | python -
