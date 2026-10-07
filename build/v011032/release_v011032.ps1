@@ -42,6 +42,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Pinned build dependencies failed to install.' 
 Push-Location $Source
 try {
     $MainText = Get-Content -Raw -Encoding UTF8 'app/src/main.py'
+    $DesktopText = Get-Content -Raw -Encoding UTF8 'app/src/desktop_actions.py'
     $NativeText = Get-Content -Raw -Encoding UTF8 'app/src/native_updater.py'
     if (-not $MainText.Contains('APP_VERSION = "0.11.0.3.2"')) { throw 'version contract failed.' }
     if (-not $MainText.Contains('uf.addRow("下载方式", update_dl_row)')) { throw 'update download selector missing.' }
