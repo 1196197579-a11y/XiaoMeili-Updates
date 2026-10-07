@@ -3,6 +3,7 @@ from pathlib import Path
 
 root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(".")
 main = (root / "app/src/main.py").read_text(encoding="utf-8")
+desk = (root / "app/src/desktop_actions.py").read_text(encoding="utf-8")
 native = (root / "app/src/native_updater.py").read_text(encoding="utf-8")
 
 required_main = [
@@ -14,13 +15,20 @@ required_main = [
     'allow_external_current=True',
     'IDLE_MAX_ASSETS = 30',
     '桌面 EXE 自动生成已禁用',
-    "'exit_chain': '爬出屏幕后接下一支动作'",
 ]
 for token in required_main:
     if token not in main:
         raise SystemExit(f"main contract missing: {token}")
 if 'bg.addRow("下载方式", mode_row)' in main:
     raise SystemExit("download selector still lives in Components page")
+
+required_desk = [
+    "'exit_chain': '爬出屏幕后接下一支动作'",
+    "'fixed': '固定位置播放（视频内部自己动）'",
+]
+for token in required_desk:
+    if token not in desk:
+        raise SystemExit(f"desktop contract missing: {token}")
 
 required_native = [
     'allow_external_current=False',
